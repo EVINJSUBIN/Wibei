@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncBeat AI</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #050505; 
+            color: white; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+        #canvas-container { 
+            width: 100vw; 
+            height: 100vh; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 1; 
+        }
+        
+        #ui-layer {
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            z-index: 10; 
+            background: rgba(0, 0, 0, 0.7); 
+            backdrop-filter: blur(10px); 
+            transition: opacity 0.5s;
+        }
+
+        #controls-layer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 5;
+            display: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05); 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 40px; 
+            border-radius: 16px; 
+            text-align: center; 
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        h1 { 
+            margin-top: 0; 
+            font-size: 2.5rem; 
+            text-shadow: 0 0 10px rgba(255,255,255,0.5); 
+            background: -webkit-linear-gradient(#00e5ff, #ff007f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p { 
+            color: #aaa; 
+            margin-bottom: 30px; 
+        }
+        button {
+            background: linear-gradient(45deg, #ff007f, #7000ff); 
+            border: none; 
+            padding: 15px 30px;
+            color: white; 
+            font-size: 1.2rem; 
+            font-weight: bold; 
+            border-radius: 30px; 
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover { 
+            transform: scale(1.05); 
+            box-shadow: 0 0 20px rgba(255, 0, 127, 0.6); 
+        }
+        .file-upload { 
+            margin-top: 20px; 
+            font-size: 0.9rem; 
+            color: #888; 
+        }
+        input[type="file"] { 
+            display: none; 
+        }
+        .file-label { 
+            cursor: pointer; 
+            text-decoration: underline; 
+            color: #00e5ff; 
+            transition: color 0.2s;
+        }
+        .file-label:hover {
+            color: #fff;
+        }
+
+        select {
+            background: transparent;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: inherit;
+            cursor: pointer;
+            outline: none;
+        }
+        select option {
+            background: #222;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui-layer">
+        <div class="glass-card">
+            <h1>SyncBeat AI</h1>
+            <p>Real-Time WebGL Audio Visualizer</p>
+            <button id="start-btn">Enable Microphone</button>
+            <div class="file-upload">
+                Or <label for="audio-upload" class="file-label">upload an MP3 file</label>
+                <input type="file" id="audio-upload" accept="audio/*">
+            </div>
+        </div>
+    </div>
+
+    <div id="controls-layer">
+        <label for="preset-select">Theme: </label>
+        <select id="preset-select">
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="neonWave">Neon Wave</option>
+            <option value="deepSpace">Deep Space</option>
+        </select>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <script>
+        // Core Variables
+        let scene, camera, renderer, controls;
+        let mesh, particles;
+        let originalVertices = [];
+        let audioContext, analyser, dataArray;
+        let audioSource = null;
+        let isPlaying = false;
+        
+        let currentPreset = 'cyberpunk';
+        
+        // Presets Configuration
+        const presets = {
+            cyberpunk: {
+                bg: 0x050505,
+                fog: 0x050505,
+                hueOffset: 0.0, // Base hue shifting
+                particleColor: 0x00e5ff,
+                wireframe: true
+            },
+            neonWave: {
+                bg: 0x1a0033,
+                fog: 0x1a0033,
+                hueOffset: 0.8, // Purple/Pink focus
+                particleColor: 0xff00cc,
+                wireframe: false
+            },
+            deepSpace: {
+                bg: 0x000000,
+                fog: 0x000000,
+                hueOffset: 0.6, // Blue focus
+                particleColor: 0xffffff,
+                wireframe: true
+            }
+        };
+
+        // Setup Three.js
+        function initWebGL() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(presets.cyberpunk.bg);
+            scene.fog = new THREE.FogExp2(presets.cyberpunk.fog, 0.002);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 100;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(50, 50, 50);
+            scene.add(dirLight);
+
+            const pointLight = new THREE.PointLight(0xff007f, 2, 200);
+            pointLight.position.set(0, 0, 0);
+            scene.add(pointLight);
+
+            // Center Mesh (Icosahedron)
+            const geometry = new THREE.IcosahedronGeometry(20, 4); // High poly count for displacement
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x7000ff,
+                emissive: 0x110033,
+                shininess: 100,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.9
+            });
+            mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+
+            // Store original vertices for displacement calculations
+            const positionAttribute = mesh.geometry.attributes.position;
+            for (let i = 0; i < positionAttribute.count; i++) {
+                originalVertices.push(new THREE.Vector3(
+                    positionAttribute.getX(i),
+                    positionAttribute.getY(i),
+                    positionAttribute.getZ(i)
+                ));
+            }
+
+            // Particles Background
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 2000;
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for(let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 400;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 1.5,
+                color: presets.cyberpunk.particleColor,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particles);
+
+            window.addEventListener('resize', onWindowResize, false);
+            
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function changePreset(presetName) {
+            currentPreset = presetName;
+            const config = presets[presetName];
+            
+            scene.background.setHex(config.bg);
+            scene.fog.color.setHex(config.fog);
+            particles.material.color.setHex(config.particleColor);
+            mesh.material.wireframe = config.wireframe;
+        }
+
+        // Setup Web Audio API
+        function setupAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        async function initMicStream() {
+            setupAudioContext();
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                
+                if(audioSource && audioSource.mediaStream) {
+                    audioSource.mediaStream.getTracks().forEach(track => track.stop());
+                } else if (audioSource) {
+                    audioSource.disconnect();
+                }
+
+                audioSource = audioContext.createMediaStreamSource(stream);
+                audioSource.connect(analyser);
+                // Do not connect analyser to destination for mic (prevents feedback loop)
+                
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                isPlaying = true;
+                
+                hideUI();
+            } catch (err) {
+                console.error('Error accessing microphone:', err);
+                alert("Microphone access denied or unavailable. Please try uploading an MP3 file instead.");
+            }
+        }
+
+        function initAudioFile(file) {
+            setupAudioContext();
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+                
+                audioContext.decodeAudioData(arrayBuffer, function(buffer) {
+                    if(audioSource && audioSource.mediaStream) {
+                        audioSource.mediaStream.getTracks().forEach(track => track.stop());
+                    } else if (audioSource) {
+                        try { audioSource.stop(); } catch(e) {}
+                        audioSource.disconnect();
+                    }
+                    
+                    audioSource = audioContext.createBufferSource();
+                    audioSource.buffer = buffer;
+                    
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256;
+                    
+                    audioSource.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                    
+                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    isPlaying = true;
+                    
+                    audioSource.start(0);
+                    hideUI();
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function hideUI() {
+            const ui = document.getElementById('ui-layer');
+            ui.style.opacity = '0';
+            setTimeout(() => { 
+                ui.style.display = 'none'; 
+                document.getElementById('controls-layer').style.display = 'block';
+            }, 500);
+        }
+
+        // Calculate average volume for a frequency range
+        function getFrequencyRange(data, startBin, endBin) {
+            let sum = 0;
+            for (let i = startBin; i <= endBin; i++) {
+                sum += data[i];
+            }
+            return sum / (endBin - startBin + 1);
+        }
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isPlaying && analyser) {
+                analyser.getByteFrequencyData(dataArray);
+
+                // Map frequencies to bands
+                // fftSize 256 -> 128 bins. Max freq is half sample rate (~22050Hz). Each bin ~172Hz
+                // Bass: 20-250Hz (bins 0-1)
+                const bass = getFrequencyRange(dataArray, 0, 2) / 255;
+                // Mid: 250-4000Hz (bins 2-23)
+                const mid = getFrequencyRange(dataArray, 2, 23) / 255;
+                // Treble: 4000-20000Hz (bins 24-127)
+                const treble = getFrequencyRange(dataArray, 24, 127) / 255;
+
+                // Reactive Mesh Scale (Bass)
+                const scale = 1 + bass * 0.8;
+                mesh.scale.set(scale, scale, scale);
+
+                // Reactive Vertex Displacement (Bass + Mid)
+                const positionAttribute = mesh.geometry.attributes.position;
+                for (let i = 0; i < positionAttribute.count; i++) {
+                    const vertex = originalVertices[i].clone();
+                    vertex.normalize();
+                    // Displacement function based on frequency and time
+                    const distance = 20 + bass * 12 * Math.sin(i + performance.now() * 0.003) + mid * 4;
+                    vertex.multiplyScalar(distance);
+                    positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+                }
+                positionAttribute.needsUpdate = true;
+
+                // Reactive Rotation (Mid)
+                mesh.rotation.x += 0.005 + mid * 0.05;
+                mesh.rotation.y += 0.005 + mid * 0.05;
+
+                // Reactive Color (Treble)
+                const config = presets[currentPreset];
+                let hue = (performance.now() * 0.0001 + treble * 0.6 + config.hueOffset) % 1;
+                
+                // If deep space, keep it mostly blue/white
+                if (currentPreset === 'deepSpace') {
+                    mesh.material.color.setHSL(0.6, 1, 0.3 + treble * 0.5);
+                } else {
+                    mesh.material.color.setHSL(hue, 1, 0.5);
+                }
+                
+                const ptLight = scene.children.find(c => c.isPointLight);
+                if (ptLight) {
+                    ptLight.color.setHSL(hue, 1, 0.5);
+                    ptLight.intensity = 2 + bass * 2;
+                }
+
+                // Particle Dynamics
+                particles.scale.set(1 + bass * 0.1, 1 + bass * 0.1, 1 + bass * 0.1);
+                particles.rotation.y += 0.001 + treble * 0.02;
+                
+                // Camera shake on heavy bass
+                if (bass > 0.85) {
+                    const shakeIntensity = (bass - 0.85) * 10;
+                    camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+                    camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+                } else {
+                    // Return camera to center smoothly
+                    camera.position.x += (0 - camera.position.x) * 0.1;
+                    camera.position.y += (0 - camera.position.y) * 0.1;
+                }
+            } else {
+                // Idle animation
+                mesh.rotation.x += 0.002;
+                mesh.rotation.y += 0.003;
+                
+                // Idle vertex subtle movement
+                if (originalVertices.length > 0) {
+                    const positionAttribute = mesh.geometry.attributes.position;
+                    for (let i = 0; i < positionAttribute.count; i++) {
+                        const vertex = originalVertices[i].clone();
+                        vertex.normalize();
+                        const distance = 20 + 0.5 * Math.sin(i + performance.now() * 0.001);
+                        vertex.multiplyScalar(distance);
+                        positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+                    }
+                    positionAttribute.needsUpdate = true;
+                }
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Event Listeners
+        document.getElementById('start-btn').addEventListener('click', initMicStream);
+
+        document.getElementById('audio-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                initAudioFile(file);
+            }
+        });
+
+        document.getElementById('preset-select').addEventListener('change', function(e) {
+            changePreset(e.target.value);
+        });
+
+        // Initialize WebGL scene on load
+        initWebGL();
+    </script>
+</body>
+</html>
