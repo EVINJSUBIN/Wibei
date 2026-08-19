@@ -219,28 +219,39 @@
             pointLight.position.set(0, 0, 0);
             scene.add(pointLight);
 
-            // Center Mesh (Icosahedron)
-            const geometry = new THREE.IcosahedronGeometry(20, 4); // High poly count for displacement
+            // Circular Spectrum (Monstercat Style)
+            bars = [];
+            const barCount = 128;
+            const radius = 25;
+            const geometry = new THREE.BoxGeometry(0.8, 1, 0.8);
+            
+            // Create a glowing material
             const material = new THREE.MeshPhongMaterial({
-                color: 0x7000ff,
-                emissive: 0x110033,
-                shininess: 100,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.9
+                color: presets[currentPreset].particleColor,
+                emissive: presets[currentPreset].particleColor,
+                emissiveIntensity: 0.5,
+                shininess: 100
             });
-            mesh = new THREE.Mesh(geometry, material);
-            scene.add(mesh);
 
-            // Store original vertices for displacement calculations
-            const positionAttribute = mesh.geometry.attributes.position;
-            for (let i = 0; i < positionAttribute.count; i++) {
-                originalVertices.push(new THREE.Vector3(
-                    positionAttribute.getX(i),
-                    positionAttribute.getY(i),
-                    positionAttribute.getZ(i)
-                ));
+            const spectrumGroup = new THREE.Group();
+
+            for (let i = 0; i < barCount; i++) {
+                const mesh = new THREE.Mesh(geometry, material);
+                
+                // Position in a circle
+                const angle = (i / barCount) * Math.PI * 2;
+                mesh.position.x = Math.cos(angle) * radius;
+                mesh.position.y = Math.sin(angle) * radius;
+                
+                // Rotate to face outward
+                mesh.rotation.z = angle;
+                
+                spectrumGroup.add(mesh);
+                bars.push(mesh);
             }
+            
+            scene.add(spectrumGroup);
+            mesh = spectrumGroup; // Re-use the 'mesh' variable for the group rotation
 
             // Particles Background
             const particlesGeometry = new THREE.BufferGeometry();
@@ -281,7 +292,11 @@
             scene.background.setHex(config.bg);
             scene.fog.color.setHex(config.fog);
             particles.material.color.setHex(config.particleColor);
-            mesh.material.wireframe = config.wireframe;
+            
+            bars.forEach(bar => {
+                bar.material.color.setHex(config.particleColor);
+                bar.material.emissive.setHex(config.particleColor);
+            });
         }
 
         // Setup Web Audio API

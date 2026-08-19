@@ -56,12 +56,17 @@ app.get('/stream', async (req, res) => {
     }
 
     // Use yt-dlp to stream audio to stdout
-    // -f bestaudio: best audio format
-    // -o -: output to stdout
-    // -q: quiet (no logs to stdout)
-    const ytdlp = spawn('python', ['-m', 'yt_dlp', '-f', 'bestaudio', '-o', '-', '-q', targetUrl]);
+    const ytdlp = spawn('python', [
+        '-m', 'yt_dlp', 
+        '-f', 'bestaudio[ext=m4a]/bestaudio', 
+        '--js-runtimes', 'node',
+        '--remote-components', 'ejs:github',
+        '-o', '-', 
+        '-q', 
+        targetUrl
+    ]);
 
-    res.setHeader('Content-Type', 'audio/webm'); // Usually webm or mp4 audio
+    res.setHeader('Content-Type', 'audio/mp4');
 
     ytdlp.stdout.pipe(res);
 
