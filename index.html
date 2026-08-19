@@ -129,6 +129,10 @@
                 Or <label for="audio-upload" class="file-label">upload an MP3 file</label>
                 <input type="file" id="audio-upload" accept="audio/*">
             </div>
+            <div class="url-input" style="margin-top: 20px;">
+                <input type="text" id="stream-url" placeholder="Paste YouTube or Spotify URL" style="padding: 10px; width: 70%; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.5); color: white; outline: none;">
+                <button id="stream-btn" style="padding: 10px 20px; font-size: 1rem; margin-top: 10px;">Stream</button>
+            </div>
         </div>
     </div>
 
@@ -471,6 +475,52 @@
 
         document.getElementById('preset-select').addEventListener('change', function(e) {
             changePreset(e.target.value);
+        });
+
+        document.getElementById('stream-btn').addEventListener('click', function() {
+            const url = document.getElementById('stream-url').value;
+            if (!url) {
+                alert("Please enter a valid YouTube or Spotify URL.");
+                return;
+            }
+
+            document.getElementById('stream-btn').innerText = "Loading...";
+
+            const audioEl = new Audio();
+            audioEl.crossOrigin = "anonymous";
+            audioEl.src = `/stream?url=${encodeURIComponent(url)}`;
+            
+            audioEl.oncanplay = function() {
+                setupAudioContext();
+                
+                if(audioSource && audioSource.mediaStream) {
+                    audioSource.mediaStream.getTracks().forEach(track => track.stop());
+                } else if (audioSource) {
+                    try { audioSource.stop(); } catch(e) {}
+                    audioSource.disconnect();
+                }
+                
+                audioSource = audioContext.createMediaElementSource(audioEl);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                
+                audioSource.connect(analyser);
+                analyser.connect(audioContext.destination);
+                
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                isPlaying = true;
+                
+                audioEl.play().catch(e => {
+                    console.error("Autoplay prevented:", e);
+                    alert("Click anywhere to allow playback.");
+                });
+                hideUI();
+            };
+
+            audioEl.onerror = function() {
+                alert("Error loading stream. Ensure the URL is valid and yt-dlp is installed.");
+                document.getElementById('stream-btn').innerText = "Stream";
+            };
         });
 
         // Initialize WebGL scene on load
