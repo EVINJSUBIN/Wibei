@@ -6,7 +6,7 @@ const https = require('https');
 const app = express();
 const PORT = 3000;
 
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 // Helper function to extract Spotify title from its web page
@@ -16,10 +16,8 @@ function getSpotifyTitle(url) {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
-                // Try to find the title tag
                 const match = data.match(/<title>(.*?)<\/title>/);
                 if (match && match[1]) {
-                    // Spotify titles usually look like "Song Name - song and lyrics by Artist | Spotify"
                     let title = match[1].split('|')[0].replace('- song and lyrics by', '').trim();
                     resolve(title);
                 } else {
@@ -35,27 +33,19 @@ app.get('/stream', async (req, res) => {
     if (!url) return res.status(400).send('URL is required');
 
     console.log(`Requested stream for: ${url}`);
-
+    
     let targetUrl = url;
-
-    // Handle Spotify URLs by scraping title and converting to a YouTube search
     if (url.includes('spotify.com/track')) {
         try {
-            console.log('Detected Spotify URL, extracting title...');
             const title = await getSpotifyTitle(url);
-            if (title) {
-                console.log(`Found title: ${title}`);
-                targetUrl = `ytsearch1:${title} audio`;
-            } else {
-                return res.status(400).send('Could not extract Spotify metadata');
-            }
+            if (title) targetUrl = `ytsearch1:${title} audio`;
         } catch (e) {
             console.error(e);
-            return res.status(500).send('Error fetching Spotify metadata');
         }
+    } else if (!url.startsWith('http')) {
+        targetUrl = `ytsearch1:${url} audio`;
     }
 
-    // Use yt-dlp to stream audio to stdout
     const ytdlp = spawn('python', [
         '-m', 'yt_dlp', 
         '-f', 'bestaudio[ext=m4a]/bestaudio', 
@@ -67,21 +57,56 @@ app.get('/stream', async (req, res) => {
     ]);
 
     res.setHeader('Content-Type', 'audio/mp4');
-
     ytdlp.stdout.pipe(res);
 
     ytdlp.stderr.on('data', (data) => {
         console.error(`yt-dlp error: ${data}`);
     });
 
-    ytdlp.on('close', (code) => {
-        console.log(`yt-dlp process exited with code ${code}`);
+    ytdlp.on('error', (err) => {
+        console.error('Failed to start python yt-dlp:', err);
     });
 
     req.on('close', () => {
         console.log('Client closed connection, killing yt-dlp...');
         ytdlp.kill();
     });
+});
+
+app.get('/api/suggest', (req, res) => {
+  const q = req.query.q;
+  if (!q) return res.json([]);
+  const url = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(q)}`;
+  https.get(url, (r) => {
+    let d = '';
+    r.on('data', chunk => d += chunk);
+    r.on('end', () => {
+      try {
+        const json = JSON.parse(d);
+        res.json(json[1] || []);
+      } catch(e) { res.json([]); }
+    });
+  }).on('error', () => res.json([]));
+});
+
+app.get('/metadata', (req, res) => {
+  const url = req.query.url;
+  if (!url) return res.status(400).send('URL required');
+  
+  let targetUrl = url;
+  if (!url.startsWith('http')) targetUrl = `ytsearch1:${url} audio`;
+  
+  const ytdlp = spawn('python', ['-m', 'yt_dlp', '-j', '--no-warnings', targetUrl]);
+  let out = '';
+  ytdlp.stdout.on('data', d => out += d);
+  ytdlp.on('close', code => {
+    try {
+      const data = JSON.parse(out);
+      res.json({ title: data.title, uploader: data.uploader, thumbnail: data.thumbnail, duration: data.duration });
+    } catch(e) {
+      res.json({ title: 'Unknown', uploader: 'Unknown', thumbnail: null });
+    }
+  });
 });
 
 app.listen(PORT, () => {

@@ -1,0 +1,254 @@
+:root {
+    --bg-main: #06070a;
+    --glass-bg: rgba(18, 20, 26, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --text-main: #ffffff;
+    --text-dim: #8b8e98;
+    --accent: #facc15; /* Gold */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* Backgrounds */
+#bg-canvas, #threejs-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+}
+#threejs-container {
+    z-index: 2;
+}
+
+/* Glass Panels */
+.glass-panel {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* Top Nav */
+.top-nav {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.glass-btn {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s;
+}
+.glass-btn:hover { background: rgba(255,255,255,0.05); }
+
+.glass-select-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.glass-select-group .label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+}
+.glass-select {
+    appearance: none;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main);
+    padding: 6px 28px 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    backdrop-filter: blur(8px);
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%238b8e98" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+}
+.glass-select option { background: #12141a; }
+
+.green-dot {
+    width: 10px; height: 10px;
+    background-color: #34d399;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Player Bar */
+.player-container {
+    position: absolute;
+    bottom: 30px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    z-index: 10;
+}
+
+.player-pill {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    width: auto;
+    min-width: 600px;
+}
+
+.track-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 200px;
+    max-width: 250px;
+}
+#album-art {
+    width: 44px; height: 44px;
+    border-radius: 6px;
+    object-fit: cover;
+}
+.track-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+}
+.track-title {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.track-artist {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-grow: 1;
+}
+.ctrl-btn {
+    background: none; border: none; color: var(--text-main);
+    font-size: 16px; cursor: pointer;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+}
+.ctrl-btn:hover { background: rgba(255,255,255,0.05); }
+
+.time { font-size: 11px; color: var(--text-dim); width: 32px; text-align: center; }
+
+.progress-bar {
+    position: relative;
+    flex-grow: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    display: flex; align-items: center;
+}
+.progress-bar input[type=range] {
+    position: absolute; width: 100%; opacity: 0; cursor: pointer; z-index: 2; height: 16px; margin: 0;
+}
+.progress-fill {
+    position: absolute; height: 100%; background: var(--accent);
+    border-radius: 2px; width: 0%; z-index: 1;
+    pointer-events: none;
+}
+
+.volume-control {
+    display: flex; align-items: center; gap: 8px; width: 80px;
+}
+.vol-icon { font-size: 14px; color: var(--text-dim); }
+.volume-control input[type=range] {
+    -webkit-appearance: none; width: 100%; height: 4px;
+    background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer;
+}
+.volume-control input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 10px; height: 10px;
+    background: var(--text-main); border-radius: 50%;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 6px 12px;
+    gap: 8px;
+}
+.search-box input {
+    background: none; border: none; color: var(--text-main);
+    outline: none; font-size: 12px; width: 110px;
+}
+.search-box input::placeholder { color: var(--text-dim); }
+.search-icon {
+    background: none; border: none; font-size: 12px; cursor: pointer; color: var(--text-dim);
+}
+
+.search-box { position: relative; }
+.suggestions-box {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    right: 0;
+    width: 250px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 20;
+}
+.suggestion-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.suggestion-item:hover { background: rgba(255,255,255,0.1); }
+
