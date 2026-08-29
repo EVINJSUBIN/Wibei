@@ -2,9 +2,10 @@ const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
 const https = require('https');
+const play = require('play-dl');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
@@ -71,6 +72,26 @@ app.get('/stream', async (req, res) => {
         console.log('Client closed connection, killing yt-dlp...');
         ytdlp.kill();
     });
+});
+
+// Accurate Search endpoint powered by play-dl
+app.get('/api/search', async (req, res) => {
+    const q = req.query.q;
+    if (!q) return res.json([]);
+    try {
+        const results = await play.search(q, { limit: 5, source: { youtube: "video" } });
+        const items = results.map(x => ({
+            title: x.title,
+            uploader: x.channel?.name || 'Unknown Artist',
+            url: x.url,
+            thumbnail: x.thumbnails?.[0]?.url || null,
+            duration: x.durationInSec || 0
+        }));
+        res.json(items);
+    } catch (e) {
+        console.error('Search error:', e);
+        res.json([]);
+    }
 });
 
 app.get('/api/suggest', (req, res) => {

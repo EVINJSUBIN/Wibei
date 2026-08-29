@@ -1,23 +1,21 @@
 {
   "name": "wibei",
   "version": "1.0.0",
-  "description": "Wibei is a stunning, real-time music visualizer using WebGL, WebAudio API, and Glassmorphism design. It pulls audio streams from YouTube/Spotify directly and generates beautiful 3D particle and waveform animations.",
-  "main": "index.js",
+  "description": "Real-time 3D WebGL Music Visualizer with Glassmorphism UI",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/EVINJSUBIN/Wibei.git"
-  },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "music-visualizer",
+    "webgl",
+    "threejs",
+    "audio-visualizer",
+    "glassmorphism"
+  ],
+  "author": "EVINJSUBIN",
   "license": "ISC",
   "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/EVINJSUBIN/Wibei/issues"
-  },
-  "homepage": "https://github.com/EVINJSUBIN/Wibei#readme",
   "dependencies": {
     "express": "^5.2.1",
     "play-dl": "^1.9.7"

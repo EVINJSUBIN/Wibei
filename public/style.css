@@ -1,6 +1,6 @@
 :root {
     --bg-main: #06070a;
-    --glass-bg: rgba(18, 20, 26, 0.7);
+    --glass-bg: rgba(18, 20, 26, 0.75);
     --glass-border: rgba(255, 255, 255, 0.08);
     --text-main: #ffffff;
     --text-dim: #8b8e98;
@@ -20,10 +20,12 @@ body {
     overflow: hidden;
     height: 100vh;
     width: 100vw;
+    user-select: none;
+    cursor: default;
 }
 
-/* Backgrounds */
-#bg-canvas, #threejs-container {
+/* Backgrounds & Canvas */
+#bg-canvas {
     position: absolute;
     top: 0;
     left: 0;
@@ -32,17 +34,28 @@ body {
     z-index: 1;
     pointer-events: none;
 }
+
 #threejs-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     z-index: 2;
+    cursor: grab;
+}
+
+#threejs-container:active {
+    cursor: grabbing;
 }
 
 /* Glass Panels */
 .glass-panel {
     background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--glass-border);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* Top Nav */
@@ -54,13 +67,14 @@ body {
     display: flex;
     align-items: center;
     gap: 16px;
+    pointer-events: auto;
 }
 
 .glass-btn {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     color: var(--text-main);
-    padding: 6px 14px;
+    padding: 7px 14px;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
@@ -69,9 +83,16 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-    transition: background 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.glass-btn:hover { background: rgba(255,255,255,0.05); }
+.glass-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+.glass-btn:active {
+    transform: translateY(0);
+}
 
 .glass-select-group {
     display: flex;
@@ -89,7 +110,7 @@ body {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     color: var(--text-main);
-    padding: 6px 28px 6px 12px;
+    padding: 7px 28px 7px 12px;
     border-radius: 6px;
     font-size: 13px;
     cursor: pointer;
@@ -98,63 +119,78 @@ body {
     background-image: url('data:image/svg+xml;utf8,<svg fill="%238b8e98" height="16" viewBox="0 0 24 24" width="16" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
     background-repeat: no-repeat;
     background-position: right 6px center;
+    transition: all 0.2s;
+}
+.glass-select:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.05);
 }
 .glass-select option { background: #12141a; }
 
 .green-dot {
-    width: 10px; height: 10px;
+    width: 8px; height: 8px;
     background-color: #34d399;
     border-radius: 50%;
     display: inline-block;
+    box-shadow: 0 0 8px #34d399;
 }
 
 /* Player Bar */
 .player-container {
     position: absolute;
-    bottom: 30px;
+    bottom: 28px;
     width: 100%;
     display: flex;
     justify-content: center;
     z-index: 10;
+    pointer-events: none;
 }
 
 .player-pill {
     display: flex;
     align-items: center;
-    gap: 24px;
-    padding: 12px 20px;
-    border-radius: 12px;
-    width: auto;
-    min-width: 600px;
+    gap: 20px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    min-width: 640px;
+    max-width: 900px;
+    pointer-events: auto;
+    transition: box-shadow 0.3s ease;
+}
+.player-pill:hover {
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 20px rgba(250, 204, 21, 0.05);
 }
 
 .track-info {
     display: flex;
     align-items: center;
     gap: 12px;
-    min-width: 200px;
-    max-width: 250px;
+    min-width: 180px;
+    max-width: 230px;
 }
 #album-art {
     width: 44px; height: 44px;
-    border-radius: 6px;
+    border-radius: 8px;
     object-fit: cover;
+    background: #18181b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 .track-text {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
     overflow: hidden;
 }
-.track-title {
-    font-size: 14px;
+.title {
+    font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--text-main);
 }
-.track-artist {
-    font-size: 12px;
+.artist {
+    font-size: 11px;
     color: var(--text-dim);
     white-space: nowrap;
     overflow: hidden;
@@ -168,87 +204,214 @@ body {
     flex-grow: 1;
 }
 .ctrl-btn {
-    background: none; border: none; color: var(--text-main);
-    font-size: 16px; cursor: pointer;
-    width: 32px; height: 32px;
-    display: flex; align-items: center; justify-content: center;
+    background: none; 
+    border: none; 
+    color: var(--text-main);
+    font-size: 15px; 
+    cursor: pointer;
+    width: 34px; 
+    height: 34px;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
     border-radius: 50%;
+    transition: all 0.2s;
 }
-.ctrl-btn:hover { background: rgba(255,255,255,0.05); }
+.ctrl-btn:hover { 
+    background: rgba(255, 255, 255, 0.1); 
+    transform: scale(1.08); 
+}
+.ctrl-btn:active {
+    transform: scale(0.95);
+}
 
-.time { font-size: 11px; color: var(--text-dim); width: 32px; text-align: center; }
+.time { 
+    font-size: 11px; 
+    color: var(--text-dim); 
+    width: 32px; 
+    text-align: center; 
+    font-variant-numeric: tabular-nums;
+}
 
+/* Refined Progress Bar with responsive cursor */
 .progress-bar {
     position: relative;
     flex-grow: 1;
-    height: 4px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 2px;
-    display: flex; align-items: center;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+    display: flex; 
+    align-items: center;
+    cursor: pointer;
+    transition: height 0.15s ease;
+}
+.progress-bar:hover {
+    height: 8px;
 }
 .progress-bar input[type=range] {
-    position: absolute; width: 100%; opacity: 0; cursor: pointer; z-index: 2; height: 16px; margin: 0;
+    position: absolute; 
+    width: 100%; 
+    opacity: 0; 
+    cursor: pointer; 
+    z-index: 5; 
+    height: 24px; 
+    margin: 0;
+    top: -8px;
 }
 .progress-fill {
-    position: absolute; height: 100%; background: var(--accent);
-    border-radius: 2px; width: 0%; z-index: 1;
+    position: absolute; 
+    height: 100%; 
+    background: var(--accent);
+    border-radius: 3px; 
+    width: 0%; 
+    z-index: 1;
     pointer-events: none;
+    box-shadow: 0 0 10px var(--accent);
+    transition: width 0.05s linear;
 }
 
+/* Volume Control */
 .volume-control {
-    display: flex; align-items: center; gap: 8px; width: 80px;
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    width: 80px;
 }
-.vol-icon { font-size: 14px; color: var(--text-dim); }
+.vol-icon { 
+    font-size: 13px; 
+    color: var(--text-dim); 
+    cursor: pointer;
+}
 .volume-control input[type=range] {
-    -webkit-appearance: none; width: 100%; height: 4px;
-    background: rgba(255,255,255,0.1); border-radius: 2px; cursor: pointer;
+    -webkit-appearance: none; 
+    width: 100%; 
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12); 
+    border-radius: 2px; 
+    cursor: pointer;
+    outline: none;
 }
 .volume-control input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 10px; height: 10px;
-    background: var(--text-main); border-radius: 50%;
+    -webkit-appearance: none; 
+    width: 12px; 
+    height: 12px;
+    background: var(--text-main); 
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(0,0,0,0.5);
+    transition: transform 0.1s;
+}
+.volume-control input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
 }
 
+/* Search Box & Controls */
 .search-box {
     display: flex;
     align-items: center;
-    background: rgba(0,0,0,0.3);
+    background: rgba(0, 0, 0, 0.35);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
-    padding: 6px 12px;
-    gap: 8px;
+    padding: 5px 10px;
+    gap: 6px;
+    position: relative;
+    transition: border-color 0.2s;
+}
+.search-box:focus-within {
+    border-color: rgba(255, 255, 255, 0.25);
 }
 .search-box input {
-    background: none; border: none; color: var(--text-main);
-    outline: none; font-size: 12px; width: 110px;
+    background: none; 
+    border: none; 
+    color: var(--text-main);
+    outline: none; 
+    font-size: 12px; 
+    width: 120px;
 }
-.search-box input::placeholder { color: var(--text-dim); }
+.search-box input::placeholder { 
+    color: var(--text-dim); 
+}
 .search-icon {
-    background: none; border: none; font-size: 12px; cursor: pointer; color: var(--text-dim);
+    background: none; 
+    border: none; 
+    font-size: 13px; 
+    cursor: pointer; 
+    color: var(--text-dim);
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.search-icon:hover { 
+    color: var(--text-main); 
+    transform: scale(1.15); 
 }
 
-.search-box { position: relative; }
-.suggestions-box {
+/* Rich Accurate Suggestions Dropdown */
+#suggestions-box {
     position: absolute;
-    bottom: calc(100% + 10px);
+    bottom: calc(100% + 12px);
     right: 0;
-    width: 250px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
-    border-radius: 8px;
+    width: 320px;
+    max-height: 280px;
+    overflow-y: auto;
+    border-radius: 12px;
+    padding: 6px;
     display: none;
     flex-direction: column;
-    overflow: hidden;
-    z-index: 20;
+    gap: 4px;
+    z-index: 30;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
 }
-.suggestion-item {
-    padding: 8px 12px;
-    font-size: 13px;
+
+#suggestions-box::-webkit-scrollbar {
+    width: 4px;
+}
+#suggestions-box::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
+.suggestion-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 8px;
     cursor: pointer;
+    transition: background 0.15s;
+}
+.suggestion-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.suggestion-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: #18181b;
+    flex-shrink: 0;
+}
+.suggestion-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+.suggestion-title {
+    font-size: 12px;
+    font-weight: 500;
     color: var(--text-main);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.suggestion-item:hover { background: rgba(255,255,255,0.1); }
-
+.suggestion-channel {
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
