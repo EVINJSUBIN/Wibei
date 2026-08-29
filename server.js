@@ -1,5 +1,6 @@
 const express = require('express');
 const { spawn, spawnSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const yts = require('yt-search');
@@ -11,7 +12,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
 function getExec() {
-    const cmds = process.platform === 'win32' 
+    const isWin = process.platform === 'win32';
+    const localBin = path.join(__dirname, 'bin', isWin ? 'yt-dlp.exe' : 'yt-dlp');
+    if (fs.existsSync(localBin)) {
+        return { cmd: localBin, prefix: [] };
+    }
+
+    const cmds = isWin 
         ? [['python', '-m', 'yt_dlp'], ['yt-dlp'], ['python3', '-m', 'yt_dlp']]
         : [['yt-dlp'], ['python3', '-m', 'yt_dlp'], ['python', '-m', 'yt_dlp']];
     for (const [cmd, ...prefix] of cmds) {
@@ -22,7 +29,7 @@ function getExec() {
             }
         } catch (e) {}
     }
-    return { cmd: process.platform === 'win32' ? 'python' : 'python3', prefix: ['-m', 'yt_dlp'] };
+    return { cmd: isWin ? 'python' : 'python3', prefix: ['-m', 'yt_dlp'] };
 }
 
 function getSpotifyTitle(url) {
