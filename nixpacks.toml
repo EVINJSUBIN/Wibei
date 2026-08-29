@@ -1,0 +1,12 @@
+# Railway / Nixpacks Configuration for Wibei
+[phases.setup]
+nixPkgs = ["nodejs_20", "python3", "python311Packages.pip", "ffmpeg"]
+
+[phases.install]
+cmds = [
+  "npm install",
+  "python3 -m pip install yt-dlp"
+]
+
+[start]
+cmd = "npm start"
