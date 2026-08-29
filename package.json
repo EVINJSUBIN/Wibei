@@ -18,6 +18,7 @@
   "type": "commonjs",
   "dependencies": {
     "express": "^5.2.1",
-    "play-dl": "^1.9.7"
+    "play-dl": "^1.9.7",
+    "yt-search": "^2.13.1"
   }
 }

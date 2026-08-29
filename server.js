@@ -1,14 +1,29 @@
 const express = require('express');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const path = require('path');
 const https = require('https');
-const play = require('play-dl');
+const yts = require('yt-search');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+
+function getExec() {
+    const cmds = process.platform === 'win32' 
+        ? [['python', '-m', 'yt_dlp'], ['yt-dlp'], ['python3', '-m', 'yt_dlp']]
+        : [['yt-dlp'], ['python3', '-m', 'yt_dlp'], ['python', '-m', 'yt_dlp']];
+    for (const [cmd, ...prefix] of cmds) {
+        try {
+            const res = spawnSync(cmd, ['--version'], { stdio: 'ignore' });
+            if (res.status === 0 || !res.error) {
+                return { cmd, prefix };
+            }
+        } catch (e) {}
+    }
+    return { cmd: process.platform === 'win32' ? 'python' : 'python3', prefix: ['-m', 'yt_dlp'] };
+}
 
 function getSpotifyTitle(url) {
     return new Promise((resolve, reject) => {
@@ -37,36 +52,38 @@ app.get('/stream', async (req, res) => {
         try {
             const title = await getSpotifyTitle(url);
             if (title) targetUrl = `ytsearch1:${title} audio`;
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) {}
     } else if (!url.startsWith('http')) {
         targetUrl = `ytsearch1:${url} audio`;
     }
 
-    const ytdlp = spawn('python', [
-        '-m', 'yt_dlp', 
-        '-f', 'bestaudio[ext=m4a]/bestaudio', 
+    const { cmd, prefix } = getExec();
+    const args = [
+        ...prefix,
+        '-f', 'bestaudio[ext=m4a]/bestaudio',
         '--js-runtimes', 'node',
         '--remote-components', 'ejs:github',
-        '-o', '-', 
-        '-q', 
+        '-o', '-',
+        '-q',
         targetUrl
-    ]);
+    ];
+
+    const ytdlp = spawn(cmd, args);
 
     res.setHeader('Content-Type', 'audio/mp4');
     ytdlp.stdout.pipe(res);
 
-    ytdlp.stderr.on('data', (data) => {
-        console.error(`yt-dlp error: ${data}`);
-    });
+    ytdlp.stderr.on('data', () => {});
 
     ytdlp.on('error', (err) => {
-        console.error('Failed to start python yt-dlp:', err);
+        console.error('yt-dlp stream error:', err.message);
+        if (!res.headersSent) res.status(500).send('Stream error');
     });
 
     req.on('close', () => {
-        ytdlp.kill();
+        try {
+            ytdlp.kill();
+        } catch (e) {}
     });
 });
 
@@ -74,13 +91,14 @@ app.get('/api/search', async (req, res) => {
     const q = req.query.q;
     if (!q) return res.json([]);
     try {
-        const results = await play.search(q, { limit: 5, source: { youtube: "video" } });
-        const items = results.map(x => ({
-            title: x.title,
-            uploader: x.channel?.name || 'Unknown Artist',
-            url: x.url,
-            thumbnail: x.thumbnails?.[0]?.url || null,
-            duration: x.durationInSec || 0
+        const searchResults = await yts(q);
+        const videos = (searchResults.videos || []).slice(0, 5);
+        const items = videos.map(v => ({
+            title: v.title,
+            uploader: v.author?.name || 'Unknown Artist',
+            url: v.url,
+            thumbnail: v.thumbnail || null,
+            duration: v.seconds || 0
         }));
         res.json(items);
     } catch (e) {
@@ -99,7 +117,7 @@ app.get('/api/suggest', (req, res) => {
             try {
                 const json = JSON.parse(d);
                 res.json(json[1] || []);
-            } catch(e) { 
+            } catch (e) { 
                 res.json([]); 
             }
         });
@@ -113,14 +131,23 @@ app.get('/metadata', (req, res) => {
     let targetUrl = url;
     if (!url.startsWith('http')) targetUrl = `ytsearch1:${url} audio`;
   
-    const ytdlp = spawn('python', ['-m', 'yt_dlp', '-j', '--no-warnings', targetUrl]);
+    const { cmd, prefix } = getExec();
+    const args = [...prefix, '-j', '--no-warnings', targetUrl];
+    const ytdlp = spawn(cmd, args);
+
     let out = '';
     ytdlp.stdout.on('data', d => out += d);
+
+    ytdlp.on('error', (err) => {
+        console.error('yt-dlp metadata error:', err.message);
+        if (!res.headersSent) res.json({ title: 'Unknown', uploader: 'Unknown', thumbnail: null });
+    });
+
     ytdlp.on('close', () => {
         try {
             const data = JSON.parse(out);
             res.json({ title: data.title, uploader: data.uploader, thumbnail: data.thumbnail, duration: data.duration });
-        } catch(e) {
+        } catch (e) {
             res.json({ title: 'Unknown', uploader: 'Unknown', thumbnail: null });
         }
     });
