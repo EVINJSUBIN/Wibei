@@ -4,7 +4,7 @@
     --glass-border: rgba(255, 255, 255, 0.08);
     --text-main: #ffffff;
     --text-dim: #8b8e98;
-    --accent: #facc15; /* Gold */
+    --accent: #facc15;
 }
 
 * {
@@ -24,7 +24,6 @@ body {
     cursor: default;
 }
 
-/* Backgrounds & Canvas */
 #bg-canvas {
     position: absolute;
     top: 0;
@@ -49,7 +48,6 @@ body {
     cursor: grabbing;
 }
 
-/* Glass Panels */
 .glass-panel {
     background: var(--glass-bg);
     backdrop-filter: blur(16px);
@@ -58,7 +56,6 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
-/* Top Nav */
 .top-nav {
     position: absolute;
     top: 24px;
@@ -85,11 +82,13 @@ body {
     gap: 6px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .glass-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
     transform: translateY(-1px);
 }
+
 .glass-btn:active {
     transform: translateY(0);
 }
@@ -99,12 +98,14 @@ body {
     align-items: center;
     gap: 8px;
 }
+
 .glass-select-group .label {
     font-size: 11px;
     font-weight: 700;
     color: var(--text-dim);
     letter-spacing: 0.5px;
 }
+
 .glass-select {
     appearance: none;
     background: var(--glass-bg);
@@ -121,21 +122,25 @@ body {
     background-position: right 6px center;
     transition: all 0.2s;
 }
+
 .glass-select:hover {
     border-color: rgba(255, 255, 255, 0.2);
     background-color: rgba(255, 255, 255, 0.05);
 }
-.glass-select option { background: #12141a; }
+
+.glass-select option { 
+    background: #12141a; 
+}
 
 .green-dot {
-    width: 8px; height: 8px;
+    width: 8px; 
+    height: 8px;
     background-color: #34d399;
     border-radius: 50%;
     display: inline-block;
     box-shadow: 0 0 8px #34d399;
 }
 
-/* Player Bar */
 .player-container {
     position: absolute;
     bottom: 28px;
@@ -157,6 +162,7 @@ body {
     pointer-events: auto;
     transition: box-shadow 0.3s ease;
 }
+
 .player-pill:hover {
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65), 0 0 20px rgba(250, 204, 21, 0.05);
 }
@@ -168,19 +174,23 @@ body {
     min-width: 180px;
     max-width: 230px;
 }
+
 #album-art {
-    width: 44px; height: 44px;
+    width: 44px; 
+    height: 44px;
     border-radius: 8px;
     object-fit: cover;
     background: #18181b;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
+
 .track-text {
     display: flex;
     flex-direction: column;
     gap: 3px;
     overflow: hidden;
 }
+
 .title {
     font-size: 13px;
     font-weight: 600;
@@ -189,6 +199,7 @@ body {
     text-overflow: ellipsis;
     color: var(--text-main);
 }
+
 .artist {
     font-size: 11px;
     color: var(--text-dim);
@@ -203,6 +214,7 @@ body {
     gap: 12px;
     flex-grow: 1;
 }
+
 .ctrl-btn {
     background: none; 
     border: none; 
@@ -217,10 +229,12 @@ body {
     border-radius: 50%;
     transition: all 0.2s;
 }
+
 .ctrl-btn:hover { 
     background: rgba(255, 255, 255, 0.1); 
     transform: scale(1.08); 
 }
+
 .ctrl-btn:active {
     transform: scale(0.95);
 }
@@ -233,7 +247,6 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
-/* Refined Progress Bar with responsive cursor */
 .progress-bar {
     position: relative;
     flex-grow: 1;
@@ -245,9 +258,11 @@ body {
     cursor: pointer;
     transition: height 0.15s ease;
 }
+
 .progress-bar:hover {
     height: 8px;
 }
+
 .progress-bar input[type=range] {
     position: absolute; 
     width: 100%; 
@@ -258,6 +273,7 @@ body {
     margin: 0;
     top: -8px;
 }
+
 .progress-fill {
     position: absolute; 
     height: 100%; 
@@ -270,18 +286,19 @@ body {
     transition: width 0.05s linear;
 }
 
-/* Volume Control */
 .volume-control {
     display: flex; 
     align-items: center; 
     gap: 8px; 
     width: 80px;
 }
+
 .vol-icon { 
     font-size: 13px; 
     color: var(--text-dim); 
     cursor: pointer;
 }
+
 .volume-control input[type=range] {
     -webkit-appearance: none; 
     width: 100%; 
@@ -291,6 +308,7 @@ body {
     cursor: pointer;
     outline: none;
 }
+
 .volume-control input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none; 
     width: 12px; 
@@ -301,11 +319,11 @@ body {
     box-shadow: 0 0 6px rgba(0,0,0,0.5);
     transition: transform 0.1s;
 }
+
 .volume-control input[type=range]::-webkit-slider-thumb:hover {
     transform: scale(1.2);
 }
 
-/* Search Box & Controls */
 .search-box {
     display: flex;
     align-items: center;
@@ -317,9 +335,11 @@ body {
     position: relative;
     transition: border-color 0.2s;
 }
+
 .search-box:focus-within {
     border-color: rgba(255, 255, 255, 0.25);
 }
+
 .search-box input {
     background: none; 
     border: none; 
@@ -328,9 +348,11 @@ body {
     font-size: 12px; 
     width: 120px;
 }
+
 .search-box input::placeholder { 
     color: var(--text-dim); 
 }
+
 .search-icon {
     background: none; 
     border: none; 
@@ -344,12 +366,12 @@ body {
     align-items: center;
     justify-content: center;
 }
+
 .search-icon:hover { 
     color: var(--text-main); 
     transform: scale(1.15); 
 }
 
-/* Rich Accurate Suggestions Dropdown */
 #suggestions-box {
     position: absolute;
     bottom: calc(100% + 12px);
@@ -369,6 +391,7 @@ body {
 #suggestions-box::-webkit-scrollbar {
     width: 4px;
 }
+
 #suggestions-box::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 2px;
@@ -383,9 +406,11 @@ body {
     cursor: pointer;
     transition: background 0.15s;
 }
+
 .suggestion-card:hover {
     background: rgba(255, 255, 255, 0.1);
 }
+
 .suggestion-thumb {
     width: 40px;
     height: 40px;
@@ -394,12 +419,14 @@ body {
     background: #18181b;
     flex-shrink: 0;
 }
+
 .suggestion-details {
     display: flex;
     flex-direction: column;
     gap: 2px;
     overflow: hidden;
 }
+
 .suggestion-title {
     font-size: 12px;
     font-weight: 500;
@@ -408,6 +435,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
 .suggestion-channel {
     font-size: 10px;
     color: var(--text-dim);

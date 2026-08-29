@@ -10,7 +10,6 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Helper function to extract Spotify title from its web page
 function getSpotifyTitle(url) {
     return new Promise((resolve, reject) => {
         https.get(url, (res) => {
@@ -33,8 +32,6 @@ app.get('/stream', async (req, res) => {
     let url = req.query.url;
     if (!url) return res.status(400).send('URL is required');
 
-    console.log(`Requested stream for: ${url}`);
-    
     let targetUrl = url;
     if (url.includes('spotify.com/track')) {
         try {
@@ -69,12 +66,10 @@ app.get('/stream', async (req, res) => {
     });
 
     req.on('close', () => {
-        console.log('Client closed connection, killing yt-dlp...');
         ytdlp.kill();
     });
 });
 
-// Accurate Search endpoint powered by play-dl
 app.get('/api/search', async (req, res) => {
     const q = req.query.q;
     if (!q) return res.json([]);
@@ -89,45 +84,46 @@ app.get('/api/search', async (req, res) => {
         }));
         res.json(items);
     } catch (e) {
-        console.error('Search error:', e);
         res.json([]);
     }
 });
 
 app.get('/api/suggest', (req, res) => {
-  const q = req.query.q;
-  if (!q) return res.json([]);
-  const url = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(q)}`;
-  https.get(url, (r) => {
-    let d = '';
-    r.on('data', chunk => d += chunk);
-    r.on('end', () => {
-      try {
-        const json = JSON.parse(d);
-        res.json(json[1] || []);
-      } catch(e) { res.json([]); }
-    });
-  }).on('error', () => res.json([]));
+    const q = req.query.q;
+    if (!q) return res.json([]);
+    const url = `https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(q)}`;
+    https.get(url, (r) => {
+        let d = '';
+        r.on('data', chunk => d += chunk);
+        r.on('end', () => {
+            try {
+                const json = JSON.parse(d);
+                res.json(json[1] || []);
+            } catch(e) { 
+                res.json([]); 
+            }
+        });
+    }).on('error', () => res.json([]));
 });
 
 app.get('/metadata', (req, res) => {
-  const url = req.query.url;
-  if (!url) return res.status(400).send('URL required');
+    const url = req.query.url;
+    if (!url) return res.status(400).send('URL required');
   
-  let targetUrl = url;
-  if (!url.startsWith('http')) targetUrl = `ytsearch1:${url} audio`;
+    let targetUrl = url;
+    if (!url.startsWith('http')) targetUrl = `ytsearch1:${url} audio`;
   
-  const ytdlp = spawn('python', ['-m', 'yt_dlp', '-j', '--no-warnings', targetUrl]);
-  let out = '';
-  ytdlp.stdout.on('data', d => out += d);
-  ytdlp.on('close', code => {
-    try {
-      const data = JSON.parse(out);
-      res.json({ title: data.title, uploader: data.uploader, thumbnail: data.thumbnail, duration: data.duration });
-    } catch(e) {
-      res.json({ title: 'Unknown', uploader: 'Unknown', thumbnail: null });
-    }
-  });
+    const ytdlp = spawn('python', ['-m', 'yt_dlp', '-j', '--no-warnings', targetUrl]);
+    let out = '';
+    ytdlp.stdout.on('data', d => out += d);
+    ytdlp.on('close', () => {
+        try {
+            const data = JSON.parse(out);
+            res.json({ title: data.title, uploader: data.uploader, thumbnail: data.thumbnail, duration: data.duration });
+        } catch(e) {
+            res.json({ title: 'Unknown', uploader: 'Unknown', thumbnail: null });
+        }
+    });
 });
 
 app.listen(PORT, () => {

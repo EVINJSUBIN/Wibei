@@ -1,4 +1,3 @@
-// Wibei Audio Visualizer Core
 const bgCanvas = document.getElementById('bg-canvas');
 const bgCtx = bgCanvas.getContext('2d');
 let blocks = [];
@@ -8,11 +7,10 @@ let isMicActive = false;
 let micStream = null;
 let scene, camera, renderer, composer;
 
-// Visualizer Groups & Bars
-let visualizerRoot; // Container group for rotation/parallax
+let visualizerRoot;
 let pulseGrp, waveGrp, vgridGrp;
 let pulseBars = [], waveBars = [], vgridBars = [];
-let gridHelper; // Background floor grid
+let gridHelper;
 
 const THEMES = {
     gold: { accent: '#facc15', color: 0xfacc15, bg: '#06070a' },
@@ -25,15 +23,14 @@ let currentBg = 'synth';
 let bgBassLevel = 0;
 let queue = [];
 
-// Mouse & Parallax State
 let mouseX = 0, mouseY = 0;
 let targetRotX = 0, targetRotY = 0;
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
 
-// Logger
 const logsContent = document.getElementById('logs-content');
 const logsPanel = document.getElementById('logs-panel');
+
 function addLog(msg, type = 'info') {
     if (!logsContent) return;
     const d = document.createElement('div');
@@ -44,9 +41,6 @@ function addLog(msg, type = 'info') {
     logsContent.scrollTop = logsContent.scrollHeight;
 }
 
-// ----------------------------------------------------
-// 2D Floating Squares Canvas
-// ----------------------------------------------------
 function resizeCanvas() {
     bgCanvas.width = window.innerWidth;
     bgCanvas.height = window.innerHeight;
@@ -101,9 +95,6 @@ function animateCanvas() {
 }
 animateCanvas();
 
-// ----------------------------------------------------
-// Three.js 3D Visualizer Setup
-// ----------------------------------------------------
 function initThree() {
     const container = document.getElementById('threejs-container');
     scene = new THREE.Scene();
@@ -133,16 +124,13 @@ function initThree() {
     pointLight.position.set(0, 0, 20);
     scene.add(pointLight);
 
-    // Floor Grid
     gridHelper = new THREE.GridHelper(200, 40, THEMES[currentTheme].color, 0x1e293b);
     gridHelper.position.y = -15;
     scene.add(gridHelper);
 
-    // Visualizer Root for Smooth Rotation & Parallax
     visualizerRoot = new THREE.Group();
     scene.add(visualizerRoot);
 
-    // Box Geometry for visualizer bars
     const bGeo = new THREE.BoxGeometry(0.5, 1, 0.5);
     bGeo.translate(0, 0.5, 0);
 
@@ -154,7 +142,6 @@ function initThree() {
         metalness: 0.8
     });
 
-    // 1. Pulse Ring (128 bars)
     pulseGrp = new THREE.Group();
     const numBars = 128;
     const radius = 22;
@@ -168,7 +155,6 @@ function initThree() {
     }
     visualizerRoot.add(pulseGrp);
 
-    // 2. Wave (64 bars)
     waveGrp = new THREE.Group();
     const waveNum = 64;
     for (let i = 0; i < waveNum; i++) {
@@ -180,7 +166,6 @@ function initThree() {
     waveGrp.visible = false;
     visualizerRoot.add(waveGrp);
 
-    // 3. 3D Matrix Grid (16x8 bars)
     vgridGrp = new THREE.Group();
     const gridCols = 16;
     const gridRows = 8;
@@ -195,9 +180,7 @@ function initThree() {
     vgridGrp.visible = false;
     visualizerRoot.add(vgridGrp);
 
-    // Mouse Interaction (Parallax & Orbit Drag)
     window.addEventListener('mousemove', e => {
-        // Normalized cursor coordinates (-1 to 1)
         mouseX = (e.clientX / window.innerWidth) * 2 - 1;
         mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
 
@@ -233,14 +216,10 @@ function initThree() {
     threeAnimate();
 }
 
-// ----------------------------------------------------
-// Refined Visualization & Idle Animation Loop
-// ----------------------------------------------------
 function threeAnimate() {
     requestAnimationFrame(threeAnimate);
     const time = performance.now() * 0.001;
 
-    // Interactive Cursor 3D Parallax & Smooth Orbit
     const parallaxX = mouseX * 0.15;
     const parallaxY = mouseY * 0.15;
     if (visualizerRoot) {
@@ -294,7 +273,6 @@ function threeAnimate() {
             }
         }
     } else {
-        // Organic, continuous, harmonic breathing idle animation
         bgBassLevel *= 0.95;
 
         if (currentVis === 'pulse') {
@@ -337,9 +315,6 @@ function threeAnimate() {
     composer.render();
 }
 
-// ----------------------------------------------------
-// Audio Engine & Streaming
-// ----------------------------------------------------
 function ensureAudioCtx() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -439,16 +414,11 @@ async function playStream(query, presetMeta = null) {
         curAudioEl.onended = playNext;
         
     } catch (err) {
-        console.error(err);
         addLog(`Stream error: ${err.message}`, 'error');
         document.getElementById('track-title').innerText = 'Playback Error';
     }
 }
 
-// ----------------------------------------------------
-// UI Event Handlers
-// ----------------------------------------------------
-// Play / Pause
 document.getElementById('play-btn').addEventListener('click', () => {
     if (isMicActive) return;
     if (!curAudioEl || !curAudioEl.src) {
@@ -467,7 +437,6 @@ document.getElementById('play-btn').addEventListener('click', () => {
     }
 });
 
-// Seek Bar
 document.getElementById('seek-slider').addEventListener('input', e => {
     if (!curAudioEl || !curAudioEl.duration) return;
     const pct = parseFloat(e.target.value);
@@ -475,12 +444,10 @@ document.getElementById('seek-slider').addEventListener('input', e => {
     document.getElementById('progress-fill').style.width = pct + '%';
 });
 
-// Volume
 document.getElementById('vol-slider').addEventListener('input', e => {
     if (curAudioEl) curAudioEl.volume = parseFloat(e.target.value) / 100;
 });
 
-// Search Input & Accurate YouTube Suggestions
 const searchInp = document.getElementById('search-inp');
 const searchBtn = document.getElementById('search-btn');
 const suggBox = document.getElementById('suggestions-box');
@@ -548,7 +515,6 @@ document.addEventListener('click', e => {
     }
 });
 
-// Microphone Input Button
 document.getElementById('mic-btn')?.addEventListener('click', async () => {
     try {
         if (curAudioEl) {
@@ -576,7 +542,6 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
     }
 });
 
-// File Upload (MP3/WAV)
 const fileUpload = document.getElementById('file-upload');
 document.getElementById('upload-btn')?.addEventListener('click', () => fileUpload?.click());
 fileUpload?.addEventListener('change', e => {
@@ -623,13 +588,11 @@ fileUpload?.addEventListener('change', e => {
     curAudioEl.onended = playNext;
 });
 
-// Logs Toggle
 document.querySelector('.logs-btn')?.addEventListener('click', () => {
     if (!logsPanel) return;
     logsPanel.style.display = logsPanel.style.display === 'none' ? 'block' : 'none';
 });
 
-// Dropdowns (Style, BG, Theme)
 document.getElementById('vis-sel').addEventListener('change', e => {
     currentVis = e.target.value;
     pulseGrp.visible = (currentVis === 'pulse');
@@ -667,7 +630,6 @@ document.getElementById('theme-sel').addEventListener('change', e => {
     addLog(`Changed Theme to: ${currentTheme.toUpperCase()}`);
 });
 
-// Default album art placeholder
 const albumArt = document.getElementById('album-art');
 if (albumArt) {
     albumArt.onerror = () => {
@@ -676,7 +638,6 @@ if (albumArt) {
     albumArt.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%2318181b"><rect width="100" height="100"/><text x="50" y="55" font-size="32" text-anchor="middle" fill="%23facc15">🎵</text></svg>';
 }
 
-// Reset View Angle Back Button
 document.getElementById('back-btn')?.addEventListener('click', () => {
     targetRotX = 0;
     targetRotY = 0;
@@ -689,6 +650,5 @@ document.getElementById('back-btn')?.addEventListener('click', () => {
     addLog('3D View angle reset', 'info');
 });
 
-// Initialize Visualizer
 initThree();
 addLog('Wibei visualizer initialized and ready', 'ok');
