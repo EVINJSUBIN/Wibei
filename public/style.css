@@ -841,3 +841,190 @@ body.light-mode .toast {
     border-color: rgba(234, 179, 8, 0.4);
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
 }
+/* Responsive layout */
+
+@media (max-width: 900px) {
+    .left-card {
+        left: 12px;
+        width: 220px;
+    }
+
+    .right-card {
+        right: 12px;
+        width: 140px;
+    }
+
+    .player {
+        bottom: 12px;
+        width: calc(100vw - 24px);
+        padding-left: 16px;
+        padding-right: 16px;
+        gap: 14px;
+    }
+
+    .now-playing {
+        width: 180px;
+    }
+
+    .vol-slider {
+        width: 52px;
+    }
+
+    .modal {
+        width: min(420px, calc(100vw - 24px));
+        max-height: calc(100dvh - 24px);
+        overflow-y: auto;
+    }
+
+    .toast {
+        max-width: calc(100vw - 24px);
+        white-space: normal;
+    }
+}
+
+@media (max-width: 700px) {
+    body {
+        height: 100dvh;
+    }
+
+    .top-bar {
+        top: 10px;
+        width: calc(100vw - 20px);
+        justify-content: center;
+    }
+
+    .left-card {
+        top: 58px;
+        left: 10px;
+        width: min(240px, calc(100vw - 20px));
+        max-height: calc(100dvh - 190px);
+        overflow-y: auto;
+    }
+
+    .right-card {
+        top: auto;
+        left: 10px;
+        right: 10px;
+        bottom: 108px;
+        width: auto;
+
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        align-items: start;
+        gap: 10px;
+
+        padding: 10px;
+    }
+
+    .right-card .control-group {
+        min-width: 0;
+    }
+
+    .right-card .control-label {
+        text-align: center;
+    }
+
+    .color-row {
+        justify-content: center;
+    }
+
+    .player {
+        bottom: max(8px, env(safe-area-inset-bottom));
+        width: calc(100vw - 20px);
+        height: auto;
+        min-height: 82px;
+        padding: 9px 12px;
+
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "track volume"
+            "transport transport";
+
+        gap: 8px 12px;
+    }
+
+    .now-playing {
+        grid-area: track;
+        width: auto;
+        min-width: 0;
+    }
+
+    .np-text {
+        min-width: 0;
+    }
+
+    .transport {
+        grid-area: transport;
+        min-width: 0;
+    }
+
+    .player-right {
+        grid-area: volume;
+    }
+
+    .scrubber-wrap {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .top-bar {
+        gap: 8px;
+    }
+
+    .brand {
+        padding-left: 13px;
+        padding-right: 13px;
+    }
+
+    .left-card {
+        width: calc(100vw - 20px);
+        max-height: 34dvh;
+    }
+
+    .right-card {
+        bottom: 126px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .shape-btn {
+        min-height: 36px;
+    }
+
+    .player {
+        min-height: 98px;
+        padding: 9px 10px;
+    }
+
+    #album-art {
+        width: 34px;
+        height: 34px;
+    }
+
+    .now-playing {
+        gap: 8px;
+    }
+
+    .play-btn {
+        width: 34px;
+        height: 34px;
+    }
+
+    .transport {
+        gap: 6px;
+    }
+
+    .time {
+        width: 28px;
+        font-size: 9px;
+    }
+
+    .vol-slider {
+        width: 46px;
+    }
+
+    .icon-btn {
+        min-height: 36px;
+    }
+}
