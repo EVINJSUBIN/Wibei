@@ -23,7 +23,20 @@ let queue        = [];
 let mouseX = 0, mouseY = 0;
 let targetRotX = 0, targetRotY = 0;
 let isDragging = false;
-let prevMouse = { x: 0, y: 0 };
+let previousPointerPosition = { x: 0, y: 0 };
+let dragVelocityX = 0;
+let dragVelocityY = 0;
+let parallaxWeight = 1;
+let targetCameraDistance = 0;
+
+const DRAG_SENSITIVITY = 0.004;
+const MAX_VERTICAL_ROTATION = Math.PI * 0.42;
+const DRAG_MOMENTUM = 0.88;
+const MAX_DRAG_VELOCITY = 0.035;
+const MIN_CAMERA_DISTANCE = 35;
+const MAX_CAMERA_DISTANCE = 95;
+const ZOOM_SENSITIVITY = 0.04;
+const ZOOM_SMOOTHING = 0.12;
 
 const playBtn      = document.getElementById('play-btn');
 const iconPlay     = document.querySelector('.icon-play');
@@ -158,6 +171,7 @@ function initThree() {
     camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
     camera.position.set(0, 8, 62);
     camera.lookAt(0, 0, 0);
+    targetCameraDistance = camera.position.length();
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(innerWidth, innerHeight);
@@ -231,25 +245,93 @@ function initThree() {
     vgridGrp.visible = false;
     visualizerRoot.add(vgridGrp);
 
-    window.addEventListener('mousemove', e => {
-        mouseX = (e.clientX / innerWidth) * 2 - 1;
-        mouseY = -(e.clientY / innerHeight) * 2 + 1;
-        if (isDragging) {
-            targetRotY += (e.clientX - prevMouse.x) * 0.006;
-            targetRotX += (e.clientY - prevMouse.y) * 0.006;
-            prevMouse = { x: e.clientX, y: e.clientY };
-        }
-    });
+const interactionSurface = renderer.domElement;
+interactionSurface.style.cursor = 'grab';
+interactionSurface.style.touchAction = 'none';
 
-    const isUI = el => el.closest('.top-bar, .side-card, .player, .overlay, .toast');
+interactionSurface.addEventListener('pointermove', e => {
+    mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+    mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
 
-    window.addEventListener('mousedown', e => {
-        if (!isUI(e.target)) {
-            isDragging = true;
-            prevMouse  = { x: e.clientX, y: e.clientY };
-        }
-    });
-    window.addEventListener('mouseup', () => { isDragging = false; });
+    if (!isDragging) return;
+
+    const deltaX = e.clientX - previousPointerPosition.x;
+    const deltaY = e.clientY - previousPointerPosition.y;
+
+    const rotationDeltaY = deltaX * DRAG_SENSITIVITY;
+    const rotationDeltaX = deltaY * DRAG_SENSITIVITY;
+
+    targetRotY += rotationDeltaY;
+    targetRotX = THREE.MathUtils.clamp(
+        targetRotX + rotationDeltaX,
+        -MAX_VERTICAL_ROTATION,
+        MAX_VERTICAL_ROTATION
+    );
+
+    dragVelocityY = THREE.MathUtils.clamp(
+        rotationDeltaY,
+        -MAX_DRAG_VELOCITY,
+        MAX_DRAG_VELOCITY
+    );
+
+    dragVelocityX = THREE.MathUtils.clamp(
+        rotationDeltaX,
+        -MAX_DRAG_VELOCITY,
+        MAX_DRAG_VELOCITY
+    );
+
+    previousPointerPosition = {
+        x: e.clientX,
+        y: e.clientY
+    };
+});
+
+interactionSurface.addEventListener('pointerdown', e => {
+    if (!e.isPrimary || e.button !== 0) return;
+
+    isDragging = true;
+    dragVelocityX = 0;
+    dragVelocityY = 0;
+
+    previousPointerPosition = {
+        x: e.clientX,
+        y: e.clientY
+    };
+
+    interactionSurface.setPointerCapture(e.pointerId);
+    interactionSurface.style.cursor = 'grabbing';
+});
+
+const endDrag = e => {
+    if (!isDragging) return;
+
+    isDragging = false;
+    interactionSurface.style.cursor = 'grab';
+
+    if (interactionSurface.hasPointerCapture(e.pointerId)) {
+        interactionSurface.releasePointerCapture(e.pointerId);
+    }
+};
+
+interactionSurface.addEventListener('pointerup', endDrag);
+interactionSurface.addEventListener('pointercancel', endDrag);
+
+interactionSurface.addEventListener('wheel', e => {
+    e.preventDefault();
+
+    targetCameraDistance = THREE.MathUtils.clamp(
+        targetCameraDistance + e.deltaY * ZOOM_SENSITIVITY,
+        MIN_CAMERA_DISTANCE,
+        MAX_CAMERA_DISTANCE
+    );
+}, { passive: false });
+
+window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    composer.setSize(innerWidth, innerHeight);
+});
 
     window.addEventListener('resize', () => {
         camera.aspect = innerWidth / innerHeight;
@@ -265,9 +347,47 @@ function threeAnimate() {
     requestAnimationFrame(threeAnimate);
     const time = performance.now() * 0.001;
 
-    if (visualizerRoot) {
-        visualizerRoot.rotation.y += (targetRotY + mouseX * 0.15 - visualizerRoot.rotation.y) * 0.08;
-        visualizerRoot.rotation.x += (targetRotX - mouseY * 0.15 - visualizerRoot.rotation.x) * 0.08;
+const targetParallaxWeight = isDragging ? 0 : 1;
+parallaxWeight += (targetParallaxWeight - parallaxWeight) * 0.12;
+
+const parallaxX = mouseX * 0.15 * parallaxWeight;
+const parallaxY = mouseY * 0.15 * parallaxWeight;
+
+if (!isDragging) {
+    targetRotY += dragVelocityY;
+
+    targetRotX = THREE.MathUtils.clamp(
+        targetRotX + dragVelocityX,
+        -MAX_VERTICAL_ROTATION,
+        MAX_VERTICAL_ROTATION
+    );
+
+    dragVelocityX *= DRAG_MOMENTUM;
+    dragVelocityY *= DRAG_MOMENTUM;
+
+    if (Math.abs(dragVelocityX) < 0.0001) dragVelocityX = 0;
+    if (Math.abs(dragVelocityY) < 0.0001) dragVelocityY = 0;
+}
+
+if (visualizerRoot) {
+    visualizerRoot.rotation.y +=
+        (targetRotY + parallaxX - visualizerRoot.rotation.y) * 0.1;
+
+    visualizerRoot.rotation.x +=
+        (targetRotX - parallaxY - visualizerRoot.rotation.x) * 0.1;
+}
+
+if (camera && targetCameraDistance) {
+    const currentDistance = camera.position.length();
+
+    const nextDistance = THREE.MathUtils.lerp(
+        currentDistance,
+        targetCameraDistance,
+        ZOOM_SMOOTHING
+    );
+
+    camera.position.setLength(nextDistance);
+}
     }
 
     let hasAudio = false, totalEnergy = 0;
@@ -687,9 +807,18 @@ function applyThemeMode(light) {
     localStorage.setItem('wibei_theme_mode', light ? 'light' : 'dark');
 }
 
-themeToggleBtn?.addEventListener('click', () => {
-    applyThemeMode(!isLightMode);
-});
+document.getElementById('reset-cam-btn')?.addEventListener('click', () => {
+    targetRotX = 0;
+    targetRotY = 0;
+    dragVelocityX = 0;
+    dragVelocityY = 0;
 
-initThree();
-applyThemeMode(isLightMode);
+    if (visualizerRoot) {
+        visualizerRoot.rotation.x = 0;
+        visualizerRoot.rotation.y = 0;
+    }
+
+    camera.position.set(0, 8, 62);
+    targetCameraDistance = camera.position.length();
+    camera.lookAt(0, 0, 0);
+});
