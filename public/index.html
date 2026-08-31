@@ -76,12 +76,12 @@
         </div>
     </header>
 
-    <!-- Quick Demo Songs Bar -->
+    <!-- Quick Demo Songs Bar (Direct instant audio playback) -->
     <div class="quick-demos-bar">
         <span class="demo-tag">Quick Play:</span>
-        <button class="demo-chip" data-query="Lofi Girl - beats to relax/study to">☕ Lofi Beats</button>
-        <button class="demo-chip" data-query="Synthwave Radio - chill synth / retro beats">🌃 Synthwave</button>
-        <button class="demo-chip" data-query="JVKE - golden hour (official audio)">✨ Golden Hour</button>
+        <button class="demo-chip" data-src="/audio/lofi.mp3" data-title="Lofi Chill Beats" data-artist="Lofi Studio">☕ Lofi Beats</button>
+        <button class="demo-chip" data-src="/audio/synthwave.mp3" data-title="Synthwave Pulse" data-artist="RetroWave Studio">🌃 Synthwave</button>
+        <button class="demo-chip" data-src="/audio/chill.mp3" data-title="Acoustic Harmony" data-artist="Ambient Vibes">✨ Chill Waves</button>
     </div>
 
     <!-- Getting Started Guide Modal -->
@@ -105,7 +105,6 @@
                 </div>
 
                 <div class="guide-step-item">
-                    <div class="step-icon-wrap">🌐</div>
                     <div class="step-info">
                         <h4>2. Interactive 3D Camera Controls</h4>
                         <p>Click & drag anywhere on the canvas to freely rotate the visualizer in 3D space. Move your cursor to see smooth camera parallax tilting.</p>
@@ -113,7 +112,6 @@
                 </div>
 
                 <div class="guide-step-item">
-                    <div class="step-icon-wrap">⚡</div>
                     <div class="step-info">
                         <h4>3. Customize Visualizer & Glow</h4>
                         <p>Switch between <strong>Ring</strong>, <strong>Wave</strong>, and <strong>Matrix Grid</strong> modes, toggle the Synth Grid floor, or switch themes (Gold, Cyan, Pink).</p>
@@ -122,7 +120,7 @@
             </div>
 
             <div class="guide-footer">
-                <button class="guide-action-btn demo-trigger-btn" id="guide-demo-btn">⚡ Play Synthwave Demo</button>
+                <button class="guide-action-btn demo-trigger-btn" id="guide-demo-btn" data-src="/audio/synthwave.mp3" data-title="Synthwave Pulse" data-artist="RetroWave Studio">⚡ Play Synthwave Demo</button>
                 <button class="guide-dismiss-btn" id="dismiss-guide-btn">Got It, Let's Vibe →</button>
             </div>
         </div>

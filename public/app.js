@@ -81,6 +81,9 @@ function updateTrackInfo(title, artist, thumb) {
     if (thumb) {
         if (albumArt) albumArt.src = thumb;
         if (miniArt) miniArt.src = thumb;
+    } else {
+        if (albumArt) albumArt.src = 'favicon.svg';
+        if (miniArt) miniArt.src = 'favicon.svg';
     }
 }
 
@@ -367,6 +370,19 @@ function ensureAudioCtx() {
     }
 }
 
+function attachAudioElement(el) {
+    if (audioSrc) {
+        try { audioSrc.disconnect(); } catch (e) {}
+    }
+    audioSrc = audioCtx.createMediaElementSource(el);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.88;
+    dataArr = new Uint8Array(analyser.frequencyBinCount);
+    audioSrc.connect(analyser);
+    analyser.connect(audioCtx.destination);
+}
+
 function stopMic() {
     if (micStream) {
         micStream.getTracks().forEach(t => t.stop());
@@ -378,11 +394,51 @@ function stopMic() {
 function playNext() {
     if (queue.length > 0) {
         const nextQuery = queue.shift();
-        playStream(nextQuery.url || nextQuery, nextQuery);
+        if (nextQuery.src) {
+            playDirectAudio(nextQuery.src, nextQuery.title, nextQuery.artist);
+        } else {
+            playStream(nextQuery.url || nextQuery, nextQuery);
+        }
     } else {
         updatePlayIcons(false);
         setStatus('Playback finished // Ready');
     }
+}
+
+// Instant Direct Audio Playback (for built-in demos & local files)
+function playDirectAudio(src, title, artist) {
+    stopMic();
+    setStatus(`Playing: ${title}`);
+    updateTrackInfo(title, artist, null);
+
+    if (curAudioEl) {
+        curAudioEl.pause();
+        curAudioEl.src = '';
+    }
+
+    curAudioEl = new Audio();
+    curAudioEl.crossOrigin = 'anonymous';
+    curAudioEl.src = src;
+
+    curAudioEl.oncanplay = () => {
+        ensureAudioCtx();
+        attachAudioElement(curAudioEl);
+        curAudioEl.play().catch(() => {});
+        updatePlayIcons(true);
+        setStatus(`Live // ${title}`);
+    };
+
+    curAudioEl.ontimeupdate = () => {
+        if (!curAudioEl.duration) return;
+        const pct = (curAudioEl.currentTime / curAudioEl.duration) * 100;
+        seekSlider.value = pct;
+        progressFill.style.width = pct + '%';
+        const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+        timeCurrent.innerText = fmt(curAudioEl.currentTime);
+        timeTotal.innerText = fmt(curAudioEl.duration);
+    };
+
+    curAudioEl.onended = playNext;
 }
 
 async function playStream(query, presetMeta = null) {
@@ -418,15 +474,7 @@ async function playStream(query, presetMeta = null) {
         
         curAudioEl.oncanplay = () => {
             ensureAudioCtx();
-            if (!audioSrc) {
-                audioSrc = audioCtx.createMediaElementSource(curAudioEl);
-                analyser = audioCtx.createAnalyser();
-                analyser.fftSize = 256;
-                analyser.smoothingTimeConstant = 0.88;
-                dataArr = new Uint8Array(analyser.frequencyBinCount);
-                audioSrc.connect(analyser);
-                analyser.connect(audioCtx.destination);
-            }
+            attachAudioElement(curAudioEl);
             curAudioEl.play().catch(() => {});
             updatePlayIcons(true);
             setStatus(`Live // ${meta.title || query}`);
@@ -447,7 +495,7 @@ async function playStream(query, presetMeta = null) {
         
     } catch (err) {
         setStatus('Stream connection error');
-        updateTrackInfo('Playback Error', 'Try another track', null);
+        updateTrackInfo('Playback Error', 'Try another track or demo', null);
     }
 }
 
@@ -457,7 +505,7 @@ async function playStream(query, presetMeta = null) {
 function togglePlay() {
     if (isMicActive) return;
     if (!curAudioEl || !curAudioEl.src) {
-        playStream('Lofi Girl - beats to relax/study to');
+        playDirectAudio('/audio/lofi.mp3', 'Lofi Chill Beats', 'Lofi Studio');
         return;
     }
     if (curAudioEl.paused) {
@@ -503,7 +551,7 @@ document.getElementById('dismiss-guide-btn')?.addEventListener('click', () => {
 });
 document.getElementById('guide-demo-btn')?.addEventListener('click', () => {
     guideModal.style.display = 'none';
-    playStream('Synthwave Radio - chill synth / retro beats');
+    playDirectAudio('/audio/synthwave.mp3', 'Synthwave Pulse', 'RetroWave Studio');
 });
 guideModal?.addEventListener('click', e => {
     if (e.target === guideModal) guideModal.style.display = 'none';
@@ -598,10 +646,17 @@ document.querySelectorAll('.color-dot').forEach(dot => {
     });
 });
 
-// Quick Demo Tracks
+// Quick Demo Tracks Buttons
 document.querySelectorAll('.demo-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-        playStream(chip.dataset.query);
+        const src = chip.dataset.src;
+        const title = chip.dataset.title;
+        const artist = chip.dataset.artist;
+        if (src) {
+            playDirectAudio(src, title, artist);
+        } else {
+            playStream(chip.dataset.query);
+        }
     });
 });
 
@@ -713,15 +768,7 @@ fileUpload?.addEventListener('change', e => {
     curAudioEl.src = URL.createObjectURL(file);
     curAudioEl.oncanplay = () => {
         ensureAudioCtx();
-        if (!audioSrc) {
-            audioSrc = audioCtx.createMediaElementSource(curAudioEl);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 256;
-            analyser.smoothingTimeConstant = 0.88;
-            dataArr = new Uint8Array(analyser.frequencyBinCount);
-            audioSrc.connect(analyser);
-            analyser.connect(audioCtx.destination);
-        }
+        attachAudioElement(curAudioEl);
         curAudioEl.play();
         updatePlayIcons(true);
     };

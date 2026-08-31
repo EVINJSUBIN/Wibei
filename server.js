@@ -63,6 +63,15 @@ app.get('/stream', async (req, res) => {
         return res.status(400).send('URL is required');
     }
 
+    // Direct local audio file streaming
+    if (url.startsWith('/audio/') || url.startsWith('audio/')) {
+        const localPath = path.join(__dirname, 'public', url.startsWith('/') ? url.slice(1) : url);
+        if (fs.existsSync(localPath)) {
+            log('STREAM', `Serving direct audio file: ${localPath}`);
+            return res.sendFile(localPath);
+        }
+    }
+
     let targetUrl = url;
     if (url.includes('spotify.com/track')) {
         try {
@@ -81,9 +90,10 @@ app.get('/stream', async (req, res) => {
     const { cmd, prefix, source } = getExec();
     const args = [
         ...prefix,
-        '-f', 'bestaudio[ext=m4a]/bestaudio',
-        '--js-runtimes', 'node',
-        '--remote-components', 'ejs:github',
+        '-f', 'bestaudio[ext=m4a]/bestaudio/best',
+        '--extractor-args', 'youtube:player_client=android,ios,mweb',
+        '--no-check-certificates',
+        '--no-warnings',
         '-o', '-',
         '-q',
         targetUrl
@@ -183,7 +193,14 @@ app.get('/metadata', (req, res) => {
     if (!url.startsWith('http')) targetUrl = `ytsearch1:${url} audio`;
   
     const { cmd, prefix, source } = getExec();
-    const args = [...prefix, '-j', '--no-warnings', targetUrl];
+    const args = [
+        ...prefix,
+        '--extractor-args', 'youtube:player_client=android,ios,mweb',
+        '--no-check-certificates',
+        '--no-warnings',
+        '-j',
+        targetUrl
+    ];
     
     log('METADATA', `Fetching track metadata via [${source}] for: "${url}"`);
     const ytdlp = spawn(cmd, args);
@@ -207,7 +224,7 @@ app.get('/metadata', (req, res) => {
     });
 });
 
-// Health check endpoint for uptime monitors
+// Health check endpoint
 app.get('/health', (req, res) => {
     const execInfo = getExec();
     res.json({
