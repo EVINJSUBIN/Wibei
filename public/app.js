@@ -5,7 +5,7 @@ let audioCtx, analyser, dataArr, audioSrc, curAudioEl;
 let isPlaying = false;
 let isMicActive = false;
 let micStream = null;
-let scene, camera, renderer, composer;
+let scene, camera, renderer, composer, bloomPass;
 
 let visualizerRoot;
 let pulseGrp, waveGrp, vgridGrp;
@@ -20,6 +20,7 @@ const THEMES = {
 let currentTheme = 'gold';
 let currentVis = 'pulse';
 let showGrid = true;
+let bloomEnabled = true;
 let bgBassLevel = 0;
 let queue = [];
 
@@ -28,18 +29,23 @@ let targetRotX = 0, targetRotY = 0;
 let isDragging = false;
 let previousMousePosition = { x: 0, y: 0 };
 
-const statusText = document.getElementById('status-text');
+// FPS tracking
+let lastFrameTime = performance.now();
+let frameCount = 0;
+let currentFps = 60;
+const fpsCounter = document.getElementById('fps-counter');
+
+// DOM Elements
+const engineStatus = document.getElementById('engine-status');
 const playBtn = document.getElementById('play-btn');
 const iconPlay = document.querySelector('.icon-play');
 const iconPause = document.querySelector('.icon-pause');
-const miniPlayBtn = document.getElementById('mini-play-btn');
-const miniIconPlay = document.querySelector('.mini-icon-play');
-const miniIconPause = document.querySelector('.mini-icon-pause');
 const seekSlider = document.getElementById('seek-slider');
 const progressFill = document.getElementById('progress-fill');
 const timeCurrent = document.getElementById('time-current');
 const timeTotal = document.getElementById('time-total');
 const volSlider = document.getElementById('vol-slider');
+const volReadout = document.getElementById('vol-readout');
 const muteBtn = document.getElementById('mute-btn');
 const searchInp = document.getElementById('search-inp');
 const searchBtn = document.getElementById('search-btn');
@@ -47,16 +53,13 @@ const suggBox = document.getElementById('suggestions-box');
 const albumArt = document.getElementById('album-art');
 const trackTitle = document.getElementById('track-title');
 const trackArtist = document.getElementById('track-artist');
-const miniArt = document.getElementById('mini-art');
-const miniTitle = document.getElementById('mini-title');
 const miniEq = document.getElementById('mini-eq');
-const mainPlayerBar = document.getElementById('main-player-bar');
-const miniPlayer = document.getElementById('mini-player');
-const guideModal = document.getElementById('guide-modal');
-const shortcutsModal = document.getElementById('shortcuts-modal');
+const vuLeds = document.querySelectorAll('.vu-led');
+const activeSourceBadge = document.getElementById('active-source-badge');
+const currentModeBadge = document.getElementById('current-mode-badge');
 
 let toastTimer;
-function showToast(msg, duration = 6000) {
+function showToast(msg, duration = 5000) {
     const banner = document.getElementById('toast-banner');
     const msgEl = document.getElementById('toast-msg');
     if (!banner || !msgEl) return;
@@ -73,8 +76,8 @@ document.getElementById('toast-close-btn')?.addEventListener('click', () => {
     if (banner) banner.style.display = 'none';
 });
 
-function setStatus(msg) {
-    if (statusText) statusText.innerText = msg;
+function setEngineStatus(msg) {
+    if (engineStatus) engineStatus.innerText = `ENGINE: ${msg}`;
 }
 
 function updatePlayIcons(playing) {
@@ -83,25 +86,17 @@ function updatePlayIcons(playing) {
         iconPlay.style.display = playing ? 'none' : 'block';
         iconPause.style.display = playing ? 'block' : 'none';
     }
-    if (miniIconPlay && miniIconPause) {
-        miniIconPlay.style.display = playing ? 'none' : 'block';
-        miniIconPause.style.display = playing ? 'block' : 'none';
-    }
     if (miniEq) {
         miniEq.style.display = playing ? 'flex' : 'none';
     }
+    setEngineStatus(playing ? 'LIVE STREAM' : 'PAUSED');
 }
 
 function updateTrackInfo(title, artist, thumb) {
     if (trackTitle) trackTitle.innerText = title;
     if (trackArtist) trackArtist.innerText = artist;
-    if (miniTitle) miniTitle.innerText = title;
-    if (thumb) {
-        if (albumArt) albumArt.src = thumb;
-        if (miniArt) miniArt.src = thumb;
-    } else {
-        if (albumArt) albumArt.src = 'favicon.svg';
-        if (miniArt) miniArt.src = 'favicon.svg';
+    if (albumArt) {
+        albumArt.src = thumb || 'favicon.svg';
     }
 }
 
@@ -118,13 +113,13 @@ function spawnBlock(randomY) {
         x: Math.random() * bgCanvas.width,
         y: randomY ? Math.random() * bgCanvas.height : -sz,
         sz,
-        dy: 0.4 + Math.random() * 1.2,
+        dy: 0.3 + Math.random() * 0.8,
         rot: Math.random() * Math.PI * 2,
-        rSpd: (Math.random() - 0.5) * 0.02,
-        alpha: 0.04 + Math.random() * 0.12,
+        rSpd: (Math.random() - 0.5) * 0.015,
+        alpha: 0.03 + Math.random() * 0.08,
     });
 }
-for (let i = 0; i < 70; i++) spawnBlock(true);
+for (let i = 0; i < 60; i++) spawnBlock(true);
 
 function animateCanvas() {
     requestAnimationFrame(animateCanvas);
@@ -133,7 +128,7 @@ function animateCanvas() {
     if (!showGrid) return;
 
     const th = THEMES[currentTheme];
-    const boost = 1 + bgBassLevel * 2.2;
+    const boost = 1 + bgBassLevel * 2.0;
     
     bgCtx.fillStyle = th.accent;
     bgCtx.strokeStyle = th.accent;
@@ -152,7 +147,7 @@ function animateCanvas() {
         bgCtx.globalAlpha = b.alpha * (1 + bgBassLevel);
         bgCtx.lineWidth = 1;
         bgCtx.strokeRect(-b.sz/2, -b.sz/2, b.sz, b.sz);
-        bgCtx.globalAlpha = b.alpha * 0.25;
+        bgCtx.globalAlpha = b.alpha * 0.2;
         bgCtx.fillRect(-b.sz/2, -b.sz/2, b.sz, b.sz);
         bgCtx.restore();
     });
@@ -164,7 +159,7 @@ function initThree() {
     scene = new THREE.Scene();
     
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 10, 60);
+    camera.position.set(0, 8, 62);
     camera.lookAt(0, 0, 0);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -173,7 +168,7 @@ function initThree() {
     container.appendChild(renderer.domElement);
 
     const renderScene = new THREE.RenderPass(scene, camera);
-    const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
     bloomPass.threshold = 0.08;
     bloomPass.strength = 1.35;
     bloomPass.radius = 0.55;
@@ -257,7 +252,7 @@ function initThree() {
         }
     });
 
-    const isUIElement = el => el.closest('.app-header, .player-wrapper, .quick-demos-bar, .modal-card, .mini-player-pill, .toast-banner');
+    const isUIElement = el => el.closest('.studio-header, .studio-panel, .modal-overlay');
 
     window.addEventListener('mousedown', e => {
         if (!isUIElement(e.target)) {
@@ -282,7 +277,17 @@ function initThree() {
 
 function threeAnimate() {
     requestAnimationFrame(threeAnimate);
-    const time = performance.now() * 0.001;
+    const now = performance.now();
+    const time = now * 0.001;
+
+    // FPS calculation
+    frameCount++;
+    if (now - lastFrameTime >= 1000) {
+        currentFps = Math.round((frameCount * 1000) / (now - lastFrameTime));
+        if (fpsCounter) fpsCounter.innerText = `${currentFps} FPS`;
+        frameCount = 0;
+        lastFrameTime = now;
+    }
 
     const parallaxX = mouseX * 0.15;
     const parallaxY = mouseY * 0.15;
@@ -303,6 +308,17 @@ function threeAnimate() {
             hasAudio = true;
         }
     }
+
+    // Hardware VU Meter updates
+    const avgVolume = hasAudio ? (totalEnergy / (dataArr.length * 255)) : 0;
+    const activeLedsCount = Math.round(avgVolume * 8);
+    vuLeds.forEach((led, idx) => {
+        if (idx < activeLedsCount) {
+            led.classList.add('active');
+        } else {
+            led.classList.remove('active');
+        }
+    });
 
     if (hasAudio) {
         let bassSum = 0;
@@ -419,14 +435,12 @@ function playNext() {
         }
     } else {
         updatePlayIcons(false);
-        setStatus('Playback finished // Ready');
+        setEngineStatus('IDLE');
     }
 }
 
-// Instant Direct Audio Playback
 function playDirectAudio(src, title, artist) {
     stopMic();
-    setStatus(`Playing: ${title}`);
     updateTrackInfo(title, artist, null);
 
     if (curAudioEl) {
@@ -443,7 +457,7 @@ function playDirectAudio(src, title, artist) {
         attachAudioElement(curAudioEl);
         curAudioEl.play().catch(() => {});
         updatePlayIcons(true);
-        setStatus(`Live // ${title}`);
+        setEngineStatus('PLAYING');
     };
 
     curAudioEl.ontimeupdate = () => {
@@ -451,14 +465,14 @@ function playDirectAudio(src, title, artist) {
         const pct = (curAudioEl.currentTime / curAudioEl.duration) * 100;
         seekSlider.value = pct;
         progressFill.style.width = pct + '%';
-        const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+        const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
         timeCurrent.innerText = fmt(curAudioEl.currentTime);
         timeTotal.innerText = fmt(curAudioEl.duration);
     };
 
     curAudioEl.onerror = () => {
         updatePlayIcons(false);
-        setStatus('Audio playback error');
+        setEngineStatus('ERROR');
     };
 
     curAudioEl.onended = playNext;
@@ -469,12 +483,12 @@ async function playStream(query, presetMeta = null) {
     
     if (isPlaying && curAudioEl && !curAudioEl.paused && curAudioEl.src && !curAudioEl.src.includes('blob:')) {
         queue.push(presetMeta || { title: query, url: query });
-        setStatus(`Queued: ${presetMeta?.title || query}`);
+        showToast(`Queued: ${presetMeta?.title || query}`);
         return;
     }
 
     stopMic();
-    setStatus(`Connecting stream: ${presetMeta?.title || query}...`);
+    setEngineStatus('CONNECTING');
     updateTrackInfo(presetMeta?.title || 'Loading...', presetMeta?.uploader || 'Streaming audio', presetMeta?.thumbnail);
     
     try {
@@ -500,7 +514,7 @@ async function playStream(query, presetMeta = null) {
             attachAudioElement(curAudioEl);
             curAudioEl.play().catch(() => {});
             updatePlayIcons(true);
-            setStatus(`Live // ${meta.title || query}`);
+            setEngineStatus('PLAYING');
         };
         
         curAudioEl.ontimeupdate = () => {
@@ -509,25 +523,25 @@ async function playStream(query, presetMeta = null) {
             seekSlider.value = pct;
             progressFill.style.width = pct + '%';
             
-            const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+            const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
             timeCurrent.innerText = fmt(curAudioEl.currentTime);
             timeTotal.innerText = fmt(curAudioEl.duration);
         };
 
         curAudioEl.onerror = () => {
             updatePlayIcons(false);
-            setStatus('YouTube blocked cloud request');
-            showToast('⚠️ YouTube bot-check triggered! Please try Quick Demos (☕ 🌃 ✨) or upload an MP3 (📁)');
-            updateTrackInfo('Stream Blocked by YouTube', 'Use Quick Demos or Local MP3', null);
+            setEngineStatus('STREAM BLOCKED');
+            showToast('⚠️ YouTube bot-check on cloud! Use PRESETS or UPLOAD (MP3).');
+            updateTrackInfo('Stream Blocked by YouTube', 'Select Presets or Local Audio', null);
         };
 
         curAudioEl.onended = playNext;
         
     } catch (err) {
         updatePlayIcons(false);
-        setStatus('Stream connection error');
-        showToast('⚠️ YouTube bot-check triggered! Please try Quick Demos (☕ 🌃 ✨) or upload an MP3 (📁)');
-        updateTrackInfo('Playback Error', 'Try Quick Demos or MP3 Upload', null);
+        setEngineStatus('STREAM ERROR');
+        showToast('⚠️ YouTube bot-check on cloud! Use PRESETS or UPLOAD (MP3).');
+        updateTrackInfo('Playback Error', 'Select Presets or Local Audio', null);
     }
 }
 
@@ -537,158 +551,43 @@ async function playStream(query, presetMeta = null) {
 function togglePlay() {
     if (isMicActive) return;
     if (!curAudioEl || !curAudioEl.src) {
-        playDirectAudio('/audio/lofi.mp3', 'Lofi Chill Beats', 'Lofi Studio');
+        playDirectAudio('/audio/synthwave.mp3', 'Synthwave Pulse', 'RetroWave Studio');
         return;
     }
     if (curAudioEl.paused) {
         ensureAudioCtx();
         curAudioEl.play();
         updatePlayIcons(true);
-        setStatus('Playing audio');
     } else {
         curAudioEl.pause();
         updatePlayIcons(false);
-        setStatus('Paused');
     }
 }
 
 playBtn.addEventListener('click', togglePlay);
-miniPlayBtn.addEventListener('click', togglePlay);
 
-// Mini Player Minimize / Expand
-const minimizePlayerBtn = document.getElementById('minimize-player-btn');
-const expandPlayerBtn = document.getElementById('expand-player-btn');
-
-minimizePlayerBtn?.addEventListener('click', () => {
-    mainPlayerBar.style.display = 'none';
-    miniPlayer.style.display = 'flex';
-    setStatus('Mini Player Active');
-});
-
-expandPlayerBtn?.addEventListener('click', () => {
-    miniPlayer.style.display = 'none';
-    mainPlayerBar.style.display = 'flex';
-    setStatus('Full Player Restored');
-});
-
-// Guide Modal Handlers
-document.getElementById('guide-btn')?.addEventListener('click', () => {
-    guideModal.style.display = 'flex';
-});
-document.getElementById('close-guide-btn')?.addEventListener('click', () => {
-    guideModal.style.display = 'none';
-});
-document.getElementById('dismiss-guide-btn')?.addEventListener('click', () => {
-    guideModal.style.display = 'none';
-});
-document.getElementById('guide-demo-btn')?.addEventListener('click', () => {
-    guideModal.style.display = 'none';
-    playDirectAudio('/audio/synthwave.mp3', 'Synthwave Pulse', 'RetroWave Studio');
-});
-guideModal?.addEventListener('click', e => {
-    if (e.target === guideModal) guideModal.style.display = 'none';
-});
-
-// Shortcuts Modal Handlers
-document.getElementById('shortcuts-btn')?.addEventListener('click', () => {
-    shortcutsModal.style.display = 'flex';
-});
-document.getElementById('close-modal-btn')?.addEventListener('click', () => {
-    shortcutsModal.style.display = 'none';
-});
-shortcutsModal?.addEventListener('click', e => {
-    if (e.target === shortcutsModal) shortcutsModal.style.display = 'none';
-});
-
-seekSlider.addEventListener('input', e => {
-    if (!curAudioEl || !curAudioEl.duration) return;
-    const pct = parseFloat(e.target.value);
-    curAudioEl.currentTime = (pct / 100) * curAudioEl.duration;
-    progressFill.style.width = pct + '%';
-});
-
-volSlider.addEventListener('input', e => {
-    if (curAudioEl) curAudioEl.volume = parseFloat(e.target.value) / 100;
-});
-
-let isMuted = false;
-let prevVol = 100;
-muteBtn.addEventListener('click', () => {
-    if (!curAudioEl) return;
-    if (isMuted) {
-        curAudioEl.volume = prevVol / 100;
-        volSlider.value = prevVol;
-        isMuted = false;
-    } else {
-        prevVol = volSlider.value;
-        curAudioEl.volume = 0;
-        volSlider.value = 0;
-        isMuted = true;
-    }
-});
-
-// Segmented Style Buttons
-document.querySelectorAll('#style-segmented .seg-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('#style-segmented .seg-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentVis = btn.dataset.value;
-        pulseGrp.visible = (currentVis === 'pulse');
-        waveGrp.visible = (currentVis === 'wave');
-        vgridGrp.visible = (currentVis === 'grid');
-        setStatus(`Visualizer: ${btn.innerText}`);
+// Audio Source Tabs
+document.querySelectorAll('.source-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        const targetTab = tab.dataset.tab;
+        document.getElementById('tab-presets').style.display = targetTab === 'presets' ? 'block' : 'none';
+        document.getElementById('tab-search').style.display = targetTab === 'search' ? 'block' : 'none';
+        document.getElementById('tab-mic').style.display = targetTab === 'mic' ? 'block' : 'none';
+        document.getElementById('tab-file').style.display = targetTab === 'file' ? 'block' : 'none';
     });
 });
 
-// Grid Toggle
-const bgGridToggle = document.getElementById('bg-grid-toggle');
-bgGridToggle.addEventListener('click', () => {
-    showGrid = !showGrid;
-    bgGridToggle.classList.toggle('active', showGrid);
-    if (gridHelper) gridHelper.visible = showGrid;
-    setStatus(`Synth Grid: ${showGrid ? 'On' : 'Off'}`);
-});
-
-// Theme Color Picker
-document.querySelectorAll('.color-dot').forEach(dot => {
-    dot.addEventListener('click', () => {
-        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-        dot.classList.add('active');
-        currentTheme = dot.dataset.theme;
-        const th = THEMES[currentTheme];
-        
-        document.documentElement.style.setProperty('--accent', th.accent);
-        document.documentElement.style.setProperty('--accent-glow', th.glow);
-        
-        const updateMaterial = arr => {
-            arr.forEach(b => {
-                b.material.color.setHex(th.color);
-                b.material.emissive.setHex(th.color);
-            });
-        };
-        
-        updateMaterial(pulseBars);
-        updateMaterial(waveBars);
-        updateMaterial(vgridBars);
-        
-        if (gridHelper) gridHelper.material.color.setHex(th.color);
-        const pl = scene.children.find(c => c.isPointLight);
-        if (pl) pl.color.setHex(th.color);
-        setStatus(`Theme: ${currentTheme.toUpperCase()}`);
-    });
-});
-
-// Quick Demo Tracks Buttons
-document.querySelectorAll('.demo-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-        const src = chip.dataset.src;
-        const title = chip.dataset.title;
-        const artist = chip.dataset.artist;
-        if (src) {
-            playDirectAudio(src, title, artist);
-        } else {
-            playStream(chip.dataset.query);
-        }
+// Preset Channel Cards
+document.querySelectorAll('.channel-card').forEach(card => {
+    card.addEventListener('click', () => {
+        document.querySelectorAll('.channel-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        const ch = card.dataset.ch;
+        if (activeSourceBadge) activeSourceBadge.innerText = `${ch}: PRESET`;
+        playDirectAudio(card.dataset.src, card.dataset.title, card.dataset.artist);
     });
 });
 
@@ -696,7 +595,10 @@ document.querySelectorAll('.demo-chip').forEach(chip => {
 let suggTimer;
 const doSearch = () => {
     const q = searchInp.value.trim();
-    if (q) playStream(q);
+    if (q) {
+        if (activeSourceBadge) activeSourceBadge.innerText = 'CH: SEARCH';
+        playStream(q);
+    }
     searchInp.value = '';
     if (suggBox) suggBox.style.display = 'none';
 };
@@ -726,7 +628,7 @@ searchInp.addEventListener('input', () => {
                 
                 const thumbImg = item.thumbnail 
                     ? `<img class="suggestion-thumb" src="${item.thumbnail}" alt="">`
-                    : `<div class="suggestion-thumb" style="display:flex;align-items:center;justify-content:center;background:#27272a;color:#facc15;font-size:16px;">🎵</div>`;
+                    : `<div class="suggestion-thumb" style="display:flex;align-items:center;justify-content:center;background:#18181b;color:#facc15;font-size:12px;">🎵</div>`;
 
                 card.innerHTML = `
                     ${thumbImg}
@@ -739,6 +641,7 @@ searchInp.addEventListener('input', () => {
                 card.onclick = () => {
                     suggBox.style.display = 'none';
                     searchInp.value = '';
+                    if (activeSourceBadge) activeSourceBadge.innerText = 'CH: SEARCH';
                     playStream(item.url, item);
                 };
                 suggBox.appendChild(card);
@@ -766,8 +669,8 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
         isMicActive = true;
         updatePlayIcons(true);
         
-        updateTrackInfo('Live Microphone', 'Listening to audio input', null);
-        setStatus('Microphone Active // Live EQ');
+        if (activeSourceBadge) activeSourceBadge.innerText = 'CH: MIC IN';
+        updateTrackInfo('Live Microphone', 'Acoustic Input Active', null);
         
         const source = audioCtx.createMediaStreamSource(micStream);
         analyser = audioCtx.createAnalyser();
@@ -776,11 +679,11 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
         dataArr = new Uint8Array(analyser.frequencyBinCount);
         source.connect(analyser);
     } catch (err) {
-        setStatus('Mic access denied');
+        showToast('Microphone access denied');
     }
 });
 
-// Local File Upload
+// File Upload
 const fileUpload = document.getElementById('file-upload');
 document.getElementById('upload-btn')?.addEventListener('click', () => fileUpload?.click());
 fileUpload?.addEventListener('change', e => {
@@ -788,8 +691,8 @@ fileUpload?.addEventListener('change', e => {
     if (!file) return;
     
     stopMic();
-    updateTrackInfo(file.name, 'Local Audio File', null);
-    setStatus(`Playing: ${file.name}`);
+    if (activeSourceBadge) activeSourceBadge.innerText = 'CH: LOCAL FILE';
+    updateTrackInfo(file.name, 'Local Audio Stem', null);
     
     if (curAudioEl) {
         curAudioEl.pause();
@@ -809,11 +712,102 @@ fileUpload?.addEventListener('change', e => {
         const pct = (curAudioEl.currentTime / curAudioEl.duration) * 100;
         seekSlider.value = pct;
         progressFill.style.width = pct + '%';
-        const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+        const fmt = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
         timeCurrent.innerText = fmt(curAudioEl.currentTime);
         timeTotal.innerText = fmt(curAudioEl.duration);
     };
     curAudioEl.onended = playNext;
+});
+
+// Visual Matrix Geometry Buttons
+document.querySelectorAll('.matrix-btn').forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.matrix-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentVis = btn.dataset.value;
+        pulseGrp.visible = (currentVis === 'pulse');
+        waveGrp.visible = (currentVis === 'wave');
+        vgridGrp.visible = (currentVis === 'grid');
+        if (currentModeBadge) currentModeBadge.innerText = `MODE: 0${idx + 1}`;
+    });
+});
+
+// Grid Toggle
+const bgGridToggle = document.getElementById('bg-grid-toggle');
+bgGridToggle.addEventListener('click', () => {
+    showGrid = !showGrid;
+    bgGridToggle.classList.toggle('active', showGrid);
+    bgGridToggle.innerText = `SYNTH GRID: ${showGrid ? 'ON' : 'OFF'}`;
+    if (gridHelper) gridHelper.visible = showGrid;
+});
+
+// Bloom Toggle
+const bloomToggle = document.getElementById('bloom-toggle');
+bloomToggle.addEventListener('click', () => {
+    bloomEnabled = !bloomEnabled;
+    bloomToggle.classList.toggle('active', bloomEnabled);
+    bloomToggle.innerText = `BLOOM: ${bloomEnabled ? 'HIGH' : 'OFF'}`;
+    if (bloomPass) bloomPass.strength = bloomEnabled ? 1.35 : 0.0;
+});
+
+// Theme Wavelength Buttons
+document.querySelectorAll('.wavelength-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.wavelength-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentTheme = btn.dataset.theme;
+        const th = THEMES[currentTheme];
+        
+        document.documentElement.style.setProperty('--accent', th.accent);
+        document.documentElement.style.setProperty('--accent-glow', th.glow);
+        
+        const updateMaterial = arr => {
+            arr.forEach(b => {
+                b.material.color.setHex(th.color);
+                b.material.emissive.setHex(th.color);
+            });
+        };
+        
+        updateMaterial(pulseBars);
+        updateMaterial(waveBars);
+        updateMaterial(vgridBars);
+        
+        if (gridHelper) gridHelper.material.color.setHex(th.color);
+        const pl = scene.children.find(c => c.isPointLight);
+        if (pl) pl.color.setHex(th.color);
+    });
+});
+
+// Scrubber & Volume Controls
+seekSlider.addEventListener('input', e => {
+    if (!curAudioEl || !curAudioEl.duration) return;
+    const pct = parseFloat(e.target.value);
+    curAudioEl.currentTime = (pct / 100) * curAudioEl.duration;
+    progressFill.style.width = pct + '%';
+});
+
+volSlider.addEventListener('input', e => {
+    const val = parseFloat(e.target.value);
+    if (curAudioEl) curAudioEl.volume = val / 100;
+    if (volReadout) volReadout.innerText = `${Math.round(val)}%`;
+});
+
+let isMuted = false;
+let prevVol = 100;
+muteBtn.addEventListener('click', () => {
+    if (!curAudioEl) return;
+    if (isMuted) {
+        curAudioEl.volume = prevVol / 100;
+        volSlider.value = prevVol;
+        if (volReadout) volReadout.innerText = `${Math.round(prevVol)}%`;
+        isMuted = false;
+    } else {
+        prevVol = volSlider.value;
+        curAudioEl.volume = 0;
+        volSlider.value = 0;
+        if (volReadout) volReadout.innerText = '0%';
+        isMuted = true;
+    }
 });
 
 // Reset Camera
@@ -824,9 +818,45 @@ document.getElementById('reset-cam-btn')?.addEventListener('click', () => {
         visualizerRoot.rotation.x = 0;
         visualizerRoot.rotation.y = 0;
     }
-    camera.position.set(0, 10, 60);
+    camera.position.set(0, 8, 62);
     camera.lookAt(0, 0, 0);
-    setStatus('Camera View Reset');
+    showToast('3D Camera Reset');
+});
+
+// Fullscreen
+document.getElementById('fullscreen-btn')?.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+        document.exitFullscreen().catch(() => {});
+    }
+});
+
+// Modals
+const guideModal = document.getElementById('guide-modal');
+const shortcutsModal = document.getElementById('shortcuts-modal');
+
+document.getElementById('guide-btn')?.addEventListener('click', () => {
+    guideModal.style.display = 'flex';
+});
+document.getElementById('close-guide-btn')?.addEventListener('click', () => {
+    guideModal.style.display = 'none';
+});
+document.getElementById('dismiss-guide-btn')?.addEventListener('click', () => {
+    guideModal.style.display = 'none';
+});
+guideModal?.addEventListener('click', e => {
+    if (e.target === guideModal) guideModal.style.display = 'none';
+});
+
+document.getElementById('shortcuts-btn')?.addEventListener('click', () => {
+    shortcutsModal.style.display = 'flex';
+});
+document.getElementById('close-modal-btn')?.addEventListener('click', () => {
+    shortcutsModal.style.display = 'none';
+});
+shortcutsModal?.addEventListener('click', e => {
+    if (e.target === shortcutsModal) shortcutsModal.style.display = 'none';
 });
 
 // Keyboard Shortcuts Listeners
@@ -841,25 +871,14 @@ window.addEventListener('keydown', e => {
     } else if (e.code === 'KeyR') {
         document.getElementById('reset-cam-btn')?.click();
     } else if (e.code === 'KeyF') {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {});
-        } else {
-            document.exitFullscreen().catch(() => {});
-        }
+        document.getElementById('fullscreen-btn')?.click();
     } else if (e.key === '1') {
-        document.querySelector('#style-segmented .seg-btn[data-value="pulse"]')?.click();
+        document.querySelector('.matrix-btn[data-value="pulse"]')?.click();
     } else if (e.key === '2') {
-        document.querySelector('#style-segmented .seg-btn[data-value="wave"]')?.click();
+        document.querySelector('.matrix-btn[data-value="wave"]')?.click();
     } else if (e.key === '3') {
-        document.querySelector('#style-segmented .seg-btn[data-value="grid"]')?.click();
+        document.querySelector('.matrix-btn[data-value="grid"]')?.click();
     }
 });
 
-if (albumArt) {
-    albumArt.onerror = () => {
-        albumArt.src = 'favicon.svg';
-    };
-}
-
 initThree();
-setStatus('wibei ready // WebGL 60 FPS');
