@@ -1,71 +1,62 @@
-# wibei ✨
+# wibei
 
-yooo welcome to **wibei**! this is a 3d music visualizer i made with three.js and web audio api for [hack club stardance](https://stardance.hackclub.com) :D
+a 3d webgl audio visualizer built with three.js and the web audio api for hack club stardance.
 
-**live site:** [https://wibei.onrender.com](https://wibei.onrender.com) (or [railway backup](https://wibei-production.up.railway.app/))
+**live site:** [https://wibei.onrender.com](https://wibei.onrender.com) (backup: [https://wibei-production.up.railway.app/](https://wibei-production.up.railway.app/))
+
+![Wibei Preview](preview.png)
 
 ---
 
 ### why i made this
-i really wanted to make an interactive audio visualizer where the music literally makes 3d geometry bounce around in real time. you can grab the camera with your mouse, spin it in 3d space, and watch the neon glow react to the bass hits and frequencies.
+i wanted to build a music visualizer where you can grab the scene with your mouse, orbit around in 3d, and watch the neon frequencies bounce to the beat in real time.
+
+---
 
 ### how to try it out
-1. **quick demos (recommended):** just click any of the quick play buttons at the top (**☕ lofi beats**, **🌃 synthwave**, or **✨ chill waves**) — these play instantly with zero loading time!
-2. **local mp3 file:** click the folder icon (📁) and drop in any song from your computer.
-3. **live mic:** click the microphone button (🎤) and make some noise or play music out loud!
-4. **youtube search:** you can search any track name in the search bar.
+- **quick demos (recommended):** click any of the quick play buttons at the top (lofi beats, synthwave, or chill waves) — these play instantly with zero loading time.
+- **local mp3 file:** click the folder button and drop in any song from your computer.
+- **live mic:** click the microphone button and make sound or play music through your mic.
+- **youtube search:** type any track name in the bottom-right search bar.
 
-> ⚠️ **quick note about youtube search on the live link:**  
-> because the live site is hosted on cloud servers (render/railway), youtube's datacenter firewall sometimes blocks automated requests with a bot-check challenge (`sign in to confirm you are not a bot / 429`).  
-> if a specific youtube song gets blocked by youtube on the cloud host, no worries! just use the **quick demo buttons (☕ 🌃 ✨)** or click the **upload button (📁)** to drop in any mp3 file!
+> **note about youtube search on the live link:**  
+> because the live site is hosted on cloud servers (render/railway), youtube's firewall sometimes blocks automated server requests with a bot-check challenge (429 / sign in to confirm you are not a bot).  
+> if a specific youtube search gets rate-limited by youtube on the cloud host, simply use the **quick demo buttons** or click the **upload button** to drop in any local audio file.
 
 ---
 
 ### controls & keyboard shortcuts
-- `space` -> play / pause
-- `m` -> mute / unmute audio
-- `1` / `2` / `3` -> switch visualizer shapes (1: pulse ring, 2: waveform, 3: matrix grid)
-- `r` -> reset the 3d camera view
-- `f` -> toggle fullscreen mode
-- `drag mouse` -> rotate the visualizer around in 3d space
+- `space` - play / pause
+- `m` - mute / unmute
+- `1` / `2` / `3` - switch visualizer shapes (ring, wave, matrix grid)
+- `r` - reset 3d camera view
+- `f` - toggle fullscreen
+- `click & drag` - rotate the visualizer in 3d space
 
 ---
 
 ### how it works under the hood
-- **web audio api:** creates an `AudioContext` and `AnalyserNode` that runs real-time Fast Fourier Transform (FFT) frequency analysis on the audio stream.
-- **three.js 3d meshes:** takes the frequency byte array (128 frequency bins) and scales 128 box meshes arranged in a radial circle and matrix grid.
-- **lerped spring physics:** the bars jump on the beat and decay smoothly (`current + (target - current) * 0.25`) so it looks bouncy and natural instead of jittery.
-- **unreal bloom shader:** passes the three.js render scene through an `UnrealBloomPass` shader for neon bloom glow.
-- **idle harmonic animation:** when no music is playing, a multi-sine wave loop (`sin(3θ + 1.5t) + sin(2θ - 0.9t)`) keeps the visualizer breathing in a liquid circle.
+1. **audio analysis:** audio streams into an `AudioContext` connected to an `AnalyserNode` which performs a real-time Fast Fourier Transform (FFT) to convert audio into 128 frequency bins.
+2. **3d meshes:** the frequency data symmetrically scales 128 Three.js box meshes. Each animation frame uses lerped spring interpolation (`current + (target - current) * 0.25`) so the bars jump on beat and decay smoothly.
+3. **idle breathing wave:** when no audio is playing, a multi-harmonic sine wave (`sin(3θ + 1.5t) + sin(2θ - 0.9t)`) keeps the ring breathing in a continuous liquid loop.
+4. **post-processing:** an `UnrealBloomPass` shader adds neon bloom glow over the dark synth grid.
 
 ---
 
-### how to run locally on your machine
-if you wanna run this on your own laptop:
-
-1. clone this repo:
-   ```bash
-   git clone https://github.com/EVINJSUBIN/Wibei.git
-   cd Wibei
-   ```
-
-2. install the node packages:
-   ```bash
-   npm install
-   ```
-
-3. start the local server:
-   ```bash
-   npm start
-   ```
-
-4. open your browser and go to `http://localhost:3000`!
+### how to run locally
+```bash
+git clone https://github.com/EVINJSUBIN/Wibei.git
+cd Wibei
+npm install
+npm start
+```
+open `http://localhost:3000` in your browser.
 
 ---
 
-### tech used
-- **frontend:** vanilla javascript, three.js, web audio api, google fonts
+### tech stack
+- **frontend:** vanilla javascript, three.js, web audio api
 - **backend:** node.js, express, yt-search, yt-dlp
-- **deployment:** docker, render.com, railway
+- **hosting:** docker, render.com, railway
 
-built for [Hack Club Stardance](https://stardance.hackclub.com) 🚀
+built for [Hack Club Stardance](https://stardance.hackclub.com)
