@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: wibei-visualizer
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    autoDeploy: true
