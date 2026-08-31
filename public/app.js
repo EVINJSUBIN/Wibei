@@ -55,6 +55,24 @@ const miniPlayer = document.getElementById('mini-player');
 const guideModal = document.getElementById('guide-modal');
 const shortcutsModal = document.getElementById('shortcuts-modal');
 
+let toastTimer;
+function showToast(msg, duration = 6000) {
+    const banner = document.getElementById('toast-banner');
+    const msgEl = document.getElementById('toast-msg');
+    if (!banner || !msgEl) return;
+    msgEl.innerText = msg;
+    banner.style.display = 'flex';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        banner.style.display = 'none';
+    }, duration);
+}
+
+document.getElementById('toast-close-btn')?.addEventListener('click', () => {
+    const banner = document.getElementById('toast-banner');
+    if (banner) banner.style.display = 'none';
+});
+
 function setStatus(msg) {
     if (statusText) statusText.innerText = msg;
 }
@@ -239,7 +257,7 @@ function initThree() {
         }
     });
 
-    const isUIElement = el => el.closest('.app-header, .player-wrapper, .quick-demos-bar, .modal-card, .mini-player-pill');
+    const isUIElement = el => el.closest('.app-header, .player-wrapper, .quick-demos-bar, .modal-card, .mini-player-pill, .toast-banner');
 
     window.addEventListener('mousedown', e => {
         if (!isUIElement(e.target)) {
@@ -405,7 +423,7 @@ function playNext() {
     }
 }
 
-// Instant Direct Audio Playback (for built-in demos & local files)
+// Instant Direct Audio Playback
 function playDirectAudio(src, title, artist) {
     stopMic();
     setStatus(`Playing: ${title}`);
@@ -436,6 +454,11 @@ function playDirectAudio(src, title, artist) {
         const fmt = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
         timeCurrent.innerText = fmt(curAudioEl.currentTime);
         timeTotal.innerText = fmt(curAudioEl.duration);
+    };
+
+    curAudioEl.onerror = () => {
+        updatePlayIcons(false);
+        setStatus('Audio playback error');
     };
 
     curAudioEl.onended = playNext;
@@ -491,11 +514,20 @@ async function playStream(query, presetMeta = null) {
             timeTotal.innerText = fmt(curAudioEl.duration);
         };
 
+        curAudioEl.onerror = () => {
+            updatePlayIcons(false);
+            setStatus('YouTube blocked cloud request');
+            showToast('⚠️ YouTube bot-check triggered! Please try Quick Demos (☕ 🌃 ✨) or upload an MP3 (📁)');
+            updateTrackInfo('Stream Blocked by YouTube', 'Use Quick Demos or Local MP3', null);
+        };
+
         curAudioEl.onended = playNext;
         
     } catch (err) {
+        updatePlayIcons(false);
         setStatus('Stream connection error');
-        updateTrackInfo('Playback Error', 'Try another track or demo', null);
+        showToast('⚠️ YouTube bot-check triggered! Please try Quick Demos (☕ 🌃 ✨) or upload an MP3 (📁)');
+        updateTrackInfo('Playback Error', 'Try Quick Demos or MP3 Upload', null);
     }
 }
 

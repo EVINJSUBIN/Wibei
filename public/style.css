@@ -62,9 +62,7 @@ body {
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
-/* ---------------------------------------------------- */
 /* Header Bar */
-/* ---------------------------------------------------- */
 .app-header {
     position: absolute;
     top: 20px;
@@ -246,9 +244,7 @@ body {
     font-weight: 700;
 }
 
-/* ---------------------------------------------------- */
 /* Quick Demos Bar */
-/* ---------------------------------------------------- */
 .quick-demos-bar {
     position: absolute;
     top: 76px;
@@ -285,9 +281,7 @@ body {
     transform: translateY(-1px);
 }
 
-/* ---------------------------------------------------- */
 /* Bottom Player Bar */
-/* ---------------------------------------------------- */
 .player-wrapper {
     position: absolute;
     bottom: 24px;
@@ -367,7 +361,6 @@ body {
     text-overflow: ellipsis;
 }
 
-/* Mini animated EQ bars */
 .mini-eq-bars {
     display: flex;
     align-items: flex-end;
@@ -675,9 +668,7 @@ body {
     text-overflow: ellipsis;
 }
 
-/* ---------------------------------------------------- */
 /* Floating Mini Player Pill */
-/* ---------------------------------------------------- */
 .mini-player-pill {
     position: fixed;
     bottom: 24px;
@@ -754,9 +745,48 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------------------------------------------------- */
-/* Bottom Left Status Indicator */
-/* ---------------------------------------------------- */
+/* Toast Notification Banner */
+.toast-banner {
+    position: fixed;
+    top: 76px;
+    right: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    background: rgba(24, 18, 10, 0.92);
+    border: 1px solid rgba(250, 204, 21, 0.45);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(250, 204, 21, 0.2);
+    z-index: 100;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fef08a;
+    max-width: 420px;
+    animation: fadeInSlideRight 0.3s ease-out;
+}
+
+.toast-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: #facc15;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+@keyframes fadeInSlideRight {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Status Indicator */
 .status-indicator {
     position: absolute;
     bottom: 24px;
@@ -779,9 +809,7 @@ body {
     box-shadow: 0 0 8px #10b981;
 }
 
-/* ---------------------------------------------------- */
-/* Modals (Guide & Shortcuts) */
-/* ---------------------------------------------------- */
+/* Modals */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -853,7 +881,6 @@ body {
     color: var(--text-primary);
 }
 
-/* Guide Steps */
 .guide-steps {
     display: flex;
     flex-direction: column;
@@ -934,7 +961,6 @@ body {
     transform: scale(1.03);
 }
 
-/* Shortcuts Grid */
 .shortcuts-grid {
     display: flex;
     flex-direction: column;
