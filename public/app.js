@@ -881,4 +881,59 @@ window.addEventListener('keydown', e => {
     }
 });
 
+// Comic Neo Skin Toggle
+let comicMode = false;
+const comicToggleBtn = document.getElementById('comic-toggle');
+const comicBadge = document.getElementById('comic-badge');
+
+comicToggleBtn?.addEventListener('click', () => {
+    comicMode = !comicMode;
+    document.body.classList.toggle('comic-mode', comicMode);
+    comicToggleBtn.dataset.active = String(comicMode);
+    comicBadge.innerText = comicMode ? 'ON' : 'OFF';
+
+    const comicThreeColor = 0x3b82f6;
+    const comicAccent = '#3b82f6';
+    const comicGlow = 'rgba(59, 130, 246, 0.4)';
+
+    if (comicMode) {
+        // Switch Three.js scene to comic blue
+        document.documentElement.style.setProperty('--accent', comicAccent);
+        document.documentElement.style.setProperty('--accent-glow', comicGlow);
+        const updateMat = arr => arr.forEach(b => {
+            b.material.color.setHex(comicThreeColor);
+            b.material.emissive.setHex(comicThreeColor);
+        });
+        updateMat(pulseBars);
+        updateMat(waveBars);
+        updateMat(vgridBars);
+        if (gridHelper) gridHelper.material.color.setHex(comicThreeColor);
+        const pl = scene.children.find(c => c.isPointLight);
+        if (pl) pl.color.setHex(comicThreeColor);
+        if (bloomPass) {
+            bloomPass.strength = 0.5;
+            bloomPass.radius = 0.2;
+        }
+    } else {
+        // Restore last non-comic theme
+        const th = THEMES[currentTheme];
+        document.documentElement.style.setProperty('--accent', th.accent);
+        document.documentElement.style.setProperty('--accent-glow', th.glow);
+        const updateMat = arr => arr.forEach(b => {
+            b.material.color.setHex(th.color);
+            b.material.emissive.setHex(th.color);
+        });
+        updateMat(pulseBars);
+        updateMat(waveBars);
+        updateMat(vgridBars);
+        if (gridHelper) gridHelper.material.color.setHex(th.color);
+        const pl = scene.children.find(c => c.isPointLight);
+        if (pl) pl.color.setHex(th.color);
+        if (bloomPass) {
+            bloomPass.strength = bloomEnabled ? 1.35 : 0.0;
+            bloomPass.radius = 0.55;
+        }
+    }
+});
+
 initThree();

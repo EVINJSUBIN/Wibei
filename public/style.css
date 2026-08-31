@@ -1059,11 +1059,477 @@ body {
     color: var(--text-dim);
 }
 
-kbd {
-    background: var(--panel-solid);
-    border: 1px solid var(--border-highlight);
-    padding: 3px 6px;
+/* ---------------------------------------------------- */
+/* Comic Skin Toggle Button                              */
+/* ---------------------------------------------------- */
+.comic-skin-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-hairline);
+    padding: 7px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    text-align: left;
+}
+
+.comic-skin-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.comic-skin-btn[data-active="true"] {
+    border: 2px solid #1a1a1a;
+    background: #3b82f6;
+    color: #1a1a1a;
+    box-shadow: 3px 3px 0 #1a1a1a;
+    font-weight: 800;
+}
+
+.comic-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: linear-gradient(135deg, #3b82f6 0%, #f43f5e 50%, #facc15 100%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+.comic-label {
+    flex-grow: 1;
+}
+
+.comic-status-badge {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 1px 6px;
     border-radius: 3px;
-    color: var(--accent);
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.comic-skin-btn[data-active="true"] .comic-status-badge {
+    background: #1a1a1a;
+    color: #3b82f6;
+    border-color: #1a1a1a;
+}
+
+/* ---------------------------------------------------- */
+/* COMIC NEO SKIN — body.comic-mode overrides           */
+/* ---------------------------------------------------- */
+
+/* Import Bangers only when comic mode is on (preloaded via head) */
+body.comic-mode {
+    --accent: #3b82f6;
+    --accent-glow: rgba(59, 130, 246, 0.4);
+    --accent-dim: rgba(59, 130, 246, 0.15);
+    --bg-dark: #f5f0e8;
+    --panel-bg: rgba(255, 255, 255, 0.95);
+    --panel-solid: #ffffff;
+    --border-hairline: #1a1a1a;
+    --border-highlight: #1a1a1a;
+    --text-main: #1a1a1a;
+    --text-dim: #333333;
+    --text-muted: #666666;
+    background-color: var(--bg-dark);
+
+    /* halftone dot background */
+    background-image: radial-gradient(circle, #c4bba8 1px, transparent 1px);
+    background-size: 18px 18px;
+}
+
+/* Studio panel in comic mode: thick black border, no blur, solid fill */
+body.comic-mode .studio-panel {
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 2.5px solid #1a1a1a;
+    box-shadow: 4px 4px 0 #1a1a1a;
+    border-radius: 6px;
+}
+
+/* Logo */
+body.comic-mode .logo-mark {
+    background: #1a1a1a;
+    color: #facc15;
+    border-color: #1a1a1a;
+    letter-spacing: 2px;
+    border-radius: 3px;
+}
+
+body.comic-mode .system-badge {
+    color: #1a1a1a;
+    font-weight: 800;
+}
+
+/* Telemetry pill */
+body.comic-mode .telemetry-pill {
+    background: #facc15;
+    border: 2px solid #1a1a1a;
+    color: #1a1a1a;
+    box-shadow: 3px 3px 0 #1a1a1a;
+    border-radius: 4px;
+    backdrop-filter: none;
     font-weight: 700;
 }
+
+body.comic-mode .live-led {
+    background: #ef4444;
+    box-shadow: 0 0 0 2px #1a1a1a;
+    animation: none;
+}
+
+/* Deck buttons */
+body.comic-mode .deck-btn {
+    background: #ffffff;
+    border: 2px solid #1a1a1a;
+    color: #1a1a1a;
+    box-shadow: 2px 2px 0 #1a1a1a;
+    border-radius: 4px;
+    font-weight: 800;
+    transition: none;
+}
+
+body.comic-mode .deck-btn:hover {
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+body.comic-mode .deck-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+}
+
+/* Panel titles */
+body.comic-mode .panel-title {
+    color: #1a1a1a;
+    font-weight: 900;
+}
+
+body.comic-mode .section-label {
+    color: #666666;
+    font-weight: 700;
+}
+
+/* Channel indicator badge */
+body.comic-mode .channel-indicator {
+    background: #facc15;
+    color: #1a1a1a;
+    border: 1.5px solid #1a1a1a;
+    font-weight: 900;
+}
+
+/* Source tabs */
+body.comic-mode .source-tabs {
+    background: rgba(0, 0, 0, 0.06);
+    border: 1.5px solid #1a1a1a;
+    border-radius: 4px;
+}
+
+body.comic-mode .source-tab {
+    color: #555555;
+    font-weight: 700;
+}
+
+body.comic-mode .source-tab.active {
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: none;
+}
+
+/* Channel preset cards */
+body.comic-mode .channel-card {
+    background: #f8f8f8;
+    border: 2px solid #1a1a1a;
+    box-shadow: 2px 2px 0 #1a1a1a;
+    border-radius: 4px;
+    transition: none;
+}
+
+body.comic-mode .channel-card:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+body.comic-mode .channel-card.active {
+    background: #3b82f6;
+    border-color: #1a1a1a;
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+body.comic-mode .channel-card.active .ch-title,
+body.comic-mode .channel-card.active .ch-number {
+    color: #ffffff;
+}
+
+body.comic-mode .channel-card.active .ch-artist {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+body.comic-mode .ch-title { color: #1a1a1a; }
+body.comic-mode .ch-number { color: #888888; }
+body.comic-mode .ch-artist { color: #555555; }
+body.comic-mode .ch-led { background: #cccccc; border: 1px solid #888888; }
+body.comic-mode .channel-card.active .ch-led { background: #facc15; box-shadow: none; border-color: #1a1a1a; }
+
+/* Search / Input */
+body.comic-mode .search-input-wrap input {
+    background: #ffffff;
+    border: 2px solid #1a1a1a;
+    color: #1a1a1a;
+    border-radius: 4px;
+}
+
+body.comic-mode .search-input-wrap input:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
+body.comic-mode .input-action-btn {
+    background: #facc15;
+    border: 2px solid #1a1a1a;
+    color: #1a1a1a;
+    box-shadow: 2px 2px 0 #1a1a1a;
+    font-weight: 800;
+    border-radius: 4px;
+}
+
+body.comic-mode .input-action-btn:hover {
+    background: #3b82f6;
+    color: #ffffff;
+}
+
+/* Geometry matrix buttons */
+body.comic-mode .matrix-btn {
+    background: #f8f8f8;
+    border: 2px solid #1a1a1a;
+    box-shadow: 2px 2px 0 #1a1a1a;
+    color: #333333;
+    border-radius: 4px;
+    transition: none;
+}
+
+body.comic-mode .matrix-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+body.comic-mode .matrix-btn.active {
+    background: #3b82f6;
+    border-color: #1a1a1a;
+    color: #ffffff;
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+body.comic-mode .matrix-btn.active .btn-idx { color: rgba(255,255,255,0.6); }
+body.comic-mode .btn-idx { color: #888888; }
+
+/* FX Toggles */
+body.comic-mode .toggle-switch {
+    background: #f8f8f8;
+    border: 2px solid #1a1a1a;
+    color: #333333;
+    font-weight: 700;
+    box-shadow: 2px 2px 0 #1a1a1a;
+    border-radius: 4px;
+}
+
+body.comic-mode .toggle-switch.active {
+    background: #10b981;
+    color: #ffffff;
+    border-color: #1a1a1a;
+    box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+/* Wavelength / palette */
+body.comic-mode .wavelength-btn {
+    background: #f8f8f8;
+    border: 2px solid #1a1a1a;
+    color: #333333;
+    box-shadow: 2px 2px 0 #1a1a1a;
+    font-weight: 700;
+    border-radius: 4px;
+    transition: none;
+}
+
+body.comic-mode .wavelength-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+body.comic-mode .wavelength-btn.active {
+    border-color: #1a1a1a;
+    background: var(--accent);
+    color: #1a1a1a;
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+/* Studio action buttons */
+body.comic-mode .studio-action-btn {
+    background: #f8f8f8;
+    border: 2px solid #1a1a1a;
+    color: #1a1a1a;
+    box-shadow: 2px 2px 0 #1a1a1a;
+    border-radius: 4px;
+    font-weight: 800;
+    transition: none;
+}
+
+body.comic-mode .studio-action-btn:hover {
+    background: #3b82f6;
+    color: #ffffff;
+    border-color: #1a1a1a;
+}
+
+body.comic-mode .studio-action-btn.primary {
+    background: #facc15;
+    color: #1a1a1a;
+    border-color: #1a1a1a;
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+/* Bottom Transport bar */
+body.comic-mode .master-transport {
+    background: #ffffff;
+    border: 2.5px solid #1a1a1a;
+    box-shadow: 4px -2px 0 #1a1a1a;
+}
+
+body.comic-mode .track-title { color: #1a1a1a; font-weight: 800; }
+body.comic-mode .track-artist { color: #555555; }
+
+body.comic-mode .track-art-box {
+    border: 2px solid #1a1a1a;
+    box-shadow: 2px 2px 0 #1a1a1a;
+    border-radius: 4px;
+}
+
+body.comic-mode .transport-btn {
+    background: #facc15;
+    border: 2px solid #1a1a1a;
+    color: #1a1a1a;
+    box-shadow: 3px 3px 0 #1a1a1a;
+    border-radius: 4px;
+    transition: none;
+}
+
+body.comic-mode .transport-btn:hover {
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+body.comic-mode .transport-btn:active {
+    transform: translate(3px, 3px);
+    box-shadow: none;
+}
+
+body.comic-mode .time-readout {
+    color: #333333;
+    font-weight: 700;
+}
+
+body.comic-mode .timeline-container {
+    background: #e5e5e5;
+    border: 2px solid #1a1a1a;
+    border-radius: 3px;
+}
+
+body.comic-mode .timeline-fill {
+    background: #3b82f6;
+    box-shadow: none;
+}
+
+body.comic-mode .vu-meter-box {
+    background: #1a1a1a;
+    border: 2px solid #1a1a1a;
+    border-radius: 4px;
+}
+
+body.comic-mode .meter-label { color: #facc15; }
+
+body.comic-mode .master-volume-box input[type=range] {
+    background: #cccccc;
+}
+
+body.comic-mode .vol-label { color: #555555; }
+body.comic-mode .meter-icon-btn { color: #333333; }
+
+/* Toast notification in comic mode */
+body.comic-mode .studio-toast {
+    background: #facc15;
+    border: 2.5px solid #1a1a1a;
+    color: #1a1a1a;
+    box-shadow: 4px 4px 0 #1a1a1a;
+    backdrop-filter: none;
+}
+
+body.comic-mode .toast-indicator {
+    background: #ef4444;
+    color: #ffffff;
+    border-radius: 2px;
+    font-weight: 900;
+}
+
+body.comic-mode .toast-close { color: #555555; }
+
+/* Modals in comic mode */
+body.comic-mode .modal-overlay {
+    background: rgba(245, 240, 232, 0.88);
+    backdrop-filter: none;
+}
+
+body.comic-mode .studio-modal {
+    background: #ffffff;
+    border: 3px solid #1a1a1a;
+    box-shadow: 6px 6px 0 #1a1a1a;
+    border-radius: 8px;
+}
+
+body.comic-mode .modal-eyebrow { color: #3b82f6; }
+body.comic-mode .modal-header h3 { color: #1a1a1a; }
+body.comic-mode .modal-header { border-color: #cccccc; }
+body.comic-mode .close-modal-btn { color: #888888; }
+body.comic-mode .close-modal-btn:hover { color: #1a1a1a; }
+
+body.comic-mode .manual-card {
+    background: #f8f8f8;
+    border: 2px solid #1a1a1a;
+    border-radius: 4px;
+    box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+body.comic-mode .manual-card h4 { color: #3b82f6; }
+body.comic-mode .manual-card p { color: #444444; }
+body.comic-mode .shortcut-item { color: #444444; }
+
+body.comic-mode kbd {
+    background: #1a1a1a;
+    color: #facc15;
+    border: 1px solid #1a1a1a;
+    border-radius: 3px;
+}
+
+/* Comic skin toggle button in comic mode */
+body.comic-mode .comic-skin-btn[data-active="true"] {
+    border: 2.5px solid #1a1a1a;
+    background: #3b82f6;
+    color: #ffffff;
+    box-shadow: 3px 3px 0 #1a1a1a;
+}
+
+body.comic-mode .panel-desc { color: #555555; }
+
+/* Mini EQ in comic mode */
+body.comic-mode .mini-eq-bars span { background: #3b82f6; }
+
+/* background canvas in comic mode — hide the falling blocks grid */
+body.comic-mode #bg-canvas { opacity: 0; }
