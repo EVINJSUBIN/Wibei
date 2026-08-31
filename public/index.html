@@ -3,17 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WIBEI // 3D Audio Spectrograph</title>
+    <title>wibei — 3d audio visualizer</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    
-    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Three.js + Postprocessing -->
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
@@ -23,319 +21,191 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 </head>
 <body>
-    <!-- Background Canvas + Three.js Container -->
     <canvas id="bg-canvas"></canvas>
     <div id="threejs-container"></div>
 
-    <!-- Top Master Telemetry Bar -->
-    <header class="studio-header">
-        <div class="header-left">
-            <div class="logo-mark">WIBEI</div>
-            <span class="system-badge">3D AUDIO SPECTROGRAPH</span>
-        </div>
-
-        <div class="header-center">
-            <div class="telemetry-pill">
-                <span class="live-led"></span>
-                <span id="engine-status">ENGINE: READY</span>
-                <span class="tele-sep">|</span>
-                <span>SR: 44.1kHz</span>
-                <span class="tele-sep">|</span>
-                <span>FFT: 256</span>
-                <span class="tele-sep">|</span>
-                <span id="fps-counter">60 FPS</span>
-            </div>
-        </div>
-
-        <div class="header-right">
-            <button class="deck-btn" id="guide-btn" title="Open Studio Manual">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                <span>MANUAL</span>
+    <!-- Header -->
+    <header class="top-bar">
+        <div class="brand">wibei</div>
+        <div class="header-actions">
+            <button class="icon-btn" id="guide-btn" title="How to use">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
             </button>
-            <button class="deck-btn" id="reset-cam-btn" title="Reset 3D Camera (R)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                <span>RESET 3D</span>
+            <button class="icon-btn" id="fullscreen-btn" title="Fullscreen (F)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
             </button>
-            <button class="deck-btn icon-only" id="shortcuts-btn" title="Keyboard Shortcuts (?)">?</button>
-            <button class="deck-btn icon-only" id="fullscreen-btn" title="Toggle Fullscreen (F)">⛶</button>
         </div>
     </header>
 
-    <!-- Left Control Deck: Audio Input Matrix -->
-    <aside class="left-deck studio-panel">
-        <div class="panel-header">
-            <span class="panel-title">AUDIO SOURCE</span>
-            <span class="channel-indicator" id="active-source-badge">CH-01: PRESET</span>
+    <!-- Left Panel: Audio source -->
+    <aside class="side-card left-card glass">
+        <div class="card-tabs">
+            <button class="tab active" data-tab="presets">Demos</button>
+            <button class="tab" data-tab="search">Search</button>
+            <button class="tab" data-tab="upload">Upload</button>
         </div>
 
-        <!-- Input Source Tabs -->
-        <div class="source-tabs">
-            <button class="source-tab active" data-tab="presets">PRESETS</button>
-            <button class="source-tab" data-tab="search">SEARCH</button>
-            <button class="source-tab" data-tab="mic">MIC IN</button>
-            <button class="source-tab" data-tab="file">UPLOAD</button>
-        </div>
-
-        <!-- Tab 1: Presets -->
-        <div class="tab-content" id="tab-presets">
-            <div class="track-channel-list">
-                <button class="channel-card active" data-src="/audio/synthwave.mp3" data-title="Synthwave Pulse" data-artist="RetroWave Studio" data-ch="CH-01">
-                    <span class="ch-number">01</span>
-                    <div class="ch-details">
-                        <span class="ch-title">Synthwave Pulse</span>
-                        <span class="ch-artist">RetroWave Studio</span>
+        <div class="tab-pane" id="tab-presets">
+            <div class="track-list">
+                <button class="track-row active" data-src="/audio/synthwave.mp3" data-title="Synthwave Pulse" data-artist="RetroWave Studio">
+                    <div class="track-dot"></div>
+                    <div class="track-info">
+                        <span class="track-name">Synthwave Pulse</span>
+                        <span class="track-sub">RetroWave Studio</span>
                     </div>
-                    <span class="ch-led"></span>
                 </button>
-
-                <button class="channel-card" data-src="/audio/lofi.mp3" data-title="Lofi Chill Beats" data-artist="Lofi Studio" data-ch="CH-02">
-                    <span class="ch-number">02</span>
-                    <div class="ch-details">
-                        <span class="ch-title">Lofi Chill Beats</span>
-                        <span class="ch-artist">Lofi Studio</span>
+                <button class="track-row" data-src="/audio/lofi.mp3" data-title="Lofi Chill Beats" data-artist="Lofi Studio">
+                    <div class="track-dot"></div>
+                    <div class="track-info">
+                        <span class="track-name">Lofi Chill Beats</span>
+                        <span class="track-sub">Lofi Studio</span>
                     </div>
-                    <span class="ch-led"></span>
                 </button>
-
-                <button class="channel-card" data-src="/audio/chill.mp3" data-title="Acoustic Harmony" data-artist="Ambient Vibes" data-ch="CH-03">
-                    <span class="ch-number">03</span>
-                    <div class="ch-details">
-                        <span class="ch-title">Acoustic Harmony</span>
-                        <span class="ch-artist">Ambient Vibes</span>
+                <button class="track-row" data-src="/audio/chill.mp3" data-title="Acoustic Harmony" data-artist="Ambient Vibes">
+                    <div class="track-dot"></div>
+                    <div class="track-info">
+                        <span class="track-name">Acoustic Harmony</span>
+                        <span class="track-sub">Ambient Vibes</span>
                     </div>
-                    <span class="ch-led"></span>
                 </button>
             </div>
         </div>
 
-        <!-- Tab 2: Search -->
-        <div class="tab-content" id="tab-search" style="display: none;">
-            <div class="search-input-wrap">
-                <input type="text" id="search-inp" placeholder="TUNE TRACK OR ARTIST..." autocomplete="off">
-                <button id="search-btn" class="input-action-btn">SEARCH</button>
-            </div>
-            <div class="suggestions-deck" id="suggestions-box" style="display: none;"></div>
-        </div>
-
-        <!-- Tab 3: Mic In -->
-        <div class="tab-content" id="tab-mic" style="display: none;">
-            <div class="mic-panel-body">
-                <p class="panel-desc">ROUTE LIVE MICROPHONE INPUT INTO THE 3D FFT ANALYSER ENGINE.</p>
-                <button class="studio-action-btn" id="mic-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                    <span>ENABLE MIC IN</span>
+        <div class="tab-pane" id="tab-search" style="display:none;">
+            <div class="search-row">
+                <input type="text" id="search-inp" placeholder="Search YouTube..." autocomplete="off">
+                <button id="search-btn" class="search-go">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
             </div>
+            <div class="suggestions-list" id="suggestions-box" style="display:none;"></div>
         </div>
 
-        <!-- Tab 4: File Upload -->
-        <div class="tab-content" id="tab-file" style="display: none;">
-            <div class="upload-panel-body">
-                <p class="panel-desc">LOAD LOCAL AUDIO ARCHIVE (.MP3, .WAV, .OGG, .FLAC).</p>
-                <button class="studio-action-btn" id="upload-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <span>CHOOSE FILE</span>
-                </button>
-                <input type="file" id="file-upload" accept="audio/*" style="display: none;">
-            </div>
+        <div class="tab-pane" id="tab-upload" style="display:none;">
+            <p class="upload-hint">Play audio from your microphone or drop in a local file.</p>
+            <button class="action-btn" id="mic-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                Use microphone
+            </button>
+            <button class="action-btn" id="upload-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Choose file
+            </button>
+            <input type="file" id="file-upload" accept="audio/*" style="display:none;">
         </div>
     </aside>
 
-    <!-- Right Control Deck: Visual Synthesis Engine -->
-    <aside class="right-deck studio-panel">
-        <div class="panel-header">
-            <span class="panel-title">SYNTHESIS ENGINE</span>
-            <span class="channel-indicator" id="current-mode-badge">MODE: 01</span>
-        </div>
-
-        <!-- Geometry Shape Matrix -->
-        <div class="control-section">
-            <span class="section-label">GEOMETRY MATRIX</span>
-            <div class="matrix-grid" id="style-segmented">
-                <button class="matrix-btn active" data-value="pulse">
-                    <span class="btn-idx">01</span>
-                    <span class="btn-name">PULSE RING</span>
+    <!-- Right Panel: Visual controls -->
+    <aside class="side-card right-card glass">
+        <div class="control-group">
+            <span class="control-label">shape</span>
+            <div class="shape-row" id="style-segmented">
+                <button class="shape-btn active" data-value="pulse" title="Ring">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
                 </button>
-                <button class="matrix-btn" data-value="wave">
-                    <span class="btn-idx">02</span>
-                    <span class="btn-name">FREQ WAVE</span>
+                <button class="shape-btn" data-value="wave" title="Wave">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12 Q6 4 10 12 Q14 20 18 12 Q22 4 24 12"/></svg>
                 </button>
-                <button class="matrix-btn" data-value="grid">
-                    <span class="btn-idx">03</span>
-                    <span class="btn-name">3D MATRIX</span>
+                <button class="shape-btn" data-value="grid" title="Grid">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                 </button>
             </div>
         </div>
 
-        <!-- Shader & Environment -->
-        <div class="control-section">
-            <span class="section-label">ENVIRONMENT FX</span>
-            <div class="toggle-row">
-                <button class="toggle-switch active" id="bg-grid-toggle">SYNTH GRID: ON</button>
-                <button class="toggle-switch active" id="bloom-toggle">BLOOM: HIGH</button>
+        <div class="control-group">
+            <span class="control-label">color</span>
+            <div class="color-row">
+                <button class="color-dot dot-gold active" data-theme="gold" title="Gold"></button>
+                <button class="color-dot dot-cyan" data-theme="cyan" title="Cyan"></button>
+                <button class="color-dot dot-rose" data-theme="magenta" title="Rose"></button>
             </div>
         </div>
 
-        <!-- Color Spectrum Wavelength -->
-        <div class="control-section">
-            <span class="section-label">SPECTRUM WAVELENGTH</span>
-            <div class="palette-row">
-                <button class="wavelength-btn active" data-theme="gold">
-                    <span class="wave-swatch gold"></span>
-                    <span>AMBER 580nm</span>
-                </button>
-                <button class="wavelength-btn" data-theme="cyan">
-                    <span class="wave-swatch cyan"></span>
-                    <span>CYAN 490nm</span>
-                </button>
-                <button class="wavelength-btn" data-theme="magenta">
-                    <span class="wave-swatch magenta"></span>
-                    <span>ROSE 620nm</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Comic Neo Skin -->
-        <div class="control-section">
-            <span class="section-label">SKIN OVERRIDE</span>
-            <button class="comic-skin-btn" id="comic-toggle" data-active="false">
-                <span class="comic-swatch"></span>
-                <span class="comic-label">COMIC NEO</span>
-                <span class="comic-status-badge" id="comic-badge">OFF</span>
+        <div class="control-group">
+            <button class="icon-btn small" id="reset-cam-btn" title="Reset camera (R)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <span>Reset view</span>
             </button>
         </div>
-        <div class="control-section" style="display:none;" id="comic-sep">
-        </div>
     </aside>
 
-    <!-- Bottom Master Transport & VU Meter Station -->
-    <footer class="master-transport studio-panel">
-        <!-- Left: Now Playing & Mini Waveform -->
-        <div class="transport-track-info">
-            <div class="track-art-box">
-                <img id="album-art" src="favicon.svg" alt="Track Art">
-                <div class="art-overlay-scanline"></div>
-            </div>
-            <div class="track-meta">
-                <div class="title-row">
-                    <span id="track-title" class="track-title">Synthwave Pulse</span>
-                    <div class="mini-eq-bars" id="mini-eq">
+    <!-- Bottom Player -->
+    <footer class="player glass">
+        <div class="now-playing">
+            <img id="album-art" src="favicon.svg" alt="">
+            <div class="np-text">
+                <div class="np-title-row">
+                    <span id="track-title">Synthwave Pulse</span>
+                    <div class="eq-bars" id="mini-eq">
                         <span></span><span></span><span></span><span></span>
                     </div>
                 </div>
-                <span id="track-artist" class="track-artist">RetroWave Studio</span>
+                <span id="track-artist" class="np-artist">RetroWave Studio</span>
             </div>
         </div>
 
-        <!-- Center: Playback Transport & Scrubber -->
-        <div class="transport-main">
-            <div class="transport-controls">
-                <button id="play-btn" class="transport-btn play-trigger" title="Play / Pause (Space)">
-                    <svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    <svg class="icon-pause" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                </button>
-
-                <span id="time-current" class="time-readout">00:00</span>
-
-                <div class="timeline-container">
-                    <div class="timeline-bar">
-                        <div class="timeline-fill" id="progress-fill"></div>
-                        <input type="range" id="seek-slider" min="0" max="100" step="0.1" value="0">
-                    </div>
+        <div class="transport">
+            <button id="play-btn" class="play-btn" title="Play / Pause (Space)">
+                <svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <svg class="icon-pause" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            </button>
+            <span id="time-current" class="time">0:00</span>
+            <div class="scrubber-wrap">
+                <div class="scrubber-track">
+                    <div class="scrubber-fill" id="progress-fill"></div>
+                    <input type="range" id="seek-slider" min="0" max="100" step="0.1" value="0">
                 </div>
-
-                <span id="time-total" class="time-readout">00:00</span>
             </div>
+            <span id="time-total" class="time">0:00</span>
         </div>
 
-        <!-- Right: Master Volume & VU Meter -->
-        <div class="transport-meters">
-            <!-- Hardware-Style VU Meter -->
-            <div class="vu-meter-box" title="Master Audio Peak Meter">
-                <span class="meter-label">VU</span>
-                <div class="vu-led-strip" id="vu-strip">
-                    <span class="vu-led"></span>
-                    <span class="vu-led"></span>
-                    <span class="vu-led"></span>
-                    <span class="vu-led"></span>
-                    <span class="vu-led"></span>
-                    <span class="vu-led"></span>
-                    <span class="vu-led warn"></span>
-                    <span class="vu-led peak"></span>
-                </div>
-            </div>
-
-            <!-- Volume Slider -->
-            <div class="master-volume-box">
-                <button class="meter-icon-btn" id="mute-btn" title="Mute Audio (M)">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                </button>
-                <input type="range" id="vol-slider" min="0" max="100" value="100">
-                <span id="vol-readout" class="vol-label">100%</span>
-            </div>
+        <div class="player-right">
+            <button class="icon-btn small" id="mute-btn" title="Mute (M)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+            </button>
+            <input type="range" id="vol-slider" min="0" max="100" value="100" class="vol-slider">
         </div>
     </footer>
 
-    <!-- Toast Notification Banner -->
-    <div id="toast-banner" class="studio-toast studio-panel" style="display: none;">
-        <span class="toast-indicator">!</span>
-        <span id="toast-msg">Notice</span>
-        <button class="toast-close" id="toast-close-btn">&times;</button>
+    <!-- Toast -->
+    <div id="toast-banner" class="toast glass" style="display:none;">
+        <span id="toast-msg"></span>
+        <button id="toast-close-btn" class="toast-close">&times;</button>
     </div>
 
-    <!-- Studio Manual Modal -->
-    <div class="modal-overlay" id="guide-modal" style="display: none;">
-        <div class="studio-modal studio-panel">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-eyebrow">SYSTEM DOCUMENTATION</span>
-                    <h3>WIBEI STUDIO MANUAL</h3>
-                </div>
-                <button class="close-modal-btn" id="close-guide-btn">&times;</button>
+    <!-- Help Modal -->
+    <div class="overlay" id="guide-modal" style="display:none;">
+        <div class="modal glass">
+            <div class="modal-top">
+                <h3>getting started</h3>
+                <button class="icon-btn" id="close-guide-btn">&times;</button>
             </div>
-
-            <div class="manual-grid">
-                <div class="manual-card">
-                    <h4>01 // AUDIO INGESTION</h4>
-                    <p>Select built-in audio channels (<strong>PRESETS</strong>), stream custom tracks via <strong>SEARCH</strong>, stream live room acoustics via <strong>MIC IN</strong>, or drag-and-drop your own local <strong>.MP3 / .WAV</strong> stems.</p>
+            <div class="modal-body">
+                <div class="help-item">
+                    <strong>Play a demo</strong>
+                    <p>Click any track in the Demos tab on the left — they load instantly.</p>
                 </div>
-
-                <div class="manual-card">
-                    <h4>02 // 3D VIEWPORT MANIPULATION</h4>
-                    <p>Click & drag across the canvas to orbit the visualizer in full 3D space. Cursor hover tilts the camera angle with physics-based parallax. Press <strong>[R]</strong> to instantly re-center the viewport.</p>
+                <div class="help-item">
+                    <strong>Search YouTube</strong>
+                    <p>Switch to the Search tab and type any song name. Note: YouTube occasionally blocks cloud server requests. If that happens, use a demo or upload a file.</p>
                 </div>
-
-                <div class="manual-card">
-                    <h4>03 // REAL-TIME SPECTRAL MODES</h4>
-                    <p>Switch between the 128-bar <strong>Pulse Ring</strong>, linear <strong>Freq Wave</strong>, and the isometric <strong>3D Matrix</strong> grid. Tweak bloom emission and select your target light wavelength.</p>
+                <div class="help-item">
+                    <strong>Upload or mic</strong>
+                    <p>Drop in any .mp3 or .wav file, or click Use microphone to visualize live audio.</p>
+                </div>
+                <div class="help-item">
+                    <strong>3D controls</strong>
+                    <p>Click and drag to rotate the visualizer. Change shape and color from the right panel.</p>
+                </div>
+                <div class="shortcuts">
+                    <div class="sc-row"><kbd>Space</kbd> play / pause</div>
+                    <div class="sc-row"><kbd>M</kbd> mute</div>
+                    <div class="sc-row"><kbd>1 2 3</kbd> switch shape</div>
+                    <div class="sc-row"><kbd>R</kbd> reset camera</div>
+                    <div class="sc-row"><kbd>F</kbd> fullscreen</div>
                 </div>
             </div>
-
-            <div class="manual-footer">
-                <button class="studio-action-btn primary" id="dismiss-guide-btn">RETURN TO WORKSPACE →</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Keyboard Shortcuts Modal -->
-    <div class="modal-overlay" id="shortcuts-modal" style="display: none;">
-        <div class="studio-modal small studio-panel">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-eyebrow">COMMAND CHEATSHEET</span>
-                    <h3>KEYBOARD SHORTCUTS</h3>
-                </div>
-                <button class="close-modal-btn" id="close-modal-btn">&times;</button>
-            </div>
-
-            <div class="shortcuts-list">
-                <div class="shortcut-item"><kbd>SPACE</kbd> <span>Master Play / Pause</span></div>
-                <div class="shortcut-item"><kbd>1 / 2 / 3</kbd> <span>Switch Geometry Mode</span></div>
-                <div class="shortcut-item"><kbd>M</kbd> <span>Toggle Audio Mute</span></div>
-                <div class="shortcut-item"><kbd>R</kbd> <span>Reset 3D Camera View</span></div>
-                <div class="shortcut-item"><kbd>F</kbd> <span>Toggle Fullscreen</span></div>
-                <div class="shortcut-item"><kbd>CLICK + DRAG</kbd> <span>3D Orbit Rotation</span></div>
-            </div>
+            <button class="action-btn primary" id="dismiss-guide-btn">Let's go</button>
         </div>
     </div>
 
