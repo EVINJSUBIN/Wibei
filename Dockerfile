@@ -1,6 +1,6 @@
 FROM node:20-bookworm-slim
 
-# Install system utilities & audio tools
+# Install system audio and download utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
@@ -9,14 +9,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Download official standalone yt-dlp binary directly
+# Download official standalone yt-dlp Linux binary directly
 RUN mkdir -p /app/bin && \
     curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /app/bin/yt-dlp && \
     chmod a+rx /app/bin/yt-dlp
 
+# Copy package manifests
 COPY package*.json ./
-RUN npm install --omit=dev
 
+# Install npm dependencies without triggering postinstall (since yt-dlp was already downloaded)
+RUN npm install --omit=dev --ignore-scripts
+
+# Copy all source files
 COPY . .
 
 ENV PORT=8080

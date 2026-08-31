@@ -4,7 +4,7 @@
   "description": "Real-time 3D WebGL Music Visualizer with Glassmorphism UI",
   "main": "server.js",
   "scripts": {
-    "postinstall": "node scripts/install-ytdlp.js",
+    "postinstall": "node -e \"if(require('fs').existsSync('scripts/install-ytdlp.js')) require('./scripts/install-ytdlp.js')\"",
     "start": "node server.js"
   },
   "keywords": [
