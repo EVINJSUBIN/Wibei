@@ -30,7 +30,6 @@
     <!-- Top Header Bar -->
     <header class="app-header">
         <div class="brand">
-            <span class="brand-dot"></span>
             <span class="brand-name">wibei</span>
             <span class="brand-tag">v1.0</span>
         </div>
@@ -63,8 +62,12 @@
 
         <!-- Right Action Tools -->
         <div class="header-actions">
+            <button class="action-btn" id="guide-btn" title="Getting Started Guide">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span>Guide</span>
+            </button>
             <button class="action-btn" id="reset-cam-btn" title="Reset 3D View (R)">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 <span>Reset View</span>
             </button>
             <button class="action-btn" id="shortcuts-btn" title="Keyboard Shortcuts">
@@ -73,12 +76,56 @@
         </div>
     </header>
 
-    <!-- Quick Demo Songs Bar (For fast reviewing & testing) -->
+    <!-- Quick Demo Songs Bar -->
     <div class="quick-demos-bar">
         <span class="demo-tag">Quick Play:</span>
         <button class="demo-chip" data-query="Lofi Girl - beats to relax/study to">☕ Lofi Beats</button>
         <button class="demo-chip" data-query="Synthwave Radio - chill synth / retro beats">🌃 Synthwave</button>
         <button class="demo-chip" data-query="JVKE - golden hour (official audio)">✨ Golden Hour</button>
+    </div>
+
+    <!-- Getting Started Guide Modal -->
+    <div class="modal-overlay" id="guide-modal" style="display: none;">
+        <div class="modal-card guide-card glass-card">
+            <div class="modal-header">
+                <div class="guide-title-wrap">
+                    <span class="guide-badge">Getting Started</span>
+                    <h3>Welcome to Wibei</h3>
+                </div>
+                <button class="close-modal-btn" id="close-guide-btn">&times;</button>
+            </div>
+            
+            <div class="guide-steps">
+                <div class="guide-step-item">
+                    <div class="step-icon-wrap">🎵</div>
+                    <div class="step-info">
+                        <h4>1. Play Audio Any Way You Like</h4>
+                        <p>Search any song on YouTube, click one of the <strong>Quick Play</strong> demos, toggle your <strong>Microphone (🎤)</strong>, or drop in a local <strong>.mp3 file (📁)</strong>.</p>
+                    </div>
+                </div>
+
+                <div class="guide-step-item">
+                    <div class="step-icon-wrap">🌐</div>
+                    <div class="step-info">
+                        <h4>2. Interactive 3D Camera Controls</h4>
+                        <p>Click & drag anywhere on the canvas to freely rotate the visualizer in 3D space. Move your cursor to see smooth camera parallax tilting.</p>
+                    </div>
+                </div>
+
+                <div class="guide-step-item">
+                    <div class="step-icon-wrap">⚡</div>
+                    <div class="step-info">
+                        <h4>3. Customize Visualizer & Glow</h4>
+                        <p>Switch between <strong>Ring</strong>, <strong>Wave</strong>, and <strong>Matrix Grid</strong> modes, toggle the Synth Grid floor, or switch themes (Gold, Cyan, Pink).</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="guide-footer">
+                <button class="guide-action-btn demo-trigger-btn" id="guide-demo-btn">⚡ Play Synthwave Demo</button>
+                <button class="guide-dismiss-btn" id="dismiss-guide-btn">Got It, Let's Vibe →</button>
+            </div>
+        </div>
     </div>
 
     <!-- Keyboard Shortcuts Modal -->
@@ -99,9 +146,9 @@
         </div>
     </div>
 
-    <!-- Bottom Audio Player -->
-    <footer class="player-wrapper">
-        <div class="player-bar glass-card">
+    <!-- Main Bottom Audio Player -->
+    <footer class="player-wrapper" id="player-wrapper">
+        <div class="player-bar glass-card" id="main-player-bar">
             <!-- Left: Artwork & Metadata -->
             <div class="now-playing">
                 <div class="art-container">
@@ -109,7 +156,12 @@
                     <div class="art-pulse-ring"></div>
                 </div>
                 <div class="meta-container">
-                    <div id="track-title" class="track-name">Ready to play</div>
+                    <div class="title-with-eq">
+                        <div id="track-title" class="track-name">Ready to play</div>
+                        <div class="mini-eq-bars" id="mini-eq" style="display:none;">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
                     <div id="track-artist" class="artist-name">Search or pick a demo track</div>
                 </div>
             </div>
@@ -169,7 +221,29 @@
                     <!-- Real-time YouTube Suggestions Dropdown -->
                     <div class="suggestions-flyout glass-card" id="suggestions-box" style="display: none;"></div>
                 </div>
+
+                <div class="tool-divider"></div>
+
+                <!-- Minimize Player Button -->
+                <button class="tool-btn min-btn" id="minimize-player-btn" title="Minimize to Mini Player">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line></svg>
+                </button>
             </div>
+        </div>
+
+        <!-- Floating Mini Player (Visible when minimized) -->
+        <div class="mini-player-pill glass-card" id="mini-player" style="display: none;">
+            <img id="mini-art" src="favicon.svg" alt="Art">
+            <div class="mini-info">
+                <span id="mini-title">Ready to play</span>
+            </div>
+            <button class="mini-btn-play" id="mini-play-btn">
+                <svg class="mini-icon-play" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <svg class="mini-icon-pause" style="display:none;" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+            </button>
+            <button class="mini-btn-expand" id="expand-player-btn" title="Expand Full Controls">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+            </button>
         </div>
     </footer>
 

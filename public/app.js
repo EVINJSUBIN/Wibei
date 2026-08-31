@@ -32,6 +32,9 @@ const statusText = document.getElementById('status-text');
 const playBtn = document.getElementById('play-btn');
 const iconPlay = document.querySelector('.icon-play');
 const iconPause = document.querySelector('.icon-pause');
+const miniPlayBtn = document.getElementById('mini-play-btn');
+const miniIconPlay = document.querySelector('.mini-icon-play');
+const miniIconPause = document.querySelector('.mini-icon-pause');
 const seekSlider = document.getElementById('seek-slider');
 const progressFill = document.getElementById('progress-fill');
 const timeCurrent = document.getElementById('time-current');
@@ -44,6 +47,13 @@ const suggBox = document.getElementById('suggestions-box');
 const albumArt = document.getElementById('album-art');
 const trackTitle = document.getElementById('track-title');
 const trackArtist = document.getElementById('track-artist');
+const miniArt = document.getElementById('mini-art');
+const miniTitle = document.getElementById('mini-title');
+const miniEq = document.getElementById('mini-eq');
+const mainPlayerBar = document.getElementById('main-player-bar');
+const miniPlayer = document.getElementById('mini-player');
+const guideModal = document.getElementById('guide-modal');
+const shortcutsModal = document.getElementById('shortcuts-modal');
 
 function setStatus(msg) {
     if (statusText) statusText.innerText = msg;
@@ -54,6 +64,23 @@ function updatePlayIcons(playing) {
     if (iconPlay && iconPause) {
         iconPlay.style.display = playing ? 'none' : 'block';
         iconPause.style.display = playing ? 'block' : 'none';
+    }
+    if (miniIconPlay && miniIconPause) {
+        miniIconPlay.style.display = playing ? 'none' : 'block';
+        miniIconPause.style.display = playing ? 'block' : 'none';
+    }
+    if (miniEq) {
+        miniEq.style.display = playing ? 'flex' : 'none';
+    }
+}
+
+function updateTrackInfo(title, artist, thumb) {
+    if (trackTitle) trackTitle.innerText = title;
+    if (trackArtist) trackArtist.innerText = artist;
+    if (miniTitle) miniTitle.innerText = title;
+    if (thumb) {
+        if (albumArt) albumArt.src = thumb;
+        if (miniArt) miniArt.src = thumb;
     }
 }
 
@@ -209,7 +236,7 @@ function initThree() {
         }
     });
 
-    const isUIElement = el => el.closest('.app-header, .player-wrapper, .quick-demos-bar, .modal-card');
+    const isUIElement = el => el.closest('.app-header, .player-wrapper, .quick-demos-bar, .modal-card, .mini-player-pill');
 
     window.addEventListener('mousedown', e => {
         if (!isUIElement(e.target)) {
@@ -369,11 +396,7 @@ async function playStream(query, presetMeta = null) {
 
     stopMic();
     setStatus(`Connecting stream: ${presetMeta?.title || query}...`);
-    trackTitle.innerText = presetMeta?.title || 'Loading...';
-    trackArtist.innerText = presetMeta?.uploader || 'Streaming audio';
-    if (presetMeta?.thumbnail) {
-        albumArt.src = presetMeta.thumbnail;
-    }
+    updateTrackInfo(presetMeta?.title || 'Loading...', presetMeta?.uploader || 'Streaming audio', presetMeta?.thumbnail);
     
     try {
         let meta = presetMeta;
@@ -382,11 +405,7 @@ async function playStream(query, presetMeta = null) {
             meta = await metaRes.json();
         }
         
-        trackTitle.innerText = meta.title || query;
-        trackArtist.innerText = meta.uploader || 'Unknown Artist';
-        if (meta.thumbnail) {
-            albumArt.src = meta.thumbnail;
-        }
+        updateTrackInfo(meta.title || query, meta.uploader || 'Unknown Artist', meta.thumbnail);
 
         if (curAudioEl) {
             curAudioEl.pause();
@@ -428,14 +447,14 @@ async function playStream(query, presetMeta = null) {
         
     } catch (err) {
         setStatus('Stream connection error');
-        trackTitle.innerText = 'Playback Error';
+        updateTrackInfo('Playback Error', 'Try another track', null);
     }
 }
 
 // ----------------------------------------------------
 // UI Interactions
 // ----------------------------------------------------
-playBtn.addEventListener('click', () => {
+function togglePlay() {
     if (isMicActive) return;
     if (!curAudioEl || !curAudioEl.src) {
         playStream('Lofi Girl - beats to relax/study to');
@@ -451,6 +470,54 @@ playBtn.addEventListener('click', () => {
         updatePlayIcons(false);
         setStatus('Paused');
     }
+}
+
+playBtn.addEventListener('click', togglePlay);
+miniPlayBtn.addEventListener('click', togglePlay);
+
+// Mini Player Minimize / Expand
+const minimizePlayerBtn = document.getElementById('minimize-player-btn');
+const expandPlayerBtn = document.getElementById('expand-player-btn');
+
+minimizePlayerBtn?.addEventListener('click', () => {
+    mainPlayerBar.style.display = 'none';
+    miniPlayer.style.display = 'flex';
+    setStatus('Mini Player Active');
+});
+
+expandPlayerBtn?.addEventListener('click', () => {
+    miniPlayer.style.display = 'none';
+    mainPlayerBar.style.display = 'flex';
+    setStatus('Full Player Restored');
+});
+
+// Guide Modal Handlers
+document.getElementById('guide-btn')?.addEventListener('click', () => {
+    guideModal.style.display = 'flex';
+});
+document.getElementById('close-guide-btn')?.addEventListener('click', () => {
+    guideModal.style.display = 'none';
+});
+document.getElementById('dismiss-guide-btn')?.addEventListener('click', () => {
+    guideModal.style.display = 'none';
+});
+document.getElementById('guide-demo-btn')?.addEventListener('click', () => {
+    guideModal.style.display = 'none';
+    playStream('Synthwave Radio - chill synth / retro beats');
+});
+guideModal?.addEventListener('click', e => {
+    if (e.target === guideModal) guideModal.style.display = 'none';
+});
+
+// Shortcuts Modal Handlers
+document.getElementById('shortcuts-btn')?.addEventListener('click', () => {
+    shortcutsModal.style.display = 'flex';
+});
+document.getElementById('close-modal-btn')?.addEventListener('click', () => {
+    shortcutsModal.style.display = 'none';
+});
+shortcutsModal?.addEventListener('click', e => {
+    if (e.target === shortcutsModal) shortcutsModal.style.display = 'none';
 });
 
 seekSlider.addEventListener('input', e => {
@@ -612,8 +679,7 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
         isMicActive = true;
         updatePlayIcons(true);
         
-        trackTitle.innerText = 'Live Microphone';
-        trackArtist.innerText = 'Listening to input';
+        updateTrackInfo('Live Microphone', 'Listening to audio input', null);
         setStatus('Microphone Active // Live EQ');
         
         const source = audioCtx.createMediaStreamSource(micStream);
@@ -635,8 +701,7 @@ fileUpload?.addEventListener('change', e => {
     if (!file) return;
     
     stopMic();
-    trackTitle.innerText = file.name;
-    trackArtist.innerText = 'Local Audio File';
+    updateTrackInfo(file.name, 'Local Audio File', null);
     setStatus(`Playing: ${file.name}`);
     
     if (curAudioEl) {
@@ -685,25 +750,13 @@ document.getElementById('reset-cam-btn')?.addEventListener('click', () => {
     setStatus('Camera View Reset');
 });
 
-// Shortcuts Modal
-const shortcutsModal = document.getElementById('shortcuts-modal');
-document.getElementById('shortcuts-btn')?.addEventListener('click', () => {
-    shortcutsModal.style.display = 'flex';
-});
-document.getElementById('close-modal-btn')?.addEventListener('click', () => {
-    shortcutsModal.style.display = 'none';
-});
-shortcutsModal?.addEventListener('click', e => {
-    if (e.target === shortcutsModal) shortcutsModal.style.display = 'none';
-});
-
 // Keyboard Shortcuts Listeners
 window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
     
     if (e.code === 'Space') {
         e.preventDefault();
-        playBtn.click();
+        togglePlay();
     } else if (e.code === 'KeyM') {
         muteBtn.click();
     } else if (e.code === 'KeyR') {
@@ -723,7 +776,6 @@ window.addEventListener('keydown', e => {
     }
 });
 
-// Placeholder error fallback
 if (albumArt) {
     albumArt.onerror = () => {
         albumArt.src = 'favicon.svg';
