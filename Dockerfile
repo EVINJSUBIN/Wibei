@@ -1,7 +1,8 @@
 FROM node:20-bookworm-slim
 
-# Install system audio and download utilities
+# Install python3, ffmpeg, and curl
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
     ffmpeg \
     curl \
     ca-certificates \
@@ -17,7 +18,7 @@ RUN mkdir -p /app/bin && \
 # Copy package manifests
 COPY package*.json ./
 
-# Install npm dependencies without triggering postinstall (since yt-dlp was already downloaded)
+# Install npm dependencies without triggering postinstall
 RUN npm install --omit=dev --ignore-scripts
 
 # Copy all source files
