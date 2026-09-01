@@ -74,8 +74,11 @@ function updateTrackInfo(title, artist, thumb) {
     if (albumArt)    albumArt.src = thumb || 'favicon.svg';
 }
 
-// ---------- Particle background ----------
-let particles = [];
+// ---------- Background animation ----------
+let currentBg     = 'dots';   // 'dots' | 'rings' | 'off'
+let particles     = [];
+let rings         = [];
+let ringSpawnTimer = 0;
 
 function resizeCanvas() {
     bgCanvas.width  = window.innerWidth;
@@ -96,34 +99,62 @@ function spawnParticle(randomY) {
 }
 for (let i = 0; i < 110; i++) spawnParticle(true);
 
-function animateParticles() {
-    requestAnimationFrame(animateParticles);
-    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+function spawnRing() {
+    const cx = bgCanvas.width  / 2 + (Math.random() - 0.5) * 80;
+    const cy = bgCanvas.height / 2 + (Math.random() - 0.5) * 60;
+    rings.push({ cx, cy, r: 0, alpha: 0.22 });
+}
+spawnRing();
 
+function drawDotsFrame() {
     const th    = THEMES[currentTheme];
     const boost = 1 + bgBassLevel * 1.6;
-
     particles.forEach(p => {
         p.y -= p.speed * boost;
         p.x += p.drift;
-
-        if (p.y < -4) {
-            p.y = bgCanvas.height + 4;
-            p.x = Math.random() * bgCanvas.width;
-        }
-        if (p.x < -4 || p.x > bgCanvas.width + 4) {
-            p.x = Math.random() * bgCanvas.width;
-        }
-
+        if (p.y < -4) { p.y = bgCanvas.height + 4; p.x = Math.random() * bgCanvas.width; }
+        if (p.x < -4 || p.x > bgCanvas.width + 4) p.x = Math.random() * bgCanvas.width;
         bgCtx.beginPath();
         bgCtx.arc(p.x, p.y, p.r * (1 + bgBassLevel * 0.5), 0, Math.PI * 2);
-        bgCtx.fillStyle = th.accent;
+        bgCtx.fillStyle   = th.accent;
         bgCtx.globalAlpha = p.alpha * (1 + bgBassLevel * 0.6);
         bgCtx.fill();
-        bgCtx.globalAlpha = 1;
     });
 }
-animateParticles();
+
+function drawRingsFrame() {
+    const th          = THEMES[currentTheme];
+    const expandSpeed = 0.55 + bgBassLevel * 2.2;
+    const spawnEvery  = Math.max(600, 1800 - bgBassLevel * 1200);
+
+    ringSpawnTimer += 16;
+    if (ringSpawnTimer >= spawnEvery) {
+        spawnRing();
+        ringSpawnTimer = 0;
+    }
+
+    bgCtx.strokeStyle = th.accent;
+    rings = rings.filter(r => r.alpha > 0.003);
+    rings.forEach(ring => {
+        ring.r    += expandSpeed;
+        ring.alpha = Math.max(0, ring.alpha - 0.0008 - bgBassLevel * 0.003);
+        bgCtx.beginPath();
+        bgCtx.arc(ring.cx, ring.cy, ring.r, 0, Math.PI * 2);
+        bgCtx.lineWidth   = 1.2 + bgBassLevel * 1.5;
+        bgCtx.globalAlpha = ring.alpha;
+        bgCtx.stroke();
+    });
+}
+
+function animateBg() {
+    requestAnimationFrame(animateBg);
+    bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    bgCtx.globalAlpha = 1;
+    if      (currentBg === 'dots')  drawDotsFrame();
+    else if (currentBg === 'rings') drawRingsFrame();
+    bgCtx.globalAlpha = 1;
+}
+animateBg();
 
 // ---------- Three.js ----------
 function initThree() {
@@ -552,14 +583,27 @@ fileUpload?.addEventListener('change', e => {
 });
 
 // Shape buttons
-document.querySelectorAll('.shape-btn').forEach(btn => {
+document.querySelectorAll('#style-segmented .shape-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#style-segmented .shape-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentVis = btn.dataset.value;
         pulseGrp.visible = currentVis === 'pulse';
         waveGrp.visible  = currentVis === 'wave';
         vgridGrp.visible = currentVis === 'grid';
+    });
+});
+
+// Background mode buttons
+document.querySelectorAll('#bg-segmented .shape-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#bg-segmented .shape-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentBg = btn.dataset.bg;
+        if (currentBg === 'rings') {
+            rings = [];
+            spawnRing();
+        }
     });
 });
 
