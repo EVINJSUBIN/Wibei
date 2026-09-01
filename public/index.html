@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>wibei — 3d audio visualizer</title>
+    <title>wibei — 3d audio spectrograph</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css">
 
@@ -24,201 +24,267 @@
     <canvas id="bg-canvas"></canvas>
     <div id="threejs-container"></div>
 
+    <div id="drag-dropzone" class="dropzone-overlay">
+        <div class="dropzone-box">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>DROP AUDIO FILE HERE</span>
+        </div>
+    </div>
+
     <header class="top-bar">
-        <div class="brand">wibei</div>
+        <div class="brand-group">
+            <span class="brand-title">WIBEI</span>
+            <span class="brand-version">DSP-3D</span>
+        </div>
+
+        <div class="telemetry-pill">
+            <span class="led-indicator" id="live-led"></span>
+            <span id="telemetry-mode">READY</span>
+            <span class="tele-divider">/</span>
+            <span id="telemetry-peak">0 dB</span>
+            <span class="tele-divider">/</span>
+            <span id="telemetry-fps">60 FPS</span>
+        </div>
+
         <div class="header-actions">
-            <button class="icon-btn" id="theme-toggle-btn" title="Toggle Light/Dark mode">
-                <svg class="theme-sun-icon" style="display:none;" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-                <svg class="theme-moon-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <button class="tactile-btn" id="theme-toggle-btn" title="Toggle Theme (Light / Dark)">
+                <svg class="theme-sun-icon" style="display:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <svg class="theme-moon-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             </button>
-            <button class="icon-btn" id="guide-btn" title="How to use">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <button class="tactile-btn" id="guide-btn" title="System Manual">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
             </button>
-            <button class="icon-btn" id="fullscreen-btn" title="Fullscreen (F)">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            <button class="tactile-btn" id="fullscreen-btn" title="Fullscreen (F)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
             </button>
         </div>
     </header>
 
-    <aside class="side-card left-card glass">
-        <div class="card-tabs">
-            <button class="tab active" data-tab="presets">Demos</button>
-            <button class="tab" data-tab="search">Search</button>
-            <button class="tab" data-tab="upload">Upload</button>
+    <aside class="control-deck left-deck">
+        <div class="deck-header">
+            <span class="deck-label">AUDIO INGEST</span>
+            <span class="deck-badge" id="source-badge">DEMO</span>
         </div>
 
-        <div class="tab-pane" id="tab-presets">
-            <div class="track-list">
-                <button class="track-row active" data-src="/audio/synthwave.mp3" data-title="Synthwave Pulse" data-artist="RetroWave Studio">
-                    <div class="track-dot"></div>
-                    <div class="track-info">
-                        <span class="track-name">Synthwave Pulse</span>
-                        <span class="track-sub">RetroWave Studio</span>
+        <div class="deck-tabs">
+            <button class="deck-tab active" data-tab="presets">DEMOS</button>
+            <button class="deck-tab" data-tab="search">STREAM</button>
+            <button class="deck-tab" data-tab="upload">LOCAL</button>
+        </div>
+
+        <div class="deck-pane" id="tab-presets">
+            <div class="preset-list">
+                <button class="preset-row active" data-src="/audio/synthwave.mp3" data-title="Synthwave Pulse" data-artist="RetroWave Studio">
+                    <span class="preset-index">01</span>
+                    <div class="preset-details">
+                        <span class="preset-title">Synthwave Pulse</span>
+                        <span class="preset-sub">128 BPM // Synth</span>
                     </div>
+                    <span class="preset-led"></span>
                 </button>
-                <button class="track-row" data-src="/audio/lofi.mp3" data-title="Lofi Chill Beats" data-artist="Lofi Studio">
-                    <div class="track-dot"></div>
-                    <div class="track-info">
-                        <span class="track-name">Lofi Chill Beats</span>
-                        <span class="track-sub">Lofi Studio</span>
+                <button class="preset-row" data-src="/audio/lofi.mp3" data-title="Lofi Chill Beats" data-artist="Lofi Studio">
+                    <span class="preset-index">02</span>
+                    <div class="preset-details">
+                        <span class="preset-title">Lofi Chill Beats</span>
+                        <span class="preset-sub">85 BPM // Lofi</span>
                     </div>
+                    <span class="preset-led"></span>
                 </button>
-                <button class="track-row" data-src="/audio/chill.mp3" data-title="Acoustic Harmony" data-artist="Ambient Vibes">
-                    <div class="track-dot"></div>
-                    <div class="track-info">
-                        <span class="track-name">Acoustic Harmony</span>
-                        <span class="track-sub">Ambient Vibes</span>
+                <button class="preset-row" data-src="/audio/chill.mp3" data-title="Acoustic Harmony" data-artist="Ambient Vibes">
+                    <span class="preset-index">03</span>
+                    <div class="preset-details">
+                        <span class="preset-title">Acoustic Harmony</span>
+                        <span class="preset-sub">100 BPM // Ambient</span>
                     </div>
+                    <span class="preset-led"></span>
                 </button>
             </div>
         </div>
 
-        <div class="tab-pane" id="tab-search" style="display:none;">
-            <div class="search-row">
-                <input type="text" id="search-inp" placeholder="Search YouTube..." autocomplete="off">
-                <button id="search-btn" class="search-go">
+        <div class="deck-pane" id="tab-search" style="display:none;">
+            <div class="search-box">
+                <input type="text" id="search-inp" placeholder="Search track or artist..." autocomplete="off">
+                <button id="search-btn" class="search-submit">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
             </div>
-            <div class="suggestions-list" id="suggestions-box" style="display:none;"></div>
+            <div class="search-results-list" id="suggestions-box" style="display:none;"></div>
         </div>
 
-        <div class="tab-pane" id="tab-upload" style="display:none;">
-            <p class="upload-hint">Play audio from your microphone or drop in a local file.</p>
-            <button class="action-btn" id="mic-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                Use microphone
-            </button>
-            <button class="action-btn" id="upload-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                Choose file
-            </button>
-            <input type="file" id="file-upload" accept="audio/*" style="display:none;">
+        <div class="deck-pane" id="tab-upload" style="display:none;">
+            <div class="input-action-stack">
+                <button class="deck-action-btn" id="upload-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Choose File (.mp3, .wav)</span>
+                </button>
+                <input type="file" id="file-upload" accept="audio/*" style="display:none;">
+
+                <button class="deck-action-btn" id="mic-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                    <span>Use Live Microphone</span>
+                </button>
+            </div>
+            <p class="deck-hint">Or drag and drop any audio file anywhere on screen.</p>
         </div>
     </aside>
 
-    <aside class="side-card right-card glass">
-        <div class="control-group">
-            <span class="control-label">shape</span>
-            <div class="shape-row" id="style-segmented">
-                <button class="shape-btn active" data-value="pulse" title="Ring">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+    <aside class="control-deck right-deck">
+        <div class="deck-header">
+            <span class="deck-label">SYNTHESIS & FX</span>
+            <span class="deck-badge" id="geometry-badge">RING</span>
+        </div>
+
+        <div class="section-group">
+            <span class="section-label">GEOMETRY MATRIX</span>
+            <div class="segmented-grid" id="style-segmented">
+                <button class="seg-btn active" data-value="pulse" title="Pulse Ring">
+                    <span>RING</span>
                 </button>
-                <button class="shape-btn" data-value="wave" title="Wave">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12 Q6 4 10 12 Q14 20 18 12 Q22 4 24 12"/></svg>
+                <button class="seg-btn" data-value="wave" title="Wave Ribbon">
+                    <span>WAVE</span>
                 </button>
-                <button class="shape-btn" data-value="grid" title="Grid">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                <button class="seg-btn" data-value="grid" title="3D Matrix">
+                    <span>GRID</span>
+                </button>
+                <button class="seg-btn" data-value="orb" title="Pulsar Sphere">
+                    <span>ORB</span>
                 </button>
             </div>
         </div>
 
-        <div class="control-group">
-            <span class="control-label">color</span>
-            <div class="color-row">
-                <button class="color-dot dot-gold active" data-theme="gold" title="Gold"></button>
-                <button class="color-dot dot-cyan" data-theme="cyan" title="Cyan"></button>
-                <button class="color-dot dot-rose" data-theme="magenta" title="Rose"></button>
-            </div>
-        </div>
-
-        <div class="control-group">
-            <span class="control-label">background</span>
-            <div class="shape-row" id="bg-segmented">
-                <button class="shape-btn active" data-bg="dots" title="Floating dots">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        <div class="section-group">
+            <span class="section-label">SOUND SHAPER FX</span>
+            <div class="fx-rack">
+                <button class="fx-switch-btn" id="fx-muffler" title="Lowpass Filter (Underwater / Club Bathroom Vibe)">
+                    <span class="fx-name">MUFFLER</span>
+                    <span class="fx-status">OFF</span>
                 </button>
-                <button class="shape-btn" data-bg="rings" title="Pulse rings">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="11"/></svg>
+                <button class="fx-switch-btn" id="fx-bassboost" title="Low-Shelf Bass Overdrive Boost">
+                    <span class="fx-name">BASS BOOST</span>
+                    <span class="fx-status">OFF</span>
                 </button>
-                <button class="shape-btn" data-bg="off" title="No background">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg>
+                <button class="fx-switch-btn" id="fx-speed" title="Speed & Pitch Vibe (Normal 1.0x / Nightcore 1.25x / Slowed 0.85x)">
+                    <span class="fx-name">SPEED</span>
+                    <span class="fx-status" id="fx-speed-status">1.0x</span>
                 </button>
             </div>
         </div>
 
-        <div class="control-group">
-            <button class="icon-btn small" id="reset-cam-btn" title="Reset camera (R)">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                <span>Reset view</span>
-            </button>
+        <div class="section-group">
+            <span class="section-label">COLOR SPECTRA</span>
+            <div class="palette-row">
+                <button class="color-chip chip-gold active" data-theme="gold" title="Solar Amber"></button>
+                <button class="color-chip chip-cyan" data-theme="cyan" title="Cyber Cyan"></button>
+                <button class="color-chip chip-rose" data-theme="magenta" title="Neon Rose"></button>
+                <button class="color-chip chip-rainbow" data-theme="rainbow" title="Full Spectrum Gradient"></button>
+            </div>
+        </div>
+
+        <div class="section-group">
+            <span class="section-label">VIEW & BACKGROUND</span>
+            <div class="view-controls-row">
+                <div class="segmented-grid compact" id="bg-segmented">
+                    <button class="seg-btn active" data-bg="dots" title="Floating Dust">DOTS</button>
+                    <button class="seg-btn" data-bg="rings" title="Pulse Rings">RINGS</button>
+                    <button class="seg-btn" data-bg="off" title="Minimal Void">VOID</button>
+                </div>
+                <div class="cam-toggle-row">
+                    <button class="toggle-tool-btn" id="cam-autopilot-btn" title="Toggle Auto-Pilot Drone Orbit">
+                        <span>AUTO-CAM</span>
+                    </button>
+                    <button class="toggle-tool-btn" id="reset-cam-btn" title="Reset Viewport (R)">
+                        <span>RESET 3D</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </aside>
 
-    <footer class="player glass">
-        <div class="now-playing">
-            <img id="album-art" src="favicon.svg" alt="">
-            <div class="np-text">
-                <div class="np-title-row">
-                    <span id="track-title">Synthwave Pulse</span>
-                    <div class="eq-bars" id="mini-eq">
+    <footer class="master-transport">
+        <div class="transport-track">
+            <div class="album-art-wrap">
+                <img id="album-art" src="favicon.svg" alt="Cover">
+                <div class="art-pulse-ring"></div>
+            </div>
+            <div class="track-meta">
+                <div class="title-row">
+                    <span id="track-title" class="track-title">Synthwave Pulse</span>
+                    <div class="mini-eq" id="mini-eq">
                         <span></span><span></span><span></span><span></span>
                     </div>
                 </div>
-                <span id="track-artist" class="np-artist">RetroWave Studio</span>
+                <span id="track-artist" class="track-artist">RetroWave Studio</span>
             </div>
         </div>
 
-        <div class="transport">
-            <button id="play-btn" class="play-btn" title="Play / Pause (Space)">
-                <svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                <svg class="icon-pause" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-            </button>
-            <span id="time-current" class="time">0:00</span>
-            <div class="scrubber-wrap">
-                <div class="scrubber-track">
+        <div class="transport-center">
+            <div class="transport-actions">
+                <button id="play-btn" class="main-play-btn" title="Play / Pause (Space)">
+                    <svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    <svg class="icon-pause" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                </button>
+                <span id="time-current" class="time-code">00:00</span>
+                <div class="scrubber-bar">
                     <div class="scrubber-fill" id="progress-fill"></div>
                     <input type="range" id="seek-slider" min="0" max="100" step="0.1" value="0">
                 </div>
+                <span id="time-total" class="time-code">00:00</span>
             </div>
-            <span id="time-total" class="time">0:00</span>
         </div>
 
-        <div class="player-right">
-            <button class="icon-btn small" id="mute-btn" title="Mute (M)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-            </button>
-            <input type="range" id="vol-slider" min="0" max="100" value="100" class="vol-slider">
+        <div class="transport-right">
+            <div class="vu-meter-strip" id="master-vu" title="Live Audio Energy Meter">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="volume-module">
+                <button class="vol-btn" id="mute-btn" title="Mute Audio (M)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                </button>
+                <input type="range" id="vol-slider" min="0" max="100" value="100" class="vol-range">
+            </div>
         </div>
     </footer>
 
-    <div id="toast-banner" class="toast glass" style="display:none;">
-        <span id="toast-msg"></span>
+    <div id="toast-banner" class="toast-card" style="display:none;">
+        <span class="toast-symbol">⚡</span>
+        <span id="toast-msg">Notification</span>
         <button id="toast-close-btn" class="toast-close">&times;</button>
     </div>
 
-    <div class="overlay" id="guide-modal" style="display:none;">
-        <div class="modal glass">
+    <div class="modal-backdrop" id="guide-modal" style="display:none;">
+        <div class="modal-dialog">
             <div class="modal-top">
-                <h3>getting started</h3>
-                <button class="icon-btn" id="close-guide-btn">&times;</button>
+                <div class="modal-title-group">
+                    <span class="modal-badge">MANUAL // v2.0</span>
+                    <h3>WIBEI AUDIO SYNTHESIZER</h3>
+                </div>
+                <button class="modal-close" id="close-guide-btn">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="help-item">
-                    <strong>Play a demo</strong>
-                    <p>Click any track in the Demos tab on the left — they load instantly.</p>
+            <div class="modal-content">
+                <div class="manual-block">
+                    <h4>01 // AUDIO INGESTION & DSP</h4>
+                    <p>Stream built-in lossless stems, search online tracks, patch in live room acoustics with <strong>MIC</strong>, or drag & drop any <strong>.mp3 / .wav</strong> directly onto the screen.</p>
                 </div>
-                <div class="help-item">
-                    <strong>Search YouTube</strong>
-                    <p>Switch to the Search tab and type any song name. Note: YouTube occasionally blocks cloud server requests. If that happens, use a demo or upload a file.</p>
+                <div class="manual-block">
+                    <h4>02 // SOUND SHAPER FX RACK</h4>
+                    <p>Toggle <strong>MUFFLER</strong> for a dreamy underwater lowpass filter, engage <strong>BASS BOOST</strong> to overdrive low-end frequencies, or shift playback speed into <strong>Nightcore (1.25x)</strong> and <strong>Slowed (0.85x)</strong>.</p>
                 </div>
-                <div class="help-item">
-                    <strong>Upload or mic</strong>
-                    <p>Drop in any .mp3 or .wav file, or click Use microphone to visualize live audio.</p>
+                <div class="manual-block">
+                    <h4>03 // 3D GEOMETRY MODES</h4>
+                    <p>Switch between the <strong>Ring</strong>, <strong>Wave Ribbon</strong>, <strong>3D Voxel Matrix</strong>, and the new <strong>Pulsar Sphere</strong>. Toggle <strong>AUTO-CAM</strong> for dynamic drone choreography.</p>
                 </div>
-                <div class="help-item">
-                    <strong>3D controls</strong>
-                    <p>Click and drag to rotate the visualizer. Change shape and color from the right panel.</p>
-                </div>
-                <div class="shortcuts">
-                    <div class="sc-row"><kbd>Space</kbd> play / pause</div>
-                    <div class="sc-row"><kbd>M</kbd> mute</div>
-                    <div class="sc-row"><kbd>1 2 3</kbd> switch shape</div>
-                    <div class="sc-row"><kbd>R</kbd> reset camera</div>
-                    <div class="sc-row"><kbd>F</kbd> fullscreen</div>
+                <div class="shortcuts-table">
+                    <div class="sc-entry"><kbd>SPACE</kbd> <span>Play / Pause</span></div>
+                    <div class="sc-entry"><kbd>1 / 2 / 3 / 4</kbd> <span>Switch Geometry Mode</span></div>
+                    <div class="sc-entry"><kbd>U</kbd> <span>Toggle Underwater Muffler</span></div>
+                    <div class="sc-entry"><kbd>B</kbd> <span>Toggle Bass Boost</span></div>
+                    <div class="sc-entry"><kbd>A</kbd> <span>Toggle Auto-Cam Orbit</span></div>
+                    <div class="sc-entry"><kbd>R</kbd> <span>Reset 3D Viewport</span></div>
+                    <div class="sc-entry"><kbd>M</kbd> <span>Mute / Unmute</span></div>
+                    <div class="sc-entry"><kbd>F</kbd> <span>Fullscreen</span></div>
                 </div>
             </div>
-            <button class="action-btn primary" id="dismiss-guide-btn">Let's go</button>
+            <button class="dialog-action-btn" id="dismiss-guide-btn">LAUNCH INTERFACE →</button>
         </div>
     </div>
 
