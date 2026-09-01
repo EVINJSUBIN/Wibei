@@ -55,6 +55,10 @@ function getSpotifyTitle(url) {
     });
 }
 
+app.get(['/app', '/visualizer', '/studio'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
 app.get('/stream', async (req, res) => {
     let url = req.query.url;
     if (!url) {
