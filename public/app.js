@@ -694,4 +694,29 @@ window.addEventListener('keydown', e => {
 
 if (albumArt) albumArt.onerror = () => { albumArt.src = 'favicon.svg'; };
 
+// ---------- Theme Mode (Light / Dark) ----------
+let isLightMode = localStorage.getItem('wibei_theme_mode') === 'light';
+const themeToggleBtn = document.getElementById('theme-toggle-btn');
+const themeSunIcon   = document.querySelector('.theme-sun-icon');
+const themeMoonIcon  = document.querySelector('.theme-moon-icon');
+
+function applyThemeMode(light) {
+    isLightMode = light;
+    document.body.classList.toggle('light-mode', light);
+    if (themeSunIcon && themeMoonIcon) {
+        themeSunIcon.style.display  = light ? 'block' : 'none';
+        themeMoonIcon.style.display = light ? 'none'  : 'block';
+    }
+    if (bloomPass) {
+        bloomPass.threshold = light ? 0.18 : 0.08;
+        bloomPass.strength  = light ? 0.95 : 1.35;
+    }
+    localStorage.setItem('wibei_theme_mode', light ? 'light' : 'dark');
+}
+
+themeToggleBtn?.addEventListener('click', () => {
+    applyThemeMode(!isLightMode);
+});
+
 initThree();
+applyThemeMode(isLightMode);

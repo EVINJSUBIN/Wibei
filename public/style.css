@@ -785,3 +785,95 @@ kbd {
     min-width: 28px;
     text-align: center;
 }
+
+/* ========================
+   Light Mode Theme
+   ======================== */
+body.light-mode {
+    --bg: #f8fafc;
+    --glass-bg: rgba(255, 255, 255, 0.78);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-border-strong: rgba(0, 0, 0, 0.16);
+    --text: #0f172a;
+    --text-dim: #475569;
+    --text-muted: #94a3b8;
+    --accent-glow: rgba(234, 179, 8, 0.35);
+    --accent-dim: rgba(234, 179, 8, 0.14);
+}
+
+body.light-mode .glass {
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+body.light-mode .card-tabs {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .tab {
+    color: var(--text-muted);
+}
+
+body.light-mode .tab.active {
+    background: rgba(0, 0, 0, 0.08);
+    color: var(--text);
+}
+
+body.light-mode .track-row:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .search-row input {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+body.light-mode .search-go {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .action-btn {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body.light-mode .action-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+body.light-mode .shape-btn {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body.light-mode .shape-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+body.light-mode .scrubber-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .vol-slider {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .vol-slider::-webkit-slider-thumb {
+    background: #0f172a;
+}
+
+body.light-mode kbd {
+    background: rgba(0, 0, 0, 0.06);
+    color: #0f172a;
+}
+
+body.light-mode #album-art {
+    background: #e2e8f0;
+}
+
+body.light-mode .overlay {
+    background: rgba(15, 23, 42, 0.35);
+}
+
+body.light-mode .toast {
+    background: rgba(255, 255, 255, 0.9);
+    color: #854d0e;
+    border-color: rgba(234, 179, 8, 0.4);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+}
