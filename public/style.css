@@ -31,7 +31,6 @@ body {
     user-select: none;
 }
 
-/* Canvas layers */
 #bg-canvas {
     position: fixed;
     inset: 0;
@@ -47,7 +46,6 @@ body {
 }
 #threejs-container:active { cursor: grabbing; }
 
-/* Glass utility */
 .glass {
     background: var(--glass-bg);
     backdrop-filter: blur(28px) saturate(1.4);
@@ -56,9 +54,6 @@ body {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-/* ========================
-   Header
-   ======================== */
 .top-bar {
     position: fixed;
     top: 16px;
@@ -92,9 +87,6 @@ body {
     pointer-events: auto;
 }
 
-/* ========================
-   Icon Buttons
-   ======================== */
 .icon-btn {
     display: inline-flex;
     align-items: center;
@@ -125,9 +117,6 @@ body {
     border-radius: 8px;
 }
 
-/* ========================
-   Side Cards
-   ======================== */
 .side-card {
     position: fixed;
     top: 68px;
@@ -150,7 +139,6 @@ body {
     gap: 18px;
 }
 
-/* Tabs */
 .card-tabs {
     display: flex;
     background: rgba(0, 0, 0, 0.3);
@@ -181,7 +169,6 @@ body {
     color: var(--text);
 }
 
-/* Track list */
 .track-list {
     display: flex;
     flex-direction: column;
@@ -249,7 +236,6 @@ body {
     text-overflow: ellipsis;
 }
 
-/* Search tab */
 .search-row {
     display: flex;
     gap: 6px;
@@ -293,7 +279,6 @@ body {
     border-color: var(--accent);
 }
 
-/* Suggestions */
 .suggestions-list {
     display: flex;
     flex-direction: column;
@@ -343,7 +328,6 @@ body {
     color: var(--text-dim);
 }
 
-/* Upload tab */
 .upload-hint {
     font-size: 11px;
     color: var(--text-dim);
@@ -351,7 +335,6 @@ body {
     margin-bottom: 10px;
 }
 
-/* Action buttons */
 .action-btn {
     display: flex;
     align-items: center;
@@ -389,9 +372,6 @@ body {
     transform: translateY(-1px);
 }
 
-/* ========================
-   Right panel controls
-   ======================== */
 .control-group {
     display: flex;
     flex-direction: column;
@@ -459,9 +439,6 @@ body {
 .dot-cyan  { background: #22d3ee; }
 .dot-rose  { background: #fb7185; }
 
-/* ========================
-   Bottom Player Bar
-   ======================== */
 .player {
     position: fixed;
     bottom: 18px;
@@ -478,7 +455,6 @@ body {
     pointer-events: auto;
 }
 
-/* Now playing */
 .now-playing {
     display: flex;
     align-items: center;
@@ -528,7 +504,6 @@ body {
     text-overflow: ellipsis;
 }
 
-/* Mini EQ bars */
 .eq-bars {
     display: flex;
     align-items: flex-end;
@@ -552,7 +527,6 @@ body {
     to   { height: 9px; }
 }
 
-/* Transport */
 .transport {
     display: flex;
     align-items: center;
@@ -628,7 +602,6 @@ body {
     margin: 0;
 }
 
-/* Player right */
 .player-right {
     display: flex;
     align-items: center;
@@ -655,9 +628,6 @@ body {
     cursor: pointer;
 }
 
-/* ========================
-   Toast
-   ======================== */
 .toast {
     position: fixed;
     bottom: 96px;
@@ -693,9 +663,6 @@ body {
     to   { opacity: 1; transform: translate(-50%, 0);   }
 }
 
-/* ========================
-   Modal
-   ======================== */
 .overlay {
     position: fixed;
     inset: 0;
@@ -786,9 +753,6 @@ kbd {
     text-align: center;
 }
 
-/* ========================
-   Light Mode Theme
-   ======================== */
 body.light-mode {
     --bg: #f8fafc;
     --glass-bg: rgba(255, 255, 255, 0.78);

@@ -55,7 +55,6 @@ function getSpotifyTitle(url) {
     });
 }
 
-// Stream Endpoint
 app.get('/stream', async (req, res) => {
     let url = req.query.url;
     if (!url) {
@@ -63,7 +62,6 @@ app.get('/stream', async (req, res) => {
         return res.status(400).send('URL is required');
     }
 
-    // Direct local audio file streaming
     if (url.startsWith('/audio/') || url.startsWith('audio/')) {
         const localPath = path.join(__dirname, 'public', url.startsWith('/') ? url.slice(1) : url);
         if (fs.existsSync(localPath)) {
@@ -139,7 +137,6 @@ app.get('/stream', async (req, res) => {
     });
 });
 
-// Search API
 app.get('/api/search', async (req, res) => {
     const q = req.query.q;
     if (!q) return res.json([]);
@@ -162,7 +159,6 @@ app.get('/api/search', async (req, res) => {
     }
 });
 
-// Auto-suggestions API
 app.get('/api/suggest', (req, res) => {
     const q = req.query.q;
     if (!q) return res.json([]);
@@ -184,7 +180,6 @@ app.get('/api/suggest', (req, res) => {
     });
 });
 
-// Metadata API
 app.get('/metadata', (req, res) => {
     const url = req.query.url;
     if (!url) return res.status(400).send('URL required');
@@ -224,7 +219,6 @@ app.get('/metadata', (req, res) => {
     });
 });
 
-// Health check endpoint
 app.get('/health', (req, res) => {
     const execInfo = getExec();
     res.json({

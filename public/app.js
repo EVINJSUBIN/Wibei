@@ -25,7 +25,6 @@ let targetRotX = 0, targetRotY = 0;
 let isDragging = false;
 let prevMouse = { x: 0, y: 0 };
 
-// ---------- DOM refs ----------
 const playBtn      = document.getElementById('play-btn');
 const iconPlay     = document.querySelector('.icon-play');
 const iconPause    = document.querySelector('.icon-pause');
@@ -43,7 +42,6 @@ const trackTitle   = document.getElementById('track-title');
 const trackArtist  = document.getElementById('track-artist');
 const miniEq       = document.getElementById('mini-eq');
 
-// ---------- Toast ----------
 let toastTimer;
 function showToast(msg, duration = 5500) {
     const el  = document.getElementById('toast-banner');
@@ -58,7 +56,6 @@ document.getElementById('toast-close-btn')?.addEventListener('click', () => {
     document.getElementById('toast-banner').style.display = 'none';
 });
 
-// ---------- Play state helpers ----------
 function updatePlayIcons(playing) {
     isPlaying = playing;
     if (iconPlay && iconPause) {
@@ -74,8 +71,7 @@ function updateTrackInfo(title, artist, thumb) {
     if (albumArt)    albumArt.src = thumb || 'favicon.svg';
 }
 
-// ---------- Background animation ----------
-let currentBg     = 'dots';   // 'dots' | 'rings' | 'off'
+let currentBg     = 'dots';
 let particles     = [];
 let rings         = [];
 let ringSpawnTimer = 0;
@@ -156,7 +152,6 @@ function animateBg() {
 }
 animateBg();
 
-// ---------- Three.js ----------
 function initThree() {
     const container = document.getElementById('threejs-container');
     scene  = new THREE.Scene();
@@ -200,7 +195,6 @@ function initThree() {
         });
     }
 
-    // Pulse ring
     pulseGrp = new THREE.Group();
     const ringCount = 128, ringR = 22;
     for (let i = 0; i < ringCount; i++) {
@@ -213,7 +207,6 @@ function initThree() {
     }
     visualizerRoot.add(pulseGrp);
 
-    // Wave
     waveGrp = new THREE.Group();
     const waveN = 64;
     for (let i = 0; i < waveN; i++) {
@@ -225,7 +218,6 @@ function initThree() {
     waveGrp.visible = false;
     visualizerRoot.add(waveGrp);
 
-    // Grid
     vgridGrp = new THREE.Group();
     const gCols = 16, gRows = 8;
     for (let i = 0; i < gCols * gRows; i++) {
@@ -239,7 +231,6 @@ function initThree() {
     vgridGrp.visible = false;
     visualizerRoot.add(vgridGrp);
 
-    // Mouse / drag
     window.addEventListener('mousemove', e => {
         mouseX = (e.clientX / innerWidth) * 2 - 1;
         mouseY = -(e.clientY / innerHeight) * 2 + 1;
@@ -274,7 +265,6 @@ function threeAnimate() {
     requestAnimationFrame(threeAnimate);
     const time = performance.now() * 0.001;
 
-    // Camera lerp
     if (visualizerRoot) {
         visualizerRoot.rotation.y += (targetRotY + mouseX * 0.15 - visualizerRoot.rotation.y) * 0.08;
         visualizerRoot.rotation.x += (targetRotX - mouseY * 0.15 - visualizerRoot.rotation.x) * 0.08;
@@ -343,7 +333,6 @@ function threeAnimate() {
     composer.render();
 }
 
-// ---------- Audio helpers ----------
 function ensureAudioCtx() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -453,7 +442,6 @@ async function playStream(query, presetMeta = null) {
     }
 }
 
-// ---------- UI interactions ----------
 function togglePlay() {
     if (isMicActive) return;
     if (!curAudioEl || !curAudioEl.src) {
@@ -471,7 +459,6 @@ function togglePlay() {
 }
 playBtn.addEventListener('click', togglePlay);
 
-// Left panel tabs
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -483,7 +470,6 @@ document.querySelectorAll('.tab').forEach(tab => {
     });
 });
 
-// Demo track rows
 document.querySelectorAll('.track-row').forEach(row => {
     row.addEventListener('click', () => {
         document.querySelectorAll('.track-row').forEach(r => r.classList.remove('active'));
@@ -492,7 +478,6 @@ document.querySelectorAll('.track-row').forEach(row => {
     });
 });
 
-// Search
 let suggTimer;
 const doSearch = () => {
     const q = searchInp.value.trim();
@@ -542,7 +527,6 @@ document.addEventListener('click', e => {
     }
 });
 
-// Mic
 document.getElementById('mic-btn')?.addEventListener('click', async () => {
     try {
         if (curAudioEl) { curAudioEl.pause(); updatePlayIcons(false); }
@@ -562,7 +546,6 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
     }
 });
 
-// File upload
 const fileUpload = document.getElementById('file-upload');
 document.getElementById('upload-btn')?.addEventListener('click', () => fileUpload?.click());
 fileUpload?.addEventListener('change', e => {
@@ -582,7 +565,6 @@ fileUpload?.addEventListener('change', e => {
     attachTimeEvents(curAudioEl);
 });
 
-// Shape buttons
 document.querySelectorAll('#style-segmented .shape-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('#style-segmented .shape-btn').forEach(b => b.classList.remove('active'));
@@ -594,7 +576,6 @@ document.querySelectorAll('#style-segmented .shape-btn').forEach(btn => {
     });
 });
 
-// Background mode buttons
 document.querySelectorAll('#bg-segmented .shape-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('#bg-segmented .shape-btn').forEach(b => b.classList.remove('active'));
@@ -607,7 +588,6 @@ document.querySelectorAll('#bg-segmented .shape-btn').forEach(btn => {
     });
 });
 
-// Color dots
 document.querySelectorAll('.color-dot').forEach(dot => {
     dot.addEventListener('click', () => {
         document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
@@ -631,7 +611,6 @@ document.querySelectorAll('.color-dot').forEach(dot => {
     });
 });
 
-// Scrubber
 seekSlider?.addEventListener('input', e => {
     if (!curAudioEl?.duration) return;
     const pct = parseFloat(e.target.value);
@@ -639,7 +618,6 @@ seekSlider?.addEventListener('input', e => {
     progressFill.style.width = pct + '%';
 });
 
-// Volume
 volSlider?.addEventListener('input', e => {
     if (curAudioEl) curAudioEl.volume = parseFloat(e.target.value) / 100;
 });
@@ -659,7 +637,6 @@ muteBtn?.addEventListener('click', () => {
     }
 });
 
-// Reset camera
 document.getElementById('reset-cam-btn')?.addEventListener('click', () => {
     targetRotX = 0; targetRotY = 0;
     if (visualizerRoot) { visualizerRoot.rotation.x = 0; visualizerRoot.rotation.y = 0; }
@@ -667,20 +644,17 @@ document.getElementById('reset-cam-btn')?.addEventListener('click', () => {
     camera.lookAt(0, 0, 0);
 });
 
-// Fullscreen
 document.getElementById('fullscreen-btn')?.addEventListener('click', () => {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
     else document.exitFullscreen().catch(() => {});
 });
 
-// Guide modal
 const guideModal = document.getElementById('guide-modal');
 document.getElementById('guide-btn')?.addEventListener('click',        () => { guideModal.style.display = 'flex'; });
 document.getElementById('close-guide-btn')?.addEventListener('click',  () => { guideModal.style.display = 'none'; });
 document.getElementById('dismiss-guide-btn')?.addEventListener('click',() => { guideModal.style.display = 'none'; });
 guideModal?.addEventListener('click', e => { if (e.target === guideModal) guideModal.style.display = 'none'; });
 
-// Keyboard shortcuts
 window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
@@ -694,7 +668,6 @@ window.addEventListener('keydown', e => {
 
 if (albumArt) albumArt.onerror = () => { albumArt.src = 'favicon.svg'; };
 
-// ---------- Theme Mode (Light / Dark) ----------
 let isLightMode = localStorage.getItem('wibei_theme_mode') === 'light';
 const themeToggleBtn = document.getElementById('theme-toggle-btn');
 const themeSunIcon   = document.querySelector('.theme-sun-icon');
