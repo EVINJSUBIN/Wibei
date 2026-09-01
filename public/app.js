@@ -6,14 +6,15 @@ let isPlaying = false;
 let isMicActive = false;
 let micStream = null;
 let scene, camera, renderer, composer, bloomPass;
+let ambientLight, pointLight;
 let visualizerRoot;
 let pulseGrp, waveGrp, vgridGrp;
 let pulseBars = [], waveBars = [], vgridBars = [];
 
 const THEMES = {
-    gold:    { accent: '#facc15', glow: 'rgba(250, 204, 21, 0.28)',  color: 0xfacc15 },
-    cyan:    { accent: '#22d3ee', glow: 'rgba(34,  211, 238, 0.28)', color: 0x22d3ee },
-    magenta: { accent: '#fb7185', glow: 'rgba(251, 113, 133, 0.28)', color: 0xfb7185 },
+    gold:    { accent: '#facc15', glow: 'rgba(250, 204, 21, 0.28)',  color: 0xfacc15, lightAccent: '#d97706', lightColor: 0xb45309, lightGlow: 'rgba(217, 119, 6, 0.25)' },
+    cyan:    { accent: '#22d3ee', glow: 'rgba(34,  211, 238, 0.28)', color: 0x22d3ee, lightAccent: '#0284c7', lightColor: 0x0369a1, lightGlow: 'rgba(2, 132, 199, 0.25)' },
+    magenta: { accent: '#fb7185', glow: 'rgba(251, 113, 133, 0.28)', color: 0xfb7185, lightAccent: '#e11d48', lightColor: 0xbe123c, lightGlow: 'rgba(225, 29, 72, 0.25)' },
 };
 let currentTheme = 'gold';
 let currentVis   = 'pulse';
@@ -109,6 +110,9 @@ spawnRing();
 function drawDotsFrame() {
     const th    = THEMES[currentTheme];
     const boost = 1 + bgBassLevel * 1.6;
+    const dotColor  = isLightMode ? th.lightAccent : th.accent;
+    const baseAlpha = isLightMode ? 0.16 : 0.05;
+
     particles.forEach(p => {
         p.y -= p.speed * boost;
         p.x += p.drift;
@@ -116,8 +120,8 @@ function drawDotsFrame() {
         if (p.x < -4 || p.x > bgCanvas.width + 4) p.x = Math.random() * bgCanvas.width;
         bgCtx.beginPath();
         bgCtx.arc(p.x, p.y, p.r * (1 + bgBassLevel * 0.5), 0, Math.PI * 2);
-        bgCtx.fillStyle   = th.accent;
-        bgCtx.globalAlpha = p.alpha * (1 + bgBassLevel * 0.6);
+        bgCtx.fillStyle   = dotColor;
+        bgCtx.globalAlpha = Math.min(0.85, (baseAlpha + p.alpha * (isLightMode ? 1.4 : 1)) * (1 + bgBassLevel * 0.6));
         bgCtx.fill();
     });
 }
@@ -133,15 +137,15 @@ function drawRingsFrame() {
         ringSpawnTimer = 0;
     }
 
-    bgCtx.strokeStyle = th.accent;
+    bgCtx.strokeStyle = isLightMode ? th.lightAccent : th.accent;
     rings = rings.filter(r => r.alpha > 0.003);
     rings.forEach(ring => {
         ring.r    += expandSpeed;
-        ring.alpha = Math.max(0, ring.alpha - 0.0008 - bgBassLevel * 0.003);
+        ring.alpha = Math.max(0, ring.alpha - (isLightMode ? 0.0006 : 0.0008) - bgBassLevel * 0.003);
         bgCtx.beginPath();
         bgCtx.arc(ring.cx, ring.cy, ring.r, 0, Math.PI * 2);
-        bgCtx.lineWidth   = 1.2 + bgBassLevel * 1.5;
-        bgCtx.globalAlpha = ring.alpha;
+        bgCtx.lineWidth   = (isLightMode ? 1.6 : 1.2) + bgBassLevel * 1.5;
+        bgCtx.globalAlpha = isLightMode ? Math.min(0.75, ring.alpha * 1.7) : ring.alpha;
         bgCtx.stroke();
     });
 }
@@ -179,8 +183,12 @@ function initThree() {
     composer.addPass(renderScene);
     composer.addPass(bloomPass);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
-    const pointLight = new THREE.PointLight(THEMES[currentTheme].color, 2.5, 120);
+    ambientLight = new THREE.AmbientLight(0xffffff, isLightMode ? 0.95 : 0.45);
+    scene.add(ambientLight);
+
+    const th = THEMES[currentTheme];
+    const col = isLightMode ? th.lightColor : th.color;
+    pointLight = new THREE.PointLight(col, isLightMode ? 3.2 : 2.5, 120);
     pointLight.position.set(0, 0, 20);
     scene.add(pointLight);
 
@@ -191,12 +199,14 @@ function initThree() {
     bGeo.translate(0, 0.5, 0);
 
     function makeMat() {
+        const t = THEMES[currentTheme];
+        const c = isLightMode ? t.lightColor : t.color;
         return new THREE.MeshStandardMaterial({
-            color:            THEMES[currentTheme].color,
-            emissive:         THEMES[currentTheme].color,
-            emissiveIntensity: 0.85,
-            roughness:        0.2,
-            metalness:        0.8,
+            color:            c,
+            emissive:         c,
+            emissiveIntensity: isLightMode ? 0.45 : 0.85,
+            roughness:        isLightMode ? 0.35 : 0.2,
+            metalness:        isLightMode ? 0.4 : 0.8,
         });
     }
 
@@ -607,27 +617,40 @@ document.querySelectorAll('#bg-segmented .shape-btn').forEach(btn => {
     });
 });
 
+function updateSceneMaterials() {
+    const th  = THEMES[currentTheme];
+    const acc = isLightMode ? th.lightAccent : th.accent;
+    const glw = isLightMode ? th.lightGlow   : th.glow;
+    const col = isLightMode ? th.lightColor  : th.color;
+
+    document.documentElement.style.setProperty('--accent',      acc);
+    document.documentElement.style.setProperty('--accent-glow', glw);
+
+    const updateMat = arr => arr.forEach(b => {
+        b.material.color.setHex(col);
+        b.material.emissive.setHex(col);
+        b.material.emissiveIntensity = isLightMode ? 0.45 : 0.85;
+        b.material.roughness = isLightMode ? 0.35 : 0.2;
+        b.material.metalness = isLightMode ? 0.4 : 0.8;
+    });
+    updateMat(pulseBars);
+    updateMat(waveBars);
+    updateMat(vgridBars);
+
+    if (ambientLight) ambientLight.intensity = isLightMode ? 0.95 : 0.45;
+    if (pointLight) {
+        pointLight.color.setHex(col);
+        pointLight.intensity = isLightMode ? 3.2 : 2.5;
+    }
+}
+
 // Color dots
 document.querySelectorAll('.color-dot').forEach(dot => {
     dot.addEventListener('click', () => {
         document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
         dot.classList.add('active');
         currentTheme = dot.dataset.theme;
-        const th = THEMES[currentTheme];
-
-        document.documentElement.style.setProperty('--accent',      th.accent);
-        document.documentElement.style.setProperty('--accent-glow', th.glow);
-
-        const updateMat = arr => arr.forEach(b => {
-            b.material.color.setHex(th.color);
-            b.material.emissive.setHex(th.color);
-        });
-        updateMat(pulseBars);
-        updateMat(waveBars);
-        updateMat(vgridBars);
-
-        const pl = scene.children.find(c => c.isPointLight);
-        if (pl) pl.color.setHex(th.color);
+        updateSceneMaterials();
     });
 });
 
@@ -710,6 +733,9 @@ function applyThemeMode(light) {
     if (bloomPass) {
         bloomPass.threshold = light ? 0.18 : 0.08;
         bloomPass.strength  = light ? 0.95 : 1.35;
+    }
+    if (scene) {
+        updateSceneMaterials();
     }
     localStorage.setItem('wibei_theme_mode', light ? 'light' : 'dark');
 }
