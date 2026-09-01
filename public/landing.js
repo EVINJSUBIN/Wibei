@@ -9,19 +9,19 @@
         if (!canvas) return;
         scene = new THREE.Scene();
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 2000);
-        camera.position.z = 700;
+        camera.position.z = 650;
 
-        const particleCount = 1400;
+        const count = 1600;
         const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        const colors = new Float32Array(particleCount * 3);
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
 
-        const colorGold = new THREE.Color(0xfacc15);
-        const colorCyan = new THREE.Color(0x06b6d4);
-        const colorRose = new THREE.Color(0xf43f5e);
+        const gold = new THREE.Color(0xfacc15);
+        const cyan = new THREE.Color(0x38bdf8);
+        const rose = new THREE.Color(0xfb7185);
 
-        for (let i = 0; i < particleCount; i++) {
-            const x = (Math.random() - 0.5) * 1600;
+        for (let i = 0; i < count; i++) {
+            const x = (Math.random() - 0.5) * 1800;
             const y = (Math.random() - 0.5) * 1200;
             const z = (Math.random() - 0.5) * 1200;
 
@@ -29,17 +29,17 @@
             positions[i * 3 + 1] = y;
             positions[i * 3 + 2] = z;
 
-            const mixedColor = Math.random() > 0.5 ? colorGold : (Math.random() > 0.5 ? colorCyan : colorRose);
-            colors[i * 3]     = mixedColor.r;
-            colors[i * 3 + 1] = mixedColor.g;
-            colors[i * 3 + 2] = mixedColor.b;
+            const col = Math.random() > 0.6 ? gold : (Math.random() > 0.3 ? cyan : rose);
+            colors[i * 3]     = col.r;
+            colors[i * 3 + 1] = col.g;
+            colors[i * 3 + 2] = col.b;
         }
 
         geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
         const material = new THREE.PointsMaterial({
-            size: 4,
+            size: 4.5,
             vertexColors: true,
             transparent: true,
             opacity: 0.65,
@@ -67,17 +67,17 @@
     }
 
     function onMouseMove(event) {
-        mouseX = (event.clientX - windowHalfX) * 0.15;
-        mouseY = (event.clientY - windowHalfY) * 0.15;
+        mouseX = (event.clientX - windowHalfX) * 0.12;
+        mouseY = (event.clientY - windowHalfY) * 0.12;
     }
 
     function animate() {
         requestAnimationFrame(animate);
-        const time = performance.now() * 0.0006;
+        const time = performance.now() * 0.0005;
         
         if (particlesMesh) {
-            particlesMesh.rotation.y = time * 0.2;
-            particlesMesh.rotation.x = Math.sin(time * 0.3) * 0.1;
+            particlesMesh.rotation.y = time * 0.25;
+            particlesMesh.rotation.x = Math.sin(time * 0.2) * 0.1;
         }
 
         camera.position.x += (mouseX - camera.position.x) * 0.05;
@@ -87,68 +87,100 @@
         renderer.render(scene, camera);
     }
 
-    let demoCtx, demoOsc, demoGain, demoFilter;
-    let isPlayingDemo = false;
-    let currentDemoMode = 'none';
+    let audioCtx;
 
-    function initDemoAudio() {
-        if (!demoCtx) {
-            demoCtx = new (window.AudioContext || window.webkitAudioContext)();
-            demoFilter = demoCtx.createBiquadFilter();
-            demoGain = demoCtx.createGain();
-            demoGain.gain.value = 0.15;
-
-            demoFilter.connect(demoGain);
-            demoGain.connect(demoCtx.destination);
+    function getAudioCtx() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        if (demoCtx.state === 'suspended') {
-            demoCtx.resume();
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
         }
+        return audioCtx;
     }
 
-    function playSynthChord(mode) {
-        initDemoAudio();
-        currentDemoMode = mode;
+    function playAuditionTone(mode) {
+        const ctx = getAudioCtx();
+        const now = ctx.currentTime;
+
+        const mainGain = ctx.createGain();
+        mainGain.gain.setValueAtTime(0.2, now);
+        mainGain.connect(ctx.destination);
+
+        const filterNode = ctx.createBiquadFilter();
 
         if (mode === 'muffler') {
-            demoFilter.type = 'lowpass';
-            demoFilter.frequency.setTargetAtTime(450, demoCtx.currentTime, 0.05);
-            demoFilter.Q.value = 2.0;
+            filterNode.type = 'lowpass';
+            filterNode.frequency.setValueAtTime(450, now);
+            filterNode.Q.setValueAtTime(2.5, now);
         } else if (mode === 'bass') {
-            demoFilter.type = 'lowshelf';
-            demoFilter.frequency.setTargetAtTime(140, demoCtx.currentTime, 0.05);
-            demoFilter.gain.value = 14;
+            filterNode.type = 'lowshelf';
+            filterNode.frequency.setValueAtTime(140, now);
+            filterNode.gain.setValueAtTime(16, now);
+        } else if (mode === 'nightcore') {
+            filterNode.type = 'highshelf';
+            filterNode.frequency.setValueAtTime(2000, now);
+            filterNode.gain.setValueAtTime(6, now);
         } else {
-            demoFilter.type = 'allpass';
-            demoFilter.frequency.setTargetAtTime(20000, demoCtx.currentTime, 0.05);
+            filterNode.type = 'allpass';
+            filterNode.frequency.setValueAtTime(20000, now);
         }
 
-        const notes = [130.81, 164.81, 196.00, 246.94];
-        notes.forEach((freq, idx) => {
-            const osc = demoCtx.createOscillator();
-            const noteGain = demoCtx.createGain();
+        filterNode.connect(mainGain);
 
-            osc.type = mode === 'bass' ? 'sawtooth' : 'sine';
-            osc.frequency.setValueAtTime(freq, demoCtx.currentTime);
+        let frequencies = [];
+        let noteSpacing = 0.08;
+        let noteLength = 1.4;
+        let oscType = 'sawtooth';
 
-            noteGain.gain.setValueAtTime(0, demoCtx.currentTime);
-            noteGain.gain.linearRampToValueAtTime(0.12, demoCtx.currentTime + 0.08);
-            noteGain.gain.exponentialRampToValueAtTime(0.0001, demoCtx.currentTime + 1.6 + idx * 0.1);
+        if (mode === 'bass') {
+            frequencies = [55, 110, 55, 82.4];
+            oscType = 'sawtooth';
+            noteSpacing = 0.18;
+            noteLength = 1.2;
+        } else if (mode === 'nightcore') {
+            frequencies = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+            oscType = 'triangle';
+            noteSpacing = 0.06;
+            noteLength = 0.9;
+        } else if (mode === 'muffler') {
+            frequencies = [130.81, 164.81, 196.00, 246.94, 293.66];
+            oscType = 'sawtooth';
+            noteSpacing = 0.09;
+            noteLength = 1.8;
+        } else {
+            frequencies = [261.63, 329.63, 392.00, 493.88, 587.33];
+            oscType = 'sine';
+            noteSpacing = 0.07;
+            noteLength = 1.5;
+        }
+
+        frequencies.forEach((freq, idx) => {
+            const osc = ctx.createOscillator();
+            const noteGain = ctx.createGain();
+
+            osc.type = oscType;
+            osc.frequency.setValueAtTime(freq, now + idx * noteSpacing);
+
+            const startTime = now + idx * noteSpacing;
+            noteGain.gain.setValueAtTime(0, startTime);
+            noteGain.gain.linearRampToValueAtTime(0.18, startTime + 0.04);
+            noteGain.gain.exponentialRampToValueAtTime(0.0001, startTime + noteLength);
 
             osc.connect(noteGain);
-            noteGain.connect(demoFilter);
+            noteGain.connect(filterNode);
 
-            osc.start();
-            osc.stop(demoCtx.currentTime + 1.8);
+            osc.start(startTime);
+            osc.stop(startTime + noteLength + 0.1);
         });
     }
 
-    document.querySelectorAll('.dsp-chip').forEach(chip => {
-        chip.addEventListener('click', () => {
-            document.querySelectorAll('.dsp-chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-            const mode = chip.dataset.mode;
-            playSynthChord(mode);
+    document.querySelectorAll('.sound-demo-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.sound-demo-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const mode = btn.dataset.mode;
+            playAuditionTone(mode);
         });
     });
 

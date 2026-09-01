@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WIBEI — 3D Audio Spectrograph & Sound Shaper Lab</title>
+    <title>WIBEI — Real-Time 3D Audio Spectrograph & DSP Synthesizer</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="landing.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -16,218 +16,233 @@
 <body>
     <canvas id="hero-webgl-canvas"></canvas>
 
-    <nav class="landing-nav">
+    <header class="site-nav">
         <a href="/" class="nav-brand">
-            <span class="nav-logo-text">WIBEI</span>
-            <span class="nav-badge">DSP-3D</span>
+            <span class="nav-title">WIBEI</span>
+            <span class="nav-badge">PRO-DSP</span>
         </a>
 
-        <div class="nav-links">
-            <a href="#features" class="nav-link">DSP Lab</a>
-            <a href="#geometry" class="nav-link">3D Engines</a>
-            <a href="#manifesto" class="nav-link">Mission</a>
-            <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" rel="noreferrer" class="nav-link">GitHub</a>
-        </div>
+        <nav class="nav-links-wrap">
+            <a href="#dsp-features" class="nav-link">DSP Rack</a>
+            <a href="#geometry-modes" class="nav-link">3D Spectrographs</a>
+            <a href="#architecture" class="nav-link">Architecture</a>
+            <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" rel="noreferrer" class="nav-link">Source</a>
+        </nav>
 
-        <a href="app.html" class="nav-cta">
+        <a href="app.html" class="nav-btn-launch">
             <span>ENTER STUDIO</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
-    </nav>
+    </header>
 
-    <div class="landing-content">
-        <section class="hero-section">
-            <div class="hero-pill-badge">
-                <span class="pulse-dot"></span>
+    <main class="main-content">
+        <section class="hero-wrap">
+            <div class="badge-tag">
+                <span class="badge-dot"></span>
                 <span>OPEN SOURCE AUDIO LAB // HACK CLUB STARDANCE</span>
             </div>
 
-            <h1 class="hero-title">
-                Shape Sound in <span class="gradient-text">Three Dimensions</span>.
+            <h1 class="hero-header-text">
+                Real-Time Audio DSP, <br>
+                <span class="gradient-headline">Visualized in 3D Space.</span>
             </h1>
 
-            <p class="hero-subtitle">
-                An open-source WebGL audio spectrograph and real-time DSP sound lab. Route lossless stems, apply analog lowpass filtering and bass overdrive, and watch acoustic harmonics explode into 3D particle shockwaves.
+            <p class="hero-description">
+                Wibei is a professional-grade web synthesizer and audio spectrograph. Manipulate live Web Audio DSP nodes, audition underwater lowpass filtering and bass overdrive in real time, and render sound into high-density WebGL geometries.
             </p>
 
-            <div class="hero-actions">
-                <a href="app.html" class="btn-primary-hero">
+            <div class="hero-btn-row">
+                <a href="app.html" class="cta-primary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     <span>Launch Visualizer Studio</span>
                 </a>
-                <a href="#features" class="btn-secondary-hero">
-                    <span>Explore Sound Lab ↓</span>
+                <a href="#dsp-features" class="cta-secondary">
+                    <span>Explore Features ↓</span>
                 </a>
             </div>
 
-            <div class="interactive-dsp-tester">
-                <div class="dsp-tester-header">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
-                    <span>CLICK TO AUDITION LIVE DSP FILTER NODES:</span>
+            <div class="metrics-strip">
+                <div class="metric-item">
+                    <span class="metric-highlight">0ms</span> Buffering Latency
                 </div>
-                <div class="dsp-chips-row">
-                    <button class="dsp-chip active" data-mode="clean">01. Pure Tone (Allpass)</button>
-                    <button class="dsp-chip" data-mode="muffler">02. Muffler (650Hz Lowpass)</button>
-                    <button class="dsp-chip" data-mode="bass">03. Overdrive (+14dB Bass)</button>
+                <div class="metric-item">
+                    <span class="metric-highlight">128</span> FFT Bins
+                </div>
+                <div class="metric-item">
+                    <span class="metric-highlight">60 FPS</span> WebGL 2.0
+                </div>
+                <div class="metric-item">
+                    <span class="metric-highlight">100%</span> Client-Side DSP
+                </div>
+            </div>
+
+            <div class="interactive-dsp-console">
+                <div class="dsp-console-top">
+                    <span>LIVE DSP NODE AUDITION</span>
+                    <span class="dsp-live-tag">● ACTIVE SYNTH ENGINE</span>
+                </div>
+                <div class="dsp-buttons-grid">
+                    <button class="sound-demo-btn active" data-mode="clean">
+                        <span class="demo-title">01. Pure Chime</span>
+                        <span class="demo-sub">Linear Allpass</span>
+                    </button>
+                    <button class="sound-demo-btn" data-mode="muffler">
+                        <span class="demo-title">02. Muffler</span>
+                        <span class="demo-sub">450Hz Lowpass</span>
+                    </button>
+                    <button class="sound-demo-btn" data-mode="bass">
+                        <span class="demo-title">03. Overdrive</span>
+                        <span class="demo-sub">+16dB Sub-Bass</span>
+                    </button>
+                    <button class="sound-demo-btn" data-mode="nightcore">
+                        <span class="demo-title">04. Nightcore</span>
+                        <span class="demo-sub">1.25x High-Pitch</span>
+                    </button>
                 </div>
             </div>
         </section>
 
-        <section id="features" class="section-container">
-            <div class="section-header">
-                <span class="section-eyebrow">// REAL-TIME AUDIO PROCESSING</span>
-                <h2 class="section-heading">The Sound Shaper DSP Rack</h2>
-                <p class="section-sub">
-                    Direct Web Audio API node graph routing in your browser with zero latency. No proprietary software required.
+        <section id="dsp-features" class="section-wrapper">
+            <div class="section-title-box">
+                <span class="section-tag">// ARCHITECTURE &amp; PROCESSING</span>
+                <h2 class="section-main-heading">The Sound Shaper DSP Suite</h2>
+                <p class="section-lead-text">
+                    Engineered directly on the browser's native Web Audio API graph for zero-latency filter processing.
                 </p>
             </div>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="card-icon-box">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2v10"/></svg>
+            <div class="bento-grid">
+                <div class="bento-card bento-span-8">
+                    <div class="bento-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"/><path d="M12 2v10"/></svg>
                     </div>
-                    <h3 class="card-title">Underwater Lowpass Muffler</h3>
-                    <p class="card-desc">
-                        Emulates the iconic "club bathroom / submerged underwater" vibe. Dynamically activates a 650Hz BiquadFilterNode with a resonant Q of 1.2 to smoothly filter high frequencies.
+                    <h3 class="bento-title">Submerged Lowpass Muffler</h3>
+                    <p class="bento-text">
+                        Instantly triggers a resonant lowpass filter with a cutoff threshold at 450Hz and resonant Q factor of 2.5. Delivers the legendary "club bathroom / underwater soundstage" atmosphere without touching any external software.
                     </p>
-                    <span class="card-tag">NODE: BiquadFilterNode (Lowpass)</span>
+                    <span class="bento-node-tag">NODE GRAPH: BiquadFilterNode (Lowpass, fc=450Hz, Q=2.5)</span>
                 </div>
 
-                <div class="feature-card">
-                    <div class="card-icon-box">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+                <div class="bento-card bento-span-4">
+                    <div class="bento-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
                     </div>
-                    <h3 class="card-title">Bass Overdrive Boost</h3>
-                    <p class="card-desc">
-                        A low-shelf equalizer with +10dB gain at 120Hz. Drives low-end saturation and supercharges the visualizer's spring physics and mesh displacement.
+                    <h3 class="bento-title">Analog Bass Boost</h3>
+                    <p class="bento-text">
+                        A dedicated low-shelf EQ node boosting sub-bass frequencies below 140Hz by +16dB, physically driving 3D bar height scaling.
                     </p>
-                    <span class="card-tag">NODE: BiquadFilterNode (Lowshelf)</span>
+                    <span class="bento-node-tag">NODE: BiquadFilterNode (+16dB Gain)</span>
                 </div>
 
-                <div class="feature-card">
-                    <div class="card-icon-box">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <div class="bento-card bento-span-4">
+                    <div class="bento-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     </div>
-                    <h3 class="card-title">Speed & Pitch Modulator</h3>
-                    <p class="card-desc">
-                        Switch between Normal (1.0x), Nightcore (1.25x high pitch), and Slowed Vibe (0.85x warm detuned tempo) with instantaneous clock reconfiguration.
+                    <h3 class="bento-title">Speed Clock Modulation</h3>
+                    <p class="bento-text">
+                        Real-time sample rate pitching between 1.0x Normal, 1.25x Nightcore, and 0.85x Slowed Reverb tempo.
                     </p>
-                    <span class="card-tag">ENGINE: HTMLMediaElement.playbackRate</span>
+                    <span class="bento-node-tag">API: HTMLMediaElement.playbackRate</span>
                 </div>
 
-                <div class="feature-card">
-                    <div class="card-icon-box">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/></svg>
+                <div class="bento-card bento-span-4">
+                    <div class="bento-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/></svg>
                     </div>
-                    <h3 class="card-title">Beat Drop Shockwaves</h3>
-                    <p class="card-desc">
-                        Real-time transient energy monitoring detecting sub-bass spikes. Spawns 3D expanding shockwave particle rings across the floor on heavy drops.
+                    <h3 class="bento-title">Beat Drop Shockwaves</h3>
+                    <p class="bento-text">
+                        Sub-bass transient detector calculating kinetic acoustic energy spikes to trigger expanding 3D shockwave particle rings.
                     </p>
-                    <span class="card-tag">TRIGGER: FFT Transient Peak &gt; 0.55</span>
+                    <span class="bento-node-tag">PHYSICS: Transient Peak Energy &gt; 0.55</span>
                 </div>
 
-                <div class="feature-card">
-                    <div class="card-icon-box">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div class="bento-card bento-span-4">
+                    <div class="bento-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </div>
-                    <h3 class="card-title">Universal Audio Ingest</h3>
-                    <p class="card-desc">
-                        Drop any .mp3 or .wav anywhere on the screen, tap your live microphone to visualize real-world acoustics, or search global tracks with 0ms buffering.
+                    <h3 class="bento-title">Auto-Pilot Drone Cam</h3>
+                    <p class="bento-text">
+                        Dynamic orbital camera choreography analyzing frequency energy to pan, zoom, and tilt automatically around 3D meshes.
                     </p>
-                    <span class="card-tag">PIPELINE: Drag &amp; Drop / WebRTC Mic</span>
-                </div>
-
-                <div class="feature-card">
-                    <div class="card-icon-box">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    </div>
-                    <h3 class="card-title">Auto-Pilot Drone Cam</h3>
-                    <p class="card-desc">
-                        A dynamic cinematic camera choreography mode that smoothly orbits, angles, and zooms around your visualizer in sync with music intensity.
-                    </p>
-                    <span class="card-tag">CONTROLLER: Three.js Orbit Choreography</span>
+                    <span class="bento-node-tag">CHOREOGRAPHY: Three.js Dynamic Orbit</span>
                 </div>
             </div>
         </section>
 
-        <section id="geometry" class="section-container">
-            <div class="section-header">
-                <span class="section-eyebrow">// 3D SPECTRAL ENGINES</span>
-                <h2 class="section-heading">4 Dimensional Geometries</h2>
-                <p class="section-sub">
-                    Crafted to render audio energy with precision lighting, bloom post-processing, and tactile responsiveness.
+        <section id="geometry-modes" class="section-wrapper">
+            <div class="section-title-box">
+                <span class="section-tag">// 3D SPECTROGRAPH ENGINES</span>
+                <h2 class="section-main-heading">Four Spatial Render Modes</h2>
+                <p class="section-lead-text">
+                    Rendered with Three.js WebGL and UnrealBloomPass post-processing shaders.
                 </p>
             </div>
 
-            <div class="geometry-showcase-grid">
-                <div class="geometry-box">
-                    <span class="geom-index">01</span>
-                    <h4 class="geom-title">Radial Pulse Ring</h4>
-                    <p class="geom-desc">128 circular spectrum towers scaling radially with sub-bass kick bounce.</p>
+            <div class="engines-grid">
+                <div class="engine-tile">
+                    <span class="engine-num">MODE 01</span>
+                    <h4 class="engine-name">Radial Pulse Ring</h4>
+                    <p class="engine-desc">128 concentric towers scaling radially with sub-bass kick transients.</p>
                 </div>
 
-                <div class="geometry-box">
-                    <span class="geom-index">02</span>
-                    <h4 class="geom-title">Waveform Ribbon</h4>
-                    <p class="geom-desc">64-band horizontal wave analyzer showing full frequency distribution.</p>
+                <div class="engine-tile">
+                    <span class="engine-num">MODE 02</span>
+                    <h4 class="engine-name">Waveform Ribbon</h4>
+                    <p class="engine-desc">64-channel linear frequency analyzer displaying continuous amplitude wave ribbons.</p>
                 </div>
 
-                <div class="geometry-box">
-                    <span class="geom-index">03</span>
-                    <h4 class="geom-title">Isometric Voxel Matrix</h4>
-                    <p class="geom-desc">16x8 spatial voxel grid showing depth and harmonic propagation.</p>
+                <div class="engine-tile">
+                    <span class="engine-num">MODE 03</span>
+                    <h4 class="engine-name">Isometric 3D Matrix</h4>
+                    <p class="engine-desc">16x8 spatial voxel grid visualizing harmonic depth and acoustic propagation.</p>
                 </div>
 
-                <div class="geometry-box">
-                    <span class="geom-index">04</span>
-                    <h4 class="geom-title">Pulsar Sphere</h4>
-                    <p class="geom-desc">Geodesic wireframe icosahedron deformed by harmonic frequency bins.</p>
+                <div class="engine-tile">
+                    <span class="engine-num">MODE 04</span>
+                    <h4 class="engine-name">Pulsar Sphere</h4>
+                    <p class="engine-desc">Geodesic wireframe icosahedron deformed in real time by harmonic frequency bins.</p>
                 </div>
             </div>
         </section>
 
-        <section id="manifesto" class="section-container">
-            <div class="manifesto-card">
-                <span class="section-eyebrow">// OUR MISSION &amp; VISION</span>
+        <section id="architecture" class="section-wrapper">
+            <div class="manifesto-box">
+                <span class="section-tag">// OPEN AUDIO MANIFESTO</span>
                 <h3 class="manifesto-quote">
-                    "Audio visualization shouldn't require bloated desktop software. It should be open, instantaneous, and accessible to every hacker, producer, and curious mind."
+                    "Professional audio visualization and sound shaping belong in the open web — accessible to every creator, bedroom producer, and hacker with zero paywalls."
                 </h3>
-                <p class="manifesto-body">
-                    Wibei was built from scratch as an open-source web synthesizer for <strong>Hack Club Stardance</strong>. It exists to prove that cutting-edge 3D WebGL graphics and real-time DSP sound filters can live directly in a modern web browser.
+                <p class="manifesto-copy">
+                    Wibei was developed as an open-source project for <strong>Hack Club Stardance</strong>. It demonstrates that cutting-edge 3D WebGL graphics and hardware-grade DSP sound processing can operate natively in the browser at 60 FPS.
                 </p>
-                <p class="manifesto-body">
-                    Whether you are testing an acoustic mix, performing a live DJ set with the microphone input, or simply chilling with lofi beats after a late-night coding session, Wibei is designed to make sound feel alive.
-                </p>
-                <div class="manifesto-author">
-                    <span class="author-pill">100% OPEN SOURCE</span>
-                    <span style="color:var(--text-muted); font-size:12px;">•</span>
-                    <span style="color:var(--text-dim); font-size:12px;">Built with Three.js &amp; Web Audio API</span>
+                <div class="manifesto-footer">
+                    <span class="author-badge">100% OPEN SOURCE // MIT LICENSE</span>
+                    <span style="color:var(--text-muted);">•</span>
+                    <span style="color:var(--text-body); font-size:13px;">Built with Three.js &amp; Web Audio API</span>
                 </div>
             </div>
         </section>
 
-        <div class="cta-banner-section">
-            <div class="cta-banner">
-                <h2 class="cta-heading">Ready to Experience Sound in 3D?</h2>
-                <p style="color:var(--text-dim); max-width:540px;">
-                    Enter the studio now to start visualizing lossless stems, local files, or live acoustic sound.
+        <div class="final-cta-box">
+            <div class="final-cta-card">
+                <h2 class="final-cta-title">Ready to Experience Sound in 3D?</h2>
+                <p style="color:var(--text-body); max-width:560px;">
+                    Launch the visualizer studio now to audition lossless stems, drop in local MP3 files, or patch in your live microphone.
                 </p>
-                <a href="app.html" class="btn-primary-hero">
+                <a href="app.html" class="cta-primary">
                     <span>Launch Visualizer Studio →</span>
                 </a>
             </div>
         </div>
 
-        <footer class="landing-footer">
-            <div class="footer-links">
-                <a href="app.html" class="footer-link">Visualizer Studio</a>
-                <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" rel="noreferrer" class="footer-link">GitHub Repository</a>
-                <a href="https://stardance.hackclub.com" target="_blank" rel="noreferrer" class="footer-link">Hack Club Stardance</a>
+        <footer class="site-footer">
+            <div class="footer-nav">
+                <a href="app.html" class="footer-nav-link">Launch Studio</a>
+                <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" rel="noreferrer" class="footer-nav-link">GitHub Repository</a>
+                <a href="https://stardance.hackclub.com" target="_blank" rel="noreferrer" class="footer-nav-link">Hack Club Stardance</a>
             </div>
             <p>© 2026 Wibei Open Audio Laboratory. Open source under MIT License.</p>
         </footer>
-    </div>
+    </main>
 
     <script src="landing.js"></script>
 </body>
