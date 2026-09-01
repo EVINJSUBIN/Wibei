@@ -117,8 +117,7 @@ function drawDotsFrame() {
         bgCtx.beginPath();
         bgCtx.arc(p.x, p.y, p.r * (1 + bgBassLevel * 0.5), 0, Math.PI * 2);
         bgCtx.fillStyle   = th.accent;
-        const baseAlpha   = isLightMode ? p.alpha * 2.2 : p.alpha;
-        bgCtx.globalAlpha = Math.min(0.85, baseAlpha * (1 + bgBassLevel * 0.6));
+        bgCtx.globalAlpha = p.alpha * (1 + bgBassLevel * 0.6);
         bgCtx.fill();
     });
 }
@@ -141,9 +140,8 @@ function drawRingsFrame() {
         ring.alpha = Math.max(0, ring.alpha - 0.0008 - bgBassLevel * 0.003);
         bgCtx.beginPath();
         bgCtx.arc(ring.cx, ring.cy, ring.r, 0, Math.PI * 2);
-        bgCtx.lineWidth   = (1.2 + bgBassLevel * 1.5) * (isLightMode ? 1.4 : 1.0);
-        const ringAlpha   = isLightMode ? ring.alpha * 2.0 : ring.alpha;
-        bgCtx.globalAlpha = Math.min(0.85, ringAlpha);
+        bgCtx.lineWidth   = 1.2 + bgBassLevel * 1.5;
+        bgCtx.globalAlpha = ring.alpha;
         bgCtx.stroke();
     });
 }

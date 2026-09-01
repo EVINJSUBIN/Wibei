@@ -790,23 +790,19 @@ kbd {
    Light Mode Theme
    ======================== */
 body.light-mode {
-    --bg: #ffffff;
-    --glass-bg: rgba(255, 255, 255, 0.86);
-    --glass-border: rgba(0, 0, 0, 0.1);
-    --glass-border-strong: rgba(0, 0, 0, 0.2);
-    --text: #090d16;
-    --text-dim: #334155;
-    --text-muted: #64748b;
+    --bg: #f8fafc;
+    --glass-bg: rgba(255, 255, 255, 0.78);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-border-strong: rgba(0, 0, 0, 0.16);
+    --text: #0f172a;
+    --text-dim: #475569;
+    --text-muted: #94a3b8;
     --accent-glow: rgba(234, 179, 8, 0.35);
     --accent-dim: rgba(234, 179, 8, 0.14);
 }
 
-body.light-mode {
-    background-color: #ffffff;
-}
-
 body.light-mode .glass {
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 1);
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 body.light-mode .card-tabs {
