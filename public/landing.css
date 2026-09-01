@@ -3,6 +3,7 @@
     --card-bg: rgba(15, 23, 42, 0.7);
     --card-bg-elevated: rgba(30, 41, 59, 0.6);
     --border-subtle: rgba(255, 255, 255, 0.08);
+    --border-highlight: rgba(255, 255, 255, 0.18);
     --border-glow: rgba(250, 204, 21, 0.35);
     
     --text-hero: #ffffff;
@@ -71,6 +72,12 @@ body {
     padding: 0 22px;
     z-index: 100;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+    animation: navEntrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes navEntrance {
+    from { opacity: 0; transform: translate(-50%, -20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .nav-brand {
@@ -169,6 +176,12 @@ body {
     color: var(--accent);
     margin-bottom: 24px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    animation: fadeSlideDown 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .badge-dot {
@@ -192,6 +205,12 @@ body {
     letter-spacing: -1.8px;
     margin-bottom: 22px;
     color: #ffffff;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+@keyframes heroTextReveal {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .gradient-headline {
@@ -206,6 +225,7 @@ body {
     max-width: 720px;
     margin-bottom: 38px;
     line-height: 1.6;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
 .hero-btn-row {
@@ -215,6 +235,7 @@ body {
     gap: 16px;
     margin-bottom: 54px;
     flex-wrap: wrap;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
 }
 
 .cta-primary {
@@ -229,11 +250,11 @@ body {
     border-radius: 12px;
     text-decoration: none;
     box-shadow: 0 0 24px var(--accent-glow);
-    transition: all 0.15s ease;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cta-primary:hover {
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
     box-shadow: 0 0 36px var(--accent-glow);
 }
 
@@ -249,7 +270,7 @@ body {
     padding: 14px 28px;
     border-radius: 12px;
     text-decoration: none;
-    transition: all 0.15s ease;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .cta-secondary:hover {
@@ -270,6 +291,7 @@ body {
     border-radius: var(--radius-pill);
     margin-bottom: 40px;
     flex-wrap: wrap;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
 }
 
 .metric-item {
@@ -299,6 +321,7 @@ body {
     max-width: 620px;
     width: 100%;
     box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
 }
 
 .dsp-console-top {
@@ -343,17 +366,23 @@ body {
     padding: 10px 8px;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sound-demo-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.sound-demo-btn:active {
+    transform: scale(0.97);
 }
 
 .sound-demo-btn.active {
     background: var(--accent-dim);
     border-color: var(--accent);
+    box-shadow: 0 0 16px var(--accent-dim);
 }
 
 .demo-title {
@@ -423,13 +452,15 @@ body {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
 }
 
 .bento-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: translateY(-4px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-6px);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6), 0 0 20px rgba(250, 204, 21, 0.08);
 }
 
 .bento-span-8 { grid-column: span 8; }
@@ -452,6 +483,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bento-card:hover .bento-icon {
+    transform: scale(1.08) rotate(3deg);
 }
 
 .bento-title {
@@ -506,12 +542,13 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    transition: all 0.2s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .engine-tile:hover {
     border-color: var(--accent);
-    transform: translateY(-3px);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 20px var(--accent-dim);
 }
 
 .engine-num {
@@ -591,6 +628,12 @@ body {
     align-items: center;
     gap: 24px;
     box-shadow: 0 0 48px var(--accent-dim);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+
+.final-cta-card:hover {
+    transform: scale(1.01);
+    box-shadow: 0 0 60px var(--accent-glow);
 }
 
 .final-cta-title {
@@ -627,3 +670,32 @@ body {
 }
 
 .footer-nav-link:hover { color: var(--accent); }
+
+/* ========================================================
+   Scroll Reveal & Animation Engine
+   ======================================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(36px);
+    transition: opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1), transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), transform 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: opacity, transform;
+}
+
+.reveal-stagger.active > *:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
+.reveal-stagger.active > *:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.15s; }
+.reveal-stagger.active > *:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.25s; }
+.reveal-stagger.active > *:nth-child(4) { opacity: 1; transform: translateY(0); transition-delay: 0.35s; }
+.reveal-stagger.active > *:nth-child(5) { opacity: 1; transform: translateY(0); transition-delay: 0.45s; }
+.reveal-stagger.active > *:nth-child(6) { opacity: 1; transform: translateY(0); transition-delay: 0.55s; }

@@ -4,6 +4,7 @@
     let mouseX = 0, mouseY = 0;
     let windowHalfX = window.innerWidth / 2;
     let windowHalfY = window.innerHeight / 2;
+    let scrollY = 0;
 
     function initWebGL() {
         if (!canvas) return;
@@ -55,6 +56,9 @@
 
         window.addEventListener('resize', onResize);
         window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('scroll', () => {
+            scrollY = window.scrollY || window.pageYOffset;
+        });
         animate();
     }
 
@@ -76,12 +80,12 @@
         const time = performance.now() * 0.0005;
         
         if (particlesMesh) {
-            particlesMesh.rotation.y = time * 0.25;
-            particlesMesh.rotation.x = Math.sin(time * 0.2) * 0.1;
+            particlesMesh.rotation.y = time * 0.25 + scrollY * 0.0004;
+            particlesMesh.rotation.x = Math.sin(time * 0.2) * 0.1 + scrollY * 0.0002;
         }
 
         camera.position.x += (mouseX - camera.position.x) * 0.05;
-        camera.position.y += (-mouseY - camera.position.y) * 0.05;
+        camera.position.y += (-mouseY - scrollY * 0.15 - camera.position.y) * 0.05;
         camera.lookAt(scene.position);
 
         renderer.render(scene, camera);
@@ -184,5 +188,49 @@
         });
     });
 
-    initWebGL();
+    function initScrollObserver() {
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.12
+        };
+
+        const revealObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
+            revealObserver.observe(el);
+        });
+    }
+
+    function initCardSpotlights() {
+        document.querySelectorAll('.bento-card, .engine-tile').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.background = `radial-gradient(400px circle at ${x}px ${y}px, rgba(250, 204, 21, 0.06), rgba(15, 23, 42, 0.7) 60%)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.background = '';
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            initWebGL();
+            initScrollObserver();
+            initCardSpotlights();
+        });
+    } else {
+        initWebGL();
+        initScrollObserver();
+        initCardSpotlights();
+    }
 })();
