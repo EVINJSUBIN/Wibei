@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WIBEI — Real-Time 3D Audio Spectrograph & DSP Synthesizer</title>
+    <title>WIBEI — 3D Audio Spectrograph & Real-Time DSP Lab</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,18 +20,19 @@
     <header class="site-nav">
         <a href="/" class="nav-brand">
             <span class="nav-title">WIBEI</span>
-            <span class="nav-badge">PRO-DSP</span>
+            <span class="nav-badge">DSP-3D</span>
         </a>
 
         <nav class="nav-links-wrap">
             <a href="#dsp-features" class="nav-link">DSP Rack</a>
-            <a href="#geometry-modes" class="nav-link">3D Spectrographs</a>
-            <a href="#architecture" class="nav-link">Architecture</a>
-            <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" rel="noreferrer" class="nav-link">Source</a>
+            <a href="#code-snippet" class="nav-link">Under The Hood</a>
+            <a href="#geometry-modes" class="nav-link">3D Engines</a>
+            <a href="#about" class="nav-link">About</a>
+            <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" rel="noreferrer" class="nav-link">GitHub</a>
         </nav>
 
         <a href="app.html" class="nav-btn-launch">
-            <span>ENTER STUDIO</span>
+            <span>LAUNCH STUDIO</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
     </header>
@@ -44,28 +45,28 @@
             </h1>
 
             <p class="hero-description">
-                Wibei is a professional-grade web synthesizer and audio spectrograph. Manipulate live Web Audio DSP nodes, audition underwater lowpass filtering and bass overdrive in real time, and render sound into high-density WebGL geometries.
+                A web synthesizer and 3D spectrograph built with Three.js and Web Audio API. Route lossless stems, experiment with live lowpass filtering and bass overdrive, and watch acoustic harmonics drive particle shockwaves in real time.
             </p>
 
             <div class="hero-btn-row">
                 <a href="app.html" class="cta-primary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    <span>Launch Visualizer Studio</span>
+                    <span>Open Visualizer Studio</span>
                 </a>
                 <a href="#dsp-features" class="cta-secondary">
-                    <span>Explore Features ↓</span>
+                    <span>Explore Sound Lab ↓</span>
                 </a>
             </div>
 
             <div class="metrics-strip">
                 <div class="metric-item">
-                    <span class="metric-highlight">0ms</span> Buffering Latency
+                    <span class="metric-highlight">0ms</span> Buffer Latency
                 </div>
                 <div class="metric-item">
                     <span class="metric-highlight">128</span> FFT Bins
                 </div>
                 <div class="metric-item">
-                    <span class="metric-highlight">60 FPS</span> WebGL 2.0
+                    <span class="metric-highlight">60 FPS</span> Three.js WebGL
                 </div>
                 <div class="metric-item">
                     <span class="metric-highlight">100%</span> Client-Side DSP
@@ -75,7 +76,7 @@
             <div class="interactive-dsp-console">
                 <div class="dsp-console-top">
                     <span>LIVE DSP NODE AUDITION</span>
-                    <span class="dsp-live-tag">● ACTIVE SYNTH ENGINE</span>
+                    <span class="dsp-live-tag">● WEB AUDIO SYNTH READY</span>
                 </div>
                 <div class="dsp-buttons-grid">
                     <button class="sound-demo-btn active" data-mode="clean">
@@ -100,10 +101,10 @@
 
         <section id="dsp-features" class="section-wrapper">
             <div class="section-title-box reveal">
-                <span class="section-tag">// ARCHITECTURE &amp; PROCESSING</span>
-                <h2 class="section-main-heading">The Sound Shaper DSP Suite</h2>
+                <span class="section-tag">// SOUND SHAPER DSP RACK</span>
+                <h2 class="section-main-heading">Real-Time Audio Processing</h2>
                 <p class="section-lead-text">
-                    Engineered directly on the browser's native Web Audio API graph for zero-latency filter processing.
+                    Engineered directly on the browser's native Web Audio API node graph for instant, glitch-free audio filtering.
                 </p>
             </div>
 
@@ -165,6 +166,44 @@
             </div>
         </section>
 
+        <section id="code-snippet" class="section-wrapper">
+            <div class="section-title-box reveal">
+                <span class="section-tag">// UNDER THE HOOD</span>
+                <h2 class="section-main-heading">How the Audio Node Graph Works</h2>
+                <p class="section-lead-text">
+                    Pure Web Audio API pipeline without external audio libraries. Simple, modular, and fast.
+                </p>
+            </div>
+
+            <div class="code-showcase-box reveal">
+                <div class="code-box-header">
+                    <div class="mac-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span class="code-file-name">audio-pipeline.js</span>
+                    <span class="code-lang-tag">JavaScript / Web Audio API</span>
+                </div>
+                <pre class="code-block"><code><span class="tok-comment">// 1. Initialize AudioContext &amp; AnalyserNode (256 FFT Bins)</span>
+<span class="tok-keyword">const</span> audioCtx = <span class="tok-keyword">new</span> (window.<span class="tok-type">AudioContext</span> || window.<span class="tok-type">webkitAudioContext</span>)();
+<span class="tok-keyword">const</span> analyser = audioCtx.<span class="tok-fn">createAnalyser</span>();
+analyser.fftSize = <span class="tok-num">256</span>;
+
+<span class="tok-comment">// 2. Underwater Lowpass Muffler Biquad Filter</span>
+<span class="tok-keyword">const</span> muffler = audioCtx.<span class="tok-fn">createBiquadFilter</span>();
+muffler.type = <span class="tok-str">'lowpass'</span>;
+muffler.frequency.value = <span class="tok-num">650</span>; <span class="tok-comment">// 650Hz cutoff creates the club bathroom vibe</span>
+
+<span class="tok-comment">// 3. Low-Shelf Bass Overdrive Node</span>
+<span class="tok-keyword">const</span> bassBoost = audioCtx.<span class="tok-fn">createBiquadFilter</span>();
+bassBoost.type = <span class="tok-str">'lowshelf'</span>;
+bassBoost.frequency.value = <span class="tok-num">120</span>;
+bassBoost.gain.value = <span class="tok-num">10</span>; <span class="tok-comment">// +10dB sub-bass drive</span>
+
+<span class="tok-comment">// 4. Chain Audio Nodes: Source → Muffler → Bass → Analyser → Speakers</span>
+source.<span class="tok-fn">connect</span>(muffler).<span class="tok-fn">connect</span>(bassBoost).<span class="tok-fn">connect</span>(analyser).<span class="tok-fn">connect</span>(audioCtx.destination);</code></pre>
+            </div>
+        </section>
+
         <section id="geometry-modes" class="section-wrapper">
             <div class="section-title-box reveal">
                 <span class="section-tag">// 3D SPECTROGRAPH ENGINES</span>
@@ -201,19 +240,19 @@
             </div>
         </section>
 
-        <section id="architecture" class="section-wrapper">
+        <section id="about" class="section-wrapper">
             <div class="manifesto-box reveal">
-                <span class="section-tag">// OPEN AUDIO MANIFESTO</span>
+                <span class="section-tag">// DEVELOPER NOTES &amp; VISION</span>
                 <h3 class="manifesto-quote">
-                    "Professional audio visualization and sound shaping belong in the open web — accessible to every creator, bedroom producer, and hacker with zero paywalls."
+                    "Built with vanilla JavaScript, Three.js, and Web Audio API — exploring how simple audio nodes can create immersive 3D generative visuals."
                 </h3>
                 <p class="manifesto-copy">
-                    Wibei was developed as an open-source project to demonstrate that cutting-edge 3D WebGL graphics and hardware-grade DSP sound processing can operate natively in the browser at 60 FPS.
+                    Wibei was built from scratch as an open-source web visualizer for <strong>Hack Club Stardance</strong>. Inspired by retro Winamp plugins, Teenage Engineering hardware, and creative coding experiments on GitHub.
                 </p>
                 <div class="manifesto-footer">
                     <span class="author-badge">100% OPEN SOURCE // MIT LICENSE</span>
                     <span style="color:var(--text-muted);">•</span>
-                    <span style="color:var(--text-body); font-size:13px;">Built with Three.js &amp; Web Audio API</span>
+                    <span style="color:var(--text-body); font-size:13px;">Built for Hack Club Stardance</span>
                 </div>
             </div>
         </section>
@@ -232,8 +271,9 @@
 
         <footer class="site-footer">
             <div class="footer-nav">
-                <a href="app.html" class="footer-nav-link">Launch Studio</a>
+                <a href="app.html" class="footer-nav-link">Visualizer Studio</a>
                 <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" rel="noreferrer" class="footer-nav-link">GitHub Repository</a>
+                <a href="https://stardance.hackclub.com" target="_blank" rel="noreferrer" class="footer-nav-link">Hack Club Stardance</a>
             </div>
             <p>© 2026 Wibei Open Audio Laboratory. Open source under MIT License.</p>
         </footer>

@@ -502,6 +502,74 @@ body {
     margin-top: auto;
 }
 
+/* ========================================================
+   Code Showcase Box
+   ======================================================== */
+.code-showcase-box {
+    background: #090d16;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-box);
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(250, 204, 21, 0.05);
+}
+
+.code-box-header {
+    background: rgba(15, 23, 42, 0.9);
+    border-bottom: 1px solid var(--border-subtle);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.mac-dots {
+    display: flex;
+    gap: 6px;
+}
+
+.mac-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.mac-dots span:nth-child(1) { background: #ef4444; }
+.mac-dots span:nth-child(2) { background: #f59e0b; }
+.mac-dots span:nth-child(3) { background: #10b981; }
+
+.code-file-name {
+    font-family: var(--font-code);
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.code-lang-tag {
+    font-family: var(--font-code);
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.code-block {
+    padding: 24px;
+    margin: 0;
+    overflow-x: auto;
+    font-family: var(--font-code);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.code-block code {
+    font-family: var(--font-code);
+}
+
+.tok-comment { color: #64748b; font-style: italic; }
+.tok-keyword { color: #f43f5e; font-weight: 600; }
+.tok-type { color: #38bdf8; }
+.tok-fn { color: #facc15; }
+.tok-str { color: #34d399; }
+.tok-num { color: #fb923c; }
+
 .engines-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);

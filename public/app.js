@@ -1,3 +1,18 @@
+// ==========================================
+// ⚡ WIBEI 3D AUDIO SPECTROGRAPH & DSP LAB
+// Built with Three.js WebGL & Web Audio API
+// ==========================================
+
+console.log(
+    '%c⚡ WIBEI // 3D AUDIO DSP STUDIO \n%cThree.js WebGL & Web Audio API Engine Initialized',
+    'color: #facc15; font-weight: bold; font-size: 14px;',
+    'color: #94a3b8; font-size: 11px;'
+);
+
+// Math & Audio DSP Helpers
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (val, min, max) => Math.min(Math.max(val, min), max);
+
 const bgCanvas = document.getElementById('bg-canvas');
 const bgCtx = bgCanvas.getContext('2d');
 
