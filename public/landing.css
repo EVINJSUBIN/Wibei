@@ -54,6 +54,18 @@ body {
     opacity: 0.75;
 }
 
+.hero-backdrop-glow {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle at 50% 32%, rgba(250, 204, 21, 0.12) 0%, rgba(56, 189, 248, 0.05) 45%, transparent 75%);
+    z-index: 2;
+    pointer-events: none;
+}
+
 .site-nav {
     position: fixed;
     top: 16px;
@@ -157,55 +169,21 @@ body {
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 130px 20px 80px;
+    padding: 120px 20px 80px;
     max-width: 980px;
     margin: 0 auto;
-}
-
-.badge-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border-subtle);
-    padding: 6px 16px;
-    border-radius: var(--radius-pill);
-    font-family: var(--font-code);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--accent);
-    margin-bottom: 24px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    animation: fadeSlideDown 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes fadeSlideDown {
-    from { opacity: 0; transform: translateY(-16px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.badge-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
-    animation: dotGlow 1.5s infinite ease-in-out;
-}
-
-@keyframes dotGlow {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.4; transform: scale(0.85); }
+    position: relative;
+    z-index: 10;
 }
 
 .hero-header-text {
-    font-size: clamp(40px, 6.5vw, 72px);
+    font-size: clamp(42px, 7vw, 76px);
     font-weight: 800;
-    line-height: 1.08;
-    letter-spacing: -1.8px;
-    margin-bottom: 22px;
+    line-height: 1.06;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
     color: #ffffff;
-    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.05s both;
 }
 
 @keyframes heroTextReveal {
@@ -214,18 +192,28 @@ body {
 }
 
 .gradient-headline {
-    background: linear-gradient(135deg, #ffffff 20%, var(--accent) 65%, var(--cyan) 100%);
+    background: linear-gradient(135deg, #ffffff 0%, var(--accent) 40%, var(--cyan) 75%, #ffffff 100%);
+    background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    animation: shimmerGradient 5s linear infinite;
+    display: inline-block;
+    filter: drop-shadow(0 0 35px rgba(250, 204, 21, 0.25));
+}
+
+@keyframes shimmerGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
 }
 
 .hero-description {
     font-size: clamp(16px, 2vw, 20px);
     color: var(--text-body);
     max-width: 720px;
-    margin-bottom: 38px;
+    margin-bottom: 40px;
     line-height: 1.6;
-    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.18s both;
 }
 
 .hero-btn-row {
@@ -235,7 +223,7 @@ body {
     gap: 16px;
     margin-bottom: 54px;
     flex-wrap: wrap;
-    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.28s both;
 }
 
 .cta-primary {
@@ -291,7 +279,7 @@ body {
     border-radius: var(--radius-pill);
     margin-bottom: 40px;
     flex-wrap: wrap;
-    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.38s both;
 }
 
 .metric-item {
@@ -321,7 +309,7 @@ body {
     max-width: 620px;
     width: 100%;
     box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
-    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
+    animation: heroTextReveal 1s cubic-bezier(0.16, 1, 0.3, 1) 0.48s both;
 }
 
 .dsp-console-top {
