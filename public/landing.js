@@ -209,7 +209,7 @@
     }
 
     function initCardSpotlights() {
-        document.querySelectorAll('.bento-card, .engine-tile').forEach(card => {
+        document.querySelectorAll('.bento-card, .engine-tile, .gh-stat-card, .contributor-card').forEach(card => {
             card.addEventListener('mousemove', e => {
                 const rect = card.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -222,15 +222,45 @@
         });
     }
 
+    async function fetchGitHubStats() {
+        try {
+            const repoRes = await fetch('https://api.github.com/repos/EVINJSUBIN/Wibei');
+            if (repoRes.ok) {
+                const repoData = await repoRes.json();
+                const starsEl = document.getElementById('gh-stars-count');
+                const prsEl = document.getElementById('gh-prs-count');
+                if (starsEl && repoData.stargazers_count !== undefined) {
+                    starsEl.innerText = `${repoData.stargazers_count} ★`;
+                }
+                if (prsEl && repoData.open_issues_count !== undefined) {
+                    prsEl.innerText = `${repoData.open_issues_count}+`;
+                }
+            }
+
+            const contribRes = await fetch('https://api.github.com/repos/EVINJSUBIN/Wibei/contributors');
+            if (contribRes.ok) {
+                const contribs = await contribRes.json();
+                const countEl = document.getElementById('gh-contributors-count');
+                if (countEl && Array.isArray(contribs)) {
+                    countEl.innerText = `${contribs.length}`;
+                }
+            }
+        } catch (e) {
+            console.log('[Wibei] Using local GitHub telemetry cache.');
+        }
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             initWebGL();
             initScrollObserver();
             initCardSpotlights();
+            fetchGitHubStats();
         });
     } else {
         initWebGL();
         initScrollObserver();
         initCardSpotlights();
+        fetchGitHubStats();
     }
 })();
