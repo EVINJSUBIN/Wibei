@@ -872,7 +872,10 @@ body.light-mode .toast {
 
     .modal {
         width: min(420px, calc(100vw - 24px));
+
+        max-height: calc(100vh - 24px);
         max-height: calc(100dvh - 24px);
+
         overflow-y: auto;
     }
 
@@ -884,6 +887,7 @@ body.light-mode .toast {
 
 @media (max-width: 700px) {
     body {
+        height: 100vh;
         height: 100dvh;
     }
 
@@ -897,7 +901,10 @@ body.light-mode .toast {
         top: 58px;
         left: 10px;
         width: min(240px, calc(100vw - 20px));
+
+        max-height: calc(100vh - 190px);
         max-height: calc(100dvh - 190px);
+
         overflow-y: auto;
     }
 
@@ -980,6 +987,8 @@ body.light-mode .toast {
 
     .left-card {
         width: calc(100vw - 20px);
+
+        max-height: 34vh;
         max-height: 34dvh;
     }
 
