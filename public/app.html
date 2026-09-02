@@ -74,6 +74,7 @@
         <div class="deck-tabs">
             <button class="deck-tab active" data-tab="presets">DEMOS</button>
             <button class="deck-tab" data-tab="search">STREAM</button>
+            <button class="deck-tab" data-tab="queue">QUEUE (<span id="queue-count">0</span>)</button>
             <button class="deck-tab" data-tab="upload">LOCAL</button>
         </div>
 
@@ -104,6 +105,9 @@
                     <span class="preset-led"></span>
                 </button>
             </div>
+            <button class="deck-action-btn" id="queue-all-presets-btn" style="margin-top:8px;">
+                <span>+ Enqueue All Demos</span>
+            </button>
         </div>
 
         <div class="deck-pane" id="tab-search" style="display:none;">
@@ -116,20 +120,30 @@
             <div class="search-results-list" id="suggestions-box" style="display:none;"></div>
         </div>
 
+        <div class="deck-pane" id="tab-queue" style="display:none;">
+            <div class="queue-header-row">
+                <span class="queue-title-tag">PLAYLIST QUEUE</span>
+                <button class="queue-clear-btn" id="clear-queue-btn">CLEAR</button>
+            </div>
+            <div class="queue-list" id="queue-list-box">
+                <div class="queue-empty-state">Queue is empty.<br>Drop files or add streams!</div>
+            </div>
+        </div>
+
         <div class="deck-pane" id="tab-upload" style="display:none;">
             <div class="input-action-stack">
                 <button class="deck-action-btn" id="upload-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    <span>Choose File (.mp3, .wav)</span>
+                    <span>Choose Files (.mp3, .wav)</span>
                 </button>
-                <input type="file" id="file-upload" accept="audio/*" style="display:none;">
+                <input type="file" id="file-upload" accept="audio/*" multiple style="display:none;">
 
                 <button class="deck-action-btn" id="mic-btn">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
                     <span>Use Live Microphone</span>
                 </button>
             </div>
-            <p class="deck-hint">Or drag and drop any audio file anywhere on screen.</p>
+            <p class="deck-hint">Drop multiple audio files to create an instant playlist.</p>
         </div>
     </aside>
 
@@ -244,9 +258,15 @@
 
         <div class="transport-center">
             <div class="transport-actions">
+                <button id="prev-track-btn" class="transport-ctrl-btn" title="Previous Track (J)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="3"/></svg>
+                </button>
                 <button id="play-btn" class="main-play-btn" title="Play / Pause (Space)">
                     <svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     <svg class="icon-pause" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                </button>
+                <button id="next-track-btn" class="transport-ctrl-btn" title="Next Track (K)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="3"/></svg>
                 </button>
                 <span id="time-current" class="time-code">00:00</span>
                 <div class="scrubber-bar">
@@ -254,6 +274,12 @@
                     <input type="range" id="seek-slider" min="0" max="100" step="0.1" value="0">
                 </div>
                 <span id="time-total" class="time-code">00:00</span>
+                <button id="repeat-btn" class="transport-ctrl-btn" title="Repeat Mode: Off / All / One (L)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                </button>
+                <button id="shuffle-btn" class="transport-ctrl-btn" title="Shuffle Playlist (S)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                </button>
             </div>
         </div>
 
@@ -300,14 +326,13 @@
                 </div>
                 <div class="shortcuts-table">
                     <div class="sc-entry"><kbd>SPACE</kbd> <span>Play / Pause</span></div>
-                    <div class="sc-entry"><kbd>1 / 2 / 3 / 4</kbd> <span>Switch Geometry Mode</span></div>
-                    <div class="sc-entry"><kbd>T</kbd> <span>Cycle Aesthetic Vibe</span></div>
-                    <div class="sc-entry"><kbd>U</kbd> <span>Toggle Underwater Muffler</span></div>
-                    <div class="sc-entry"><kbd>B</kbd> <span>Toggle Bass Boost</span></div>
-                    <div class="sc-entry"><kbd>A</kbd> <span>Toggle Auto-Cam Orbit</span></div>
-                    <div class="sc-entry"><kbd>R</kbd> <span>Reset 3D Viewport</span></div>
-                    <div class="sc-entry"><kbd>M</kbd> <span>Mute / Unmute</span></div>
-                    <div class="sc-entry"><kbd>F</kbd> <span>Fullscreen</span></div>
+                    <div class="sc-entry"><kbd>J / K</kbd> <span>Prev / Next Track</span></div>
+                    <div class="sc-entry"><kbd>L / S</kbd> <span>Repeat / Shuffle</span></div>
+                    <div class="sc-entry"><kbd>1/2/3/4</kbd> <span>Geometry Modes</span></div>
+                    <div class="sc-entry"><kbd>T</kbd> <span>Cycle Vibe Theme</span></div>
+                    <div class="sc-entry"><kbd>U / B</kbd> <span>Muffler / Bass</span></div>
+                    <div class="sc-entry"><kbd>A / R</kbd> <span>Auto-Cam / Reset</span></div>
+                    <div class="sc-entry"><kbd>M / F</kbd> <span>Mute / Fullscreen</span></div>
                 </div>
             </div>
             <button class="dialog-action-btn" id="dismiss-guide-btn">LAUNCH INTERFACE →</button>

@@ -945,16 +945,149 @@ function stopMic() {
     isMicActive = false;
 }
 
-function playNext() {
-    if (queue.length > 0) {
-        const n = queue.shift();
-        n.src ? playDirectAudio(n.src, n.title, n.artist) : playStream(n.url || n, n);
+let playlist = [
+    { id: 'demo-1', title: 'Synthwave Pulse', artist: 'RetroWave Studio', src: '/audio/synthwave.mp3', thumb: 'favicon.svg', type: 'demo' },
+    { id: 'demo-2', title: 'Lofi Chill Beats', artist: 'Lofi Studio', src: '/audio/lofi.mp3', thumb: 'favicon.svg', type: 'demo' },
+    { id: 'demo-3', title: 'Acoustic Harmony', artist: 'Ambient Vibes', src: '/audio/chill.mp3', thumb: 'favicon.svg', type: 'demo' }
+];
+let currentTrackIdx = -1;
+let isShuffle = false;
+let repeatMode = 'off'; // 'off' | 'all' | 'one'
+
+function renderPlaylistUI() {
+    const box = document.getElementById('queue-list-box');
+    const countEl = document.getElementById('queue-count');
+    if (countEl) countEl.innerText = `${playlist.length}`;
+    if (!box) return;
+
+    if (playlist.length === 0) {
+        box.innerHTML = '<div class="queue-empty-state">Queue is empty.<br>Drop files or add streams!</div>';
+        return;
+    }
+
+    box.innerHTML = '';
+    playlist.forEach((track, idx) => {
+        const item = document.createElement('div');
+        item.className = `queue-item ${idx === currentTrackIdx ? 'active' : ''}`;
+        item.innerHTML = `
+            <div class="queue-item-info">
+                <span class="queue-item-title">${idx + 1}. ${track.title}</span>
+                <span class="queue-item-sub">${track.artist || 'Audio Track'}</span>
+            </div>
+            <button class="queue-remove-btn" title="Remove track">&times;</button>
+        `;
+        item.querySelector('.queue-item-info').addEventListener('click', () => {
+            playTrackAtIndex(idx);
+        });
+        item.querySelector('.queue-remove-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            removeFromPlaylist(idx);
+        });
+        box.appendChild(item);
+    });
+}
+
+function addToPlaylist(track, playImmediately = false) {
+    track.id = track.id || (Date.now() + Math.random());
+    playlist.push(track);
+    renderPlaylistUI();
+    if (playImmediately || (playlist.length === 1 && (!curAudioEl || curAudioEl.paused))) {
+        playTrackAtIndex(playlist.length - 1);
+    } else {
+        showToast(`Queued: ${track.title}`);
+    }
+}
+
+function removeFromPlaylist(idx) {
+    if (idx < 0 || idx >= playlist.length) return;
+    playlist.splice(idx, 1);
+    if (idx === currentTrackIdx) {
+        if (playlist.length > 0) {
+            currentTrackIdx = Math.min(idx, playlist.length - 1);
+            playTrackAtIndex(currentTrackIdx);
+        } else {
+            currentTrackIdx = -1;
+            if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
+            updatePlayIcons(false);
+            updateTrackInfo('No Track Playing', 'Queue is empty', null);
+        }
+    } else if (idx < currentTrackIdx) {
+        currentTrackIdx--;
+    }
+    renderPlaylistUI();
+}
+
+function clearPlaylist() {
+    playlist = [];
+    currentTrackIdx = -1;
+    renderPlaylistUI();
+    showToast('Playlist cleared');
+}
+
+function playTrackAtIndex(idx) {
+    if (idx < 0 || idx >= playlist.length) return;
+    currentTrackIdx = idx;
+    renderPlaylistUI();
+
+    const track = playlist[idx];
+    if (track.type === 'stream' || track.url) {
+        playStream(track.url || track.src, track);
+    } else {
+        const t = (track.title || '').toLowerCase();
+        if (t.includes('synth') || t.includes('cyber')) applyTheme('cyber');
+        else if (t.includes('lofi') || t.includes('chill')) applyTheme('lofi');
+        else if (t.includes('phonk') || t.includes('drift')) applyTheme('phonk');
+        else if (t.includes('acoustic') || t.includes('piano')) applyTheme('serious');
+
+        playDirectAudio(track.src, track.title, track.artist);
+    }
+}
+
+function playNextTrack(auto = false) {
+    if (playlist.length === 0) {
+        updatePlayIcons(false);
+        return;
+    }
+
+    if (repeatMode === 'one' && auto) {
+        if (curAudioEl) { curAudioEl.currentTime = 0; curAudioEl.play(); }
+        return;
+    }
+
+    if (isShuffle) {
+        let nextIdx = Math.floor(Math.random() * playlist.length);
+        if (playlist.length > 1 && nextIdx === currentTrackIdx) {
+            nextIdx = (nextIdx + 1) % playlist.length;
+        }
+        playTrackAtIndex(nextIdx);
+        return;
+    }
+
+    if (currentTrackIdx + 1 < playlist.length) {
+        playTrackAtIndex(currentTrackIdx + 1);
+    } else if (repeatMode === 'all') {
+        playTrackAtIndex(0);
     } else {
         updatePlayIcons(false);
+        if (!auto) showToast('Reached end of playlist');
+    }
+}
+
+function playPrevTrack() {
+    if (playlist.length === 0) return;
+    if (curAudioEl && curAudioEl.currentTime > 3) {
+        curAudioEl.currentTime = 0;
+        return;
+    }
+    if (currentTrackIdx > 0) {
+        playTrackAtIndex(currentTrackIdx - 1);
+    } else {
+        playTrackAtIndex(playlist.length - 1);
     }
 }
 
 function fmtTime(s) {
+    if (!s || isNaN(s)) return '00:00';
     return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 }
 
@@ -967,13 +1100,15 @@ function attachTimeEvents(el) {
         timeCurrent.innerText = fmtTime(el.currentTime);
         timeTotal.innerText   = fmtTime(el.duration);
     };
-    el.onended = playNext;
+    el.onended = () => {
+        playNextTrack(true);
+    };
 }
 
 function playDirectAudio(src, title, artist) {
     stopMic();
     updateTrackInfo(title, artist, null);
-    if (sourceBadge) sourceBadge.innerText = 'DEMO';
+    if (sourceBadge) sourceBadge.innerText = 'PLAYING';
 
     if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
 
@@ -994,11 +1129,6 @@ function playDirectAudio(src, title, artist) {
 
 async function playStream(query, presetMeta = null) {
     if (!query) return;
-    if (isPlaying && curAudioEl && !curAudioEl.paused) {
-        queue.push(presetMeta || { title: query, url: query });
-        showToast(`Queued: ${presetMeta?.title || query}`);
-        return;
-    }
 
     stopMic();
     if (sourceBadge) sourceBadge.innerText = 'STREAM';
@@ -1026,14 +1156,14 @@ async function playStream(query, presetMeta = null) {
         };
         curAudioEl.onerror = () => {
             updatePlayIcons(false);
-            showToast('YouTube bot challenge triggered on cloud! Use DEMOS or local MP3.');
-            updateTrackInfo('Stream Blocked by YouTube', 'Use Demos or Local File', null);
+            showToast('YouTube bot challenge triggered! Use Demos or Local Files.');
+            updateTrackInfo('Stream Error', 'Use Demos or Local Files', null);
         };
         attachTimeEvents(curAudioEl);
 
     } catch (_) {
         updatePlayIcons(false);
-        showToast('YouTube rate-limit on cloud host! Use DEMOS or local MP3.');
+        showToast('Stream error! Use DEMOS or local MP3.');
         updateTrackInfo('Playback Error', 'Use Demos or Local File', null);
     }
 }
@@ -1041,7 +1171,11 @@ async function playStream(query, presetMeta = null) {
 function togglePlay() {
     if (isMicActive) return;
     if (!curAudioEl || !curAudioEl.src) {
-        playDirectAudio('/audio/synthwave.mp3', 'Synthwave Pulse', 'RetroWave Studio');
+        if (playlist.length > 0) {
+            playTrackAtIndex(0);
+        } else {
+            playDirectAudio('/audio/synthwave.mp3', 'Synthwave Pulse', 'RetroWave Studio');
+        }
         return;
     }
     if (curAudioEl.paused) {
@@ -1055,6 +1189,48 @@ function togglePlay() {
 }
 playBtn.addEventListener('click', togglePlay);
 
+document.getElementById('prev-track-btn')?.addEventListener('click', playPrevTrack);
+document.getElementById('next-track-btn')?.addEventListener('click', () => playNextTrack(false));
+
+const repeatBtn = document.getElementById('repeat-btn');
+repeatBtn?.addEventListener('click', () => {
+    if (repeatMode === 'off') {
+        repeatMode = 'all';
+        repeatBtn.classList.add('active');
+        repeatBtn.title = 'Repeat Mode: ALL (L)';
+        showToast('Repeat Mode: ALL');
+    } else if (repeatMode === 'all') {
+        repeatMode = 'one';
+        repeatBtn.classList.add('active');
+        repeatBtn.title = 'Repeat Mode: ONE (L)';
+        showToast('Repeat Mode: SINGLE TRACK');
+    } else {
+        repeatMode = 'off';
+        repeatBtn.classList.remove('active');
+        repeatBtn.title = 'Repeat Mode: OFF (L)';
+        showToast('Repeat Mode: OFF');
+    }
+});
+
+const shuffleBtn = document.getElementById('shuffle-btn');
+shuffleBtn?.addEventListener('click', () => {
+    isShuffle = !isShuffle;
+    shuffleBtn.classList.toggle('active', isShuffle);
+    showToast(`Shuffle Mode: ${isShuffle ? 'ON' : 'OFF'}`);
+});
+
+document.getElementById('clear-queue-btn')?.addEventListener('click', clearPlaylist);
+
+document.getElementById('queue-all-presets-btn')?.addEventListener('click', () => {
+    const demos = [
+        { title: 'Synthwave Pulse', artist: 'RetroWave Studio', src: '/audio/synthwave.mp3', thumb: 'favicon.svg', type: 'demo' },
+        { title: 'Lofi Chill Beats', artist: 'Lofi Studio', src: '/audio/lofi.mp3', thumb: 'favicon.svg', type: 'demo' },
+        { title: 'Acoustic Harmony', artist: 'Ambient Vibes', src: '/audio/chill.mp3', thumb: 'favicon.svg', type: 'demo' }
+    ];
+    demos.forEach(d => addToPlaylist(d, false));
+    showToast('Enqueued all 3 demo stems!');
+});
+
 document.querySelectorAll('.deck-tab').forEach(tab => {
     tab.addEventListener('click', () => {
         document.querySelectorAll('.deck-tab').forEach(t => t.classList.remove('active'));
@@ -1062,7 +1238,9 @@ document.querySelectorAll('.deck-tab').forEach(tab => {
         const target = tab.dataset.tab;
         document.getElementById('tab-presets').style.display = target === 'presets' ? 'block' : 'none';
         document.getElementById('tab-search').style.display  = target === 'search'  ? 'block' : 'none';
+        document.getElementById('tab-queue').style.display   = target === 'queue'   ? 'block' : 'none';
         document.getElementById('tab-upload').style.display  = target === 'upload'  ? 'block' : 'none';
+        if (target === 'queue') renderPlaylistUI();
     });
 });
 
@@ -1070,18 +1248,23 @@ document.querySelectorAll('.preset-row').forEach(row => {
     row.addEventListener('click', () => {
         document.querySelectorAll('.preset-row').forEach(r => r.classList.remove('active'));
         row.classList.add('active');
-        const title = row.dataset.title || '';
-        if (title.includes('Synthwave')) applyTheme('cyber');
-        else if (title.includes('Lofi')) applyTheme('lofi');
-        else if (title.includes('Acoustic')) applyTheme('serious');
-        playDirectAudio(row.dataset.src, row.dataset.title, row.dataset.artist);
+        const trackObj = {
+            title: row.dataset.title || 'Demo Track',
+            artist: row.dataset.artist || 'Studio',
+            src: row.dataset.src,
+            thumb: 'favicon.svg',
+            type: 'demo'
+        };
+        addToPlaylist(trackObj, true);
     });
 });
 
 let suggTimer;
 const doSearch = () => {
     const q = searchInp.value.trim();
-    if (q) playStream(q);
+    if (q) {
+        addToPlaylist({ title: q, artist: 'YouTube Stream', url: q, thumb: 'favicon.svg', type: 'stream' }, true);
+    }
     searchInp.value = '';
     if (suggBox) suggBox.style.display = 'none';
 };
@@ -1112,7 +1295,14 @@ searchInp?.addEventListener('input', () => {
                 card.onclick = () => {
                     suggBox.style.display = 'none';
                     searchInp.value = '';
-                    playStream(item.url, item);
+                    const trackObj = {
+                        title: item.title,
+                        artist: item.uploader || 'YouTube Artist',
+                        url: item.url,
+                        thumb: item.thumbnail,
+                        type: 'stream'
+                    };
+                    addToPlaylist(trackObj, true);
                 };
                 suggBox.appendChild(card);
             });
@@ -1150,26 +1340,31 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
 const fileUpload = document.getElementById('file-upload');
 document.getElementById('upload-btn')?.addEventListener('click', () => fileUpload?.click());
 
-function loadLocalFile(file) {
-    if (!file) return;
+function loadLocalFiles(filesList) {
+    if (!filesList || filesList.length === 0) return;
     stopMic();
+    const files = Array.from(filesList).filter(f => f.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac)$/i.test(f.name));
+    if (files.length === 0) return;
+
+    files.forEach((file, idx) => {
+        const title = file.name.replace(/\.[^/.]+$/, '');
+        const trackObj = {
+            id: Date.now() + Math.random(),
+            title: title,
+            artist: 'Local Audio',
+            src: URL.createObjectURL(file),
+            thumb: 'favicon.svg',
+            type: 'local'
+        };
+        addToPlaylist(trackObj, idx === 0 && (!curAudioEl || curAudioEl.paused));
+    });
+
     if (sourceBadge) sourceBadge.innerText = 'LOCAL';
-    updateTrackInfo(file.name, 'Local Audio File', null);
-    if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
-    curAudioEl = new Audio();
-    curAudioEl.src = URL.createObjectURL(file);
-    curAudioEl.playbackRate = FX_SPEEDS[fxSpeedIdx];
-    curAudioEl.oncanplay = () => {
-        ensureAudioCtx();
-        attachAudioElement(curAudioEl);
-        curAudioEl.play();
-        updatePlayIcons(true);
-    };
-    attachTimeEvents(curAudioEl);
+    showToast(`Added ${files.length} track(s) to playlist`);
 }
 
 fileUpload?.addEventListener('change', e => {
-    loadLocalFile(e.target.files[0]);
+    loadLocalFiles(e.target.files);
 });
 
 const dropzone = document.getElementById('drag-dropzone');
@@ -1185,10 +1380,9 @@ window.addEventListener('dragleave', e => {
 window.addEventListener('drop', e => {
     e.preventDefault();
     if (dropzone) dropzone.classList.remove('active');
-    const file = e.dataTransfer?.files?.[0];
-    if (file && file.type.startsWith('audio/')) {
-        loadLocalFile(file);
-        showToast(`Loaded: ${file.name}`);
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+        loadLocalFiles(files);
     }
 });
 
@@ -1367,7 +1561,10 @@ window.addEventListener('keydown', e => {
     else if (e.code === 'KeyF') document.getElementById('fullscreen-btn')?.click();
     else if (e.code === 'KeyU') fxMufflerBtn?.click();
     else if (e.code === 'KeyB') fxBassBtn?.click();
-    else if (e.code === 'KeyA') autoCamBtn?.click();
+    else if (e.code === 'KeyJ') playPrevTrack();
+    else if (e.code === 'KeyK') playNextTrack(false);
+    else if (e.code === 'KeyL') document.getElementById('repeat-btn')?.click();
+    else if (e.code === 'KeyS') document.getElementById('shuffle-btn')?.click();
     else if (e.code === 'KeyT') {
         const keys = Object.keys(THEMES);
         const nextIdx = (keys.indexOf(currentTheme) + 1) % keys.length;
@@ -1404,6 +1601,7 @@ themeToggleBtn?.addEventListener('click', () => {
     applyThemeMode(!isLightMode);
 });
 
+renderPlaylistUI();
 initThree();
 applyTheme(currentTheme, true);
 applyThemeMode(isLightMode);
