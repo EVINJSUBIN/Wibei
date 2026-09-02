@@ -184,6 +184,117 @@ app.get('/api/suggest', (req, res) => {
     });
 });
 
+function getSpotifyPlaylistTracks(url) {
+    return new Promise((resolve) => {
+        let embedUrl = url;
+        if (!embedUrl.includes('/embed/')) {
+            embedUrl = embedUrl.replace('spotify.com/playlist/', 'spotify.com/embed/playlist/')
+                               .replace('spotify.com/album/', 'spotify.com/embed/album/');
+        }
+        https.get(embedUrl, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        }, (res) => {
+            let data = '';
+            res.on('data', c => data += c);
+            res.on('end', () => {
+                try {
+                    const scriptMatch = data.match(/<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/s);
+                    if (scriptMatch) {
+                        const json = JSON.parse(scriptMatch[1]);
+                        const entity = json.props?.pageProps?.state?.data?.entity;
+                        if (entity?.trackList) {
+                            const tracks = entity.trackList.map(t => ({
+                                title: t.title,
+                                artist: t.subtitle || entity.name || 'Spotify Track',
+                                url: `ytsearch1:${t.title} ${t.subtitle || ''} audio`,
+                                duration: Math.round((t.duration || 0) / 1000),
+                                thumbnail: entity.coverArt?.sources?.[0]?.url || null,
+                                type: 'stream'
+                            }));
+                            return resolve({
+                                title: entity.name || entity.title || 'Spotify Playlist',
+                                count: tracks.length,
+                                thumbnail: entity.coverArt?.sources?.[0]?.url || null,
+                                tracks
+                            });
+                        }
+                    }
+                    resolve({ title: 'Spotify Playlist', count: 0, tracks: [] });
+                } catch (e) {
+                    resolve({ title: 'Spotify Playlist', count: 0, tracks: [] });
+                }
+            });
+        }).on('error', () => resolve({ title: 'Spotify Playlist', count: 0, tracks: [] }));
+    });
+}
+
+function getYouTubePlaylistTracks(url) {
+    return new Promise((resolve) => {
+        const { cmd, prefix, source } = getExec();
+        const args = [
+            ...prefix,
+            '--flat-playlist',
+            '-J',
+            '--playlist-items', '1:40',
+            '--no-check-certificates',
+            '--no-warnings',
+            url
+        ];
+
+        log('PLAYLIST', `Resolving playlist via [${source}] for: "${url}"`);
+        const ytdlp = spawn(cmd, args);
+        let out = '';
+        ytdlp.stdout.on('data', d => out += d);
+        ytdlp.on('error', (err) => {
+            log('PLAYLIST-ERR', `yt-dlp error: ${err.message}`);
+            resolve({ title: 'YouTube Playlist', count: 0, tracks: [] });
+        });
+        ytdlp.on('close', () => {
+            try {
+                const data = JSON.parse(out);
+                const entries = data.entries || [];
+                const tracks = entries.filter(e => e && e.title).map(e => ({
+                    title: e.title,
+                    artist: e.uploader || e.artist || data.title || 'YouTube Artist',
+                    url: e.url || (e.id ? `https://www.youtube.com/watch?v=${e.id}` : `ytsearch1:${e.title} audio`),
+                    duration: e.duration || 0,
+                    thumbnail: e.thumbnails?.[0]?.url || e.thumbnail || null,
+                    type: 'stream'
+                }));
+                log('PLAYLIST', `Resolved "${data.title || 'Playlist'}" with ${tracks.length} tracks`);
+                resolve({
+                    title: data.title || 'YouTube Playlist',
+                    count: tracks.length,
+                    thumbnail: data.thumbnails?.[0]?.url || null,
+                    tracks
+                });
+            } catch (e) {
+                log('PLAYLIST-ERR', `Parse error: ${e.message}`);
+                resolve({ title: 'YouTube Playlist', count: 0, tracks: [] });
+            }
+        });
+    });
+}
+
+app.get('/api/playlist', async (req, res) => {
+    const url = req.query.url;
+    if (!url) return res.status(400).json({ error: 'URL required', tracks: [] });
+
+    log('PLAYLIST-REQ', `Resolving playlist URL: "${url}"`);
+    try {
+        if (url.includes('spotify.com/playlist') || url.includes('spotify.com/album')) {
+            const data = await getSpotifyPlaylistTracks(url);
+            return res.json(data);
+        }
+
+        const data = await getYouTubePlaylistTracks(url);
+        return res.json(data);
+    } catch (err) {
+        log('PLAYLIST-ERR', `Failed to parse playlist: ${err.message}`);
+        res.status(500).json({ error: 'Failed to parse playlist', tracks: [] });
+    }
+});
+
 app.get('/metadata', (req, res) => {
     const url = req.query.url;
     if (!url) return res.status(400).send('URL required');

@@ -1259,14 +1259,56 @@ document.querySelectorAll('.preset-row').forEach(row => {
     });
 });
 
-let suggTimer;
-const doSearch = () => {
-    const q = searchInp.value.trim();
-    if (q) {
-        addToPlaylist({ title: q, artist: 'YouTube Stream', url: q, thumb: 'favicon.svg', type: 'stream' }, true);
+async function handlePlaylistUrl(url) {
+    showToast('Resolving playlist tracks...');
+    try {
+        const res = await fetch('/api/playlist?url=' + encodeURIComponent(url));
+        const data = await res.json();
+        if (data.tracks && data.tracks.length > 0) {
+            playlist = data.tracks.map((t, idx) => ({
+                id: 'pl-' + idx + '-' + Date.now(),
+                title: t.title,
+                artist: t.artist || data.title || 'Stream Track',
+                url: t.url,
+                thumb: t.thumbnail || data.thumbnail || 'favicon.svg',
+                type: 'stream'
+            }));
+            currentTrackIdx = 0;
+            renderPlaylistUI();
+            
+            document.querySelector('.deck-tab[data-tab="queue"]')?.click();
+            playTrackAtIndex(0);
+            showToast(`Loaded ${data.tracks.length} tracks from ${data.title || 'playlist'}!`);
+            return true;
+        } else {
+            showToast('No tracks found in playlist. Streaming as single track.');
+            return false;
+        }
+    } catch (e) {
+        showToast('Playlist resolve error. Streaming as single track.');
+        return false;
     }
+}
+
+let suggTimer;
+const doSearch = async () => {
+    const q = searchInp.value.trim();
+    if (!q) return;
+
     searchInp.value = '';
     if (suggBox) suggBox.style.display = 'none';
+
+    const isPlaylistUrl = q.includes('list=') ||
+                          q.includes('playlist') ||
+                          q.includes('spotify.com/album') ||
+                          q.includes('music.youtube.com/playlist');
+
+    if (isPlaylistUrl && q.startsWith('http')) {
+        const ok = await handlePlaylistUrl(q);
+        if (ok) return;
+    }
+
+    addToPlaylist({ title: q, artist: 'YouTube Stream', url: q, thumb: 'favicon.svg', type: 'stream' }, true);
 };
 searchBtn?.addEventListener('click', doSearch);
 searchInp?.addEventListener('keypress', e => { if (e.key === 'Enter') doSearch(); });
