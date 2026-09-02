@@ -321,7 +321,7 @@ function fetchLyrics(title, artist) {
                     headers: { 'User-Agent': 'WibeiVisualizer/2.0 (https://github.com/evinjsubin/wibei)' }
                 }, (r) => {
                     let d = '';
-                    r.on('data', c => data += c);
+                    r.on('data', c => d += c);
                     r.on('end', () => {
                         try {
                             const j = JSON.parse(d);

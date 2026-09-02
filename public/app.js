@@ -1463,7 +1463,7 @@ searchInp?.addEventListener('keypress', e => { if (e.key === 'Enter') doSearch()
 searchInp?.addEventListener('input', () => {
     clearTimeout(suggTimer);
     const q = searchInp.value.trim();
-    if (!q) { if (suggBox) suggBox.style.display = 'none'; return; }
+    if (!q || q.length < 2) { if (suggBox) suggBox.style.display = 'none'; return; }
     suggTimer = setTimeout(async () => {
         try {
             const res  = await fetch('/api/search?q=' + encodeURIComponent(q));
