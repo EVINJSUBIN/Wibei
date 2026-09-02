@@ -2,9 +2,6 @@
     let scene, camera, renderer, particlesMesh;
     const canvas = document.getElementById('hero-webgl-canvas');
     let mouseX = 0, mouseY = 0;
-    let windowHalfX = window.innerWidth / 2;
-    let windowHalfY = window.innerHeight / 2;
-    let scrollY = 0;
 
     function initWebGL() {
         if (!canvas) return;
@@ -12,25 +9,20 @@
         camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 2000);
         camera.position.z = 650;
 
-        const count = 1600;
+        const count = 1200;
         const geometry = new THREE.BufferGeometry();
         const positions = new Float32Array(count * 3);
         const colors = new Float32Array(count * 3);
 
-        const gold = new THREE.Color(0xfacc15);
-        const cyan = new THREE.Color(0x38bdf8);
-        const rose = new THREE.Color(0xfb7185);
+        const c1 = new THREE.Color(0xfacc15);
+        const c2 = new THREE.Color(0x333333);
 
         for (let i = 0; i < count; i++) {
-            const x = (Math.random() - 0.5) * 1800;
-            const y = (Math.random() - 0.5) * 1200;
-            const z = (Math.random() - 0.5) * 1200;
+            positions[i * 3]     = (Math.random() - 0.5) * 1800;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 1200;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 1200;
 
-            positions[i * 3]     = x;
-            positions[i * 3 + 1] = y;
-            positions[i * 3 + 2] = z;
-
-            const col = Math.random() > 0.6 ? gold : (Math.random() > 0.3 ? cyan : rose);
+            const col = Math.random() > 0.8 ? c1 : c2;
             colors[i * 3]     = col.r;
             colors[i * 3 + 1] = col.g;
             colors[i * 3 + 2] = col.b;
@@ -40,39 +32,35 @@
         geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
         const material = new THREE.PointsMaterial({
-            size: 4.5,
+            size: 3,
             vertexColors: true,
             transparent: true,
-            opacity: 0.65,
+            opacity: 0.8,
             blending: THREE.AdditiveBlending
         });
 
         particlesMesh = new THREE.Points(geometry, material);
         scene.add(particlesMesh);
 
-        renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
         window.addEventListener('resize', onResize);
         window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('scroll', () => {
-            scrollY = window.scrollY || window.pageYOffset;
-        });
+        
         animate();
     }
 
     function onResize() {
-        windowHalfX = window.innerWidth / 2;
-        windowHalfY = window.innerHeight / 2;
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
     function onMouseMove(event) {
-        mouseX = (event.clientX - windowHalfX) * 0.12;
-        mouseY = (event.clientY - windowHalfY) * 0.12;
+        mouseX = (event.clientX - window.innerWidth / 2) * 0.1;
+        mouseY = (event.clientY - window.innerHeight / 2) * 0.1;
     }
 
     function animate() {
@@ -80,26 +68,22 @@
         const time = performance.now() * 0.0005;
         
         if (particlesMesh) {
-            particlesMesh.rotation.y = time * 0.25 + scrollY * 0.0004;
-            particlesMesh.rotation.x = Math.sin(time * 0.2) * 0.1 + scrollY * 0.0002;
+            particlesMesh.rotation.y = time * 0.15;
+            particlesMesh.rotation.x = Math.sin(time * 0.1) * 0.05;
         }
 
         camera.position.x += (mouseX - camera.position.x) * 0.05;
-        camera.position.y += (-mouseY - scrollY * 0.15 - camera.position.y) * 0.05;
+        camera.position.y += (-mouseY - camera.position.y) * 0.05;
         camera.lookAt(scene.position);
 
         renderer.render(scene, camera);
     }
 
+    // Audio context for the DSP preview
     let audioCtx;
-
     function getAudioCtx() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         return audioCtx;
     }
 
@@ -132,50 +116,30 @@
 
         filterNode.connect(mainGain);
 
-        let frequencies = [];
-        let noteSpacing = 0.08;
-        let noteLength = 1.4;
-        let oscType = 'sawtooth';
+        let freqs = [261.63, 329.63, 392.00];
+        let oscType = 'sine';
 
-        if (mode === 'bass') {
-            frequencies = [55, 110, 55, 82.4];
-            oscType = 'sawtooth';
-            noteSpacing = 0.18;
-            noteLength = 1.2;
-        } else if (mode === 'nightcore') {
-            frequencies = [523.25, 659.25, 783.99, 1046.50, 1318.51];
-            oscType = 'triangle';
-            noteSpacing = 0.06;
-            noteLength = 0.9;
-        } else if (mode === 'muffler') {
-            frequencies = [130.81, 164.81, 196.00, 246.94, 293.66];
-            oscType = 'sawtooth';
-            noteSpacing = 0.09;
-            noteLength = 1.8;
-        } else {
-            frequencies = [261.63, 329.63, 392.00, 493.88, 587.33];
-            oscType = 'sine';
-            noteSpacing = 0.07;
-            noteLength = 1.5;
-        }
+        if (mode === 'bass') { freqs = [55, 110]; oscType = 'sawtooth'; }
+        else if (mode === 'nightcore') { freqs = [523.25, 783.99, 1046.50]; oscType = 'triangle'; }
+        else if (mode === 'muffler') { freqs = [130.81, 164.81]; oscType = 'square'; }
 
-        frequencies.forEach((freq, idx) => {
+        freqs.forEach((f, i) => {
             const osc = ctx.createOscillator();
-            const noteGain = ctx.createGain();
-
+            const g = ctx.createGain();
+            
             osc.type = oscType;
-            osc.frequency.setValueAtTime(freq, now + idx * noteSpacing);
-
-            const startTime = now + idx * noteSpacing;
-            noteGain.gain.setValueAtTime(0, startTime);
-            noteGain.gain.linearRampToValueAtTime(0.18, startTime + 0.04);
-            noteGain.gain.exponentialRampToValueAtTime(0.0001, startTime + noteLength);
-
-            osc.connect(noteGain);
-            noteGain.connect(filterNode);
-
-            osc.start(startTime);
-            osc.stop(startTime + noteLength + 0.1);
+            osc.frequency.setValueAtTime(f, now + (i * 0.1));
+            
+            const start = now + (i * 0.1);
+            g.gain.setValueAtTime(0, start);
+            g.gain.linearRampToValueAtTime(0.15, start + 0.05);
+            g.gain.exponentialRampToValueAtTime(0.001, start + 1.2);
+            
+            osc.connect(g);
+            g.connect(filterNode);
+            
+            osc.start(start);
+            osc.stop(start + 1.5);
         });
     }
 
@@ -183,84 +147,14 @@
         btn.addEventListener('click', () => {
             document.querySelectorAll('.sound-demo-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            const mode = btn.dataset.mode;
-            playAuditionTone(mode);
+            playAuditionTone(btn.dataset.mode);
         });
     });
 
-    function initScrollObserver() {
-        const observerOptions = {
-            root: null,
-            rootMargin: '0px',
-            threshold: 0.12
-        };
-
-        const revealObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                }
-            });
-        }, observerOptions);
-
-        document.querySelectorAll('.reveal, .reveal-stagger').forEach(el => {
-            revealObserver.observe(el);
-        });
-    }
-
-    function initCardSpotlights() {
-        document.querySelectorAll('.bento-card, .engine-tile, .gh-stat-card, .contributor-card').forEach(card => {
-            card.addEventListener('mousemove', e => {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                card.style.background = `radial-gradient(400px circle at ${x}px ${y}px, rgba(250, 204, 21, 0.06), rgba(15, 23, 42, 0.7) 60%)`;
-            });
-            card.addEventListener('mouseleave', () => {
-                card.style.background = '';
-            });
-        });
-    }
-
-    async function fetchGitHubStats() {
-        try {
-            const repoRes = await fetch('https://api.github.com/repos/EVINJSUBIN/Wibei');
-            if (repoRes.ok) {
-                const repoData = await repoRes.json();
-                const starsEl = document.getElementById('gh-stars-count');
-                const prsEl = document.getElementById('gh-prs-count');
-                if (starsEl && repoData.stargazers_count !== undefined) {
-                    starsEl.innerText = `${repoData.stargazers_count} ★`;
-                }
-                if (prsEl && repoData.open_issues_count !== undefined) {
-                    prsEl.innerText = `${repoData.open_issues_count}+`;
-                }
-            }
-
-            const contribRes = await fetch('https://api.github.com/repos/EVINJSUBIN/Wibei/contributors');
-            if (contribRes.ok) {
-                const contribs = await contribRes.json();
-                const countEl = document.getElementById('gh-contributors-count');
-                if (countEl && Array.isArray(contribs)) {
-                    countEl.innerText = `${contribs.length}`;
-                }
-            }
-        } catch (e) {
-            console.log('[Wibei] Using local GitHub telemetry cache.');
-        }
-    }
-
+    // Boot
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            initWebGL();
-            initScrollObserver();
-            initCardSpotlights();
-            fetchGitHubStats();
-        });
+        document.addEventListener('DOMContentLoaded', initWebGL);
     } else {
         initWebGL();
-        initScrollObserver();
-        initCardSpotlights();
-        fetchGitHubStats();
     }
 })();
