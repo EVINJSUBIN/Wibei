@@ -195,6 +195,8 @@ document.getElementById('toast-close-btn')?.addEventListener('click', () => {
     document.getElementById('toast-banner').style.display = 'none';
 });
 
+let currentAudioSessionId = 0;
+
 function updatePlayIcons(playing) {
     isPlaying = playing;
     if (iconPlay && iconPause) {
@@ -203,12 +205,29 @@ function updatePlayIcons(playing) {
     }
     if (miniEq) miniEq.style.display = playing ? 'flex' : 'none';
     if (telemetryMode) telemetryMode.innerText = playing ? 'ACTIVE' : 'IDLE';
+    
+    const artWrap = document.querySelector('.album-art-wrap');
+    if (artWrap) artWrap.classList.toggle('playing', playing);
 }
 
 function updateTrackInfo(title, artist, thumb) {
-    if (trackTitle)  trackTitle.innerText  = title;
-    if (trackArtist) trackArtist.innerText = artist;
-    if (albumArt)    albumArt.src = thumb || 'favicon.svg';
+    if (trackTitle)  trackTitle.innerText  = title || 'Unknown Track';
+    if (trackArtist) trackArtist.innerText = artist || 'Unknown Artist';
+    
+    const lyricsTrackTitle = document.getElementById('lyrics-track-title');
+    if (lyricsTrackTitle) lyricsTrackTitle.innerText = `${title || 'Track'} // ${artist || 'Artist'}`;
+
+    if (albumArt) {
+        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/'))) {
+            albumArt.src = thumb;
+        } else {
+            albumArt.src = 'favicon.svg';
+        }
+    }
+    
+    if (title && !title.includes('Connecting') && !title.includes('Loading') && !title.includes('Error')) {
+        loadLyricsForTrack(title, artist);
+    }
 }
 
 let particles = [];
@@ -1086,6 +1105,122 @@ function playPrevTrack() {
     }
 }
 
+let currentLyrics = [];
+let activeLyricIdx = -1;
+let isLyricsSynced = false;
+let isLyricsOpen = false;
+
+function parseLRC(text) {
+    if (!text) return [];
+    const lines = text.split('\n');
+    const result = [];
+    const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)/;
+    for (const line of lines) {
+        const m = line.match(timeRegex);
+        if (m) {
+            const min = parseInt(m[1], 10);
+            const sec = parseInt(m[2], 10);
+            const ms = parseFloat('0.' + m[3]);
+            const time = min * 60 + sec + ms;
+            const lyric = m[4].trim();
+            if (lyric) {
+                result.push({ time, text: lyric });
+            }
+        }
+    }
+    return result.sort((a, b) => a.time - b.time);
+}
+
+async function loadLyricsForTrack(title, artist) {
+    const hudBody = document.getElementById('lyrics-hud-body');
+    if (!hudBody) return;
+    hudBody.innerHTML = '<div class="lyrics-empty-msg">Searching synchronized lyrics... 🎵</div>';
+    currentLyrics = [];
+    activeLyricIdx = -1;
+    isLyricsSynced = false;
+
+    try {
+        const res = await fetch(`/api/lyrics?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || '')}`);
+        const data = await res.json();
+        
+        if (!data.found) {
+            hudBody.innerHTML = `<div class="lyrics-empty-msg">No synchronized lyrics found for "${title}".<br><span style="opacity:0.6;font-size:9px;">Enjoy the visualizer!</span></div>`;
+            return;
+        }
+
+        if (data.syncedLyrics) {
+            isLyricsSynced = true;
+            currentLyrics = parseLRC(data.syncedLyrics);
+            if (currentLyrics.length === 0) {
+                renderPlainLyrics(data.plainLyrics || data.syncedLyrics);
+                return;
+            }
+
+            hudBody.innerHTML = '';
+            currentLyrics.forEach((l, idx) => {
+                const lineEl = document.createElement('div');
+                lineEl.className = 'lyric-line';
+                lineEl.dataset.idx = idx;
+                lineEl.innerText = l.text;
+                lineEl.addEventListener('click', () => {
+                    if (curAudioEl) {
+                        curAudioEl.currentTime = l.time;
+                    }
+                });
+                hudBody.appendChild(lineEl);
+            });
+        } else if (data.plainLyrics) {
+            renderPlainLyrics(data.plainLyrics);
+        }
+    } catch (err) {
+        hudBody.innerHTML = '<div class="lyrics-empty-msg">Could not load lyrics.</div>';
+    }
+}
+
+function renderPlainLyrics(plainText) {
+    const hudBody = document.getElementById('lyrics-hud-body');
+    if (!hudBody) return;
+    isLyricsSynced = false;
+    hudBody.innerHTML = '';
+    const lines = plainText.split('\n');
+    lines.forEach(line => {
+        if (!line.trim()) return;
+        const div = document.createElement('div');
+        div.className = 'lyric-line';
+        div.innerText = line;
+        hudBody.appendChild(div);
+    });
+}
+
+function updateLyricsProgress(currentTime) {
+    if (!isLyricsSynced || currentLyrics.length === 0) return;
+    
+    let curIdx = -1;
+    for (let i = 0; i < currentLyrics.length; i++) {
+        if (currentTime >= currentLyrics[i].time) {
+            curIdx = i;
+        } else {
+            break;
+        }
+    }
+
+    if (curIdx !== activeLyricIdx) {
+        activeLyricIdx = curIdx;
+        const hudBody = document.getElementById('lyrics-hud-body');
+        if (!hudBody) return;
+
+        const lineEls = hudBody.querySelectorAll('.lyric-line');
+        lineEls.forEach((el, idx) => {
+            el.classList.toggle('active', idx === curIdx);
+            el.classList.toggle('passed', idx < curIdx);
+        });
+
+        if (curIdx >= 0 && lineEls[curIdx]) {
+            lineEls[curIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+}
+
 function fmtTime(s) {
     if (!s || isNaN(s)) return '00:00';
     return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -1099,6 +1234,7 @@ function attachTimeEvents(el) {
         progressFill.style.width = pct + '%';
         timeCurrent.innerText = fmtTime(el.currentTime);
         timeTotal.innerText   = fmtTime(el.duration);
+        updateLyricsProgress(el.currentTime);
     };
     el.onended = () => {
         playNextTrack(true);
@@ -1107,6 +1243,7 @@ function attachTimeEvents(el) {
 
 function playDirectAudio(src, title, artist) {
     stopMic();
+    const thisSession = ++currentAudioSessionId;
     updateTrackInfo(title, artist, null);
     if (sourceBadge) sourceBadge.innerText = 'PLAYING';
 
@@ -1118,12 +1255,17 @@ function playDirectAudio(src, title, artist) {
     curAudioEl.playbackRate = FX_SPEEDS[fxSpeedIdx];
 
     curAudioEl.oncanplay = () => {
+        if (currentAudioSessionId !== thisSession) return;
         ensureAudioCtx();
         attachAudioElement(curAudioEl);
         curAudioEl.play().catch(() => {});
         updatePlayIcons(true);
     };
-    curAudioEl.onerror = () => updatePlayIcons(false);
+    curAudioEl.onerror = () => {
+        if (currentAudioSessionId === thisSession && curAudioEl.error?.code !== 20) {
+            updatePlayIcons(false);
+        }
+    };
     attachTimeEvents(curAudioEl);
 }
 
@@ -1131,8 +1273,9 @@ async function playStream(query, presetMeta = null) {
     if (!query) return;
 
     stopMic();
+    const thisSession = ++currentAudioSessionId;
     if (sourceBadge) sourceBadge.innerText = 'STREAM';
-    updateTrackInfo(presetMeta?.title || 'Connecting...', presetMeta?.uploader || 'Streaming audio', presetMeta?.thumbnail);
+    updateTrackInfo(presetMeta?.title || query, presetMeta?.uploader || 'Streaming audio', presetMeta?.thumbnail);
 
     try {
         let meta = presetMeta;
@@ -1140,6 +1283,7 @@ async function playStream(query, presetMeta = null) {
             const r = await fetch(`/metadata?url=${encodeURIComponent(query)}`);
             meta = await r.json();
         }
+        if (currentAudioSessionId !== thisSession) return;
         updateTrackInfo(meta.title || query, meta.uploader || 'Unknown Artist', meta.thumbnail);
 
         if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
@@ -1149,22 +1293,25 @@ async function playStream(query, presetMeta = null) {
         curAudioEl.playbackRate = FX_SPEEDS[fxSpeedIdx];
 
         curAudioEl.oncanplay = () => {
+            if (currentAudioSessionId !== thisSession) return;
             ensureAudioCtx();
             attachAudioElement(curAudioEl);
             curAudioEl.play().catch(() => {});
             updatePlayIcons(true);
         };
         curAudioEl.onerror = () => {
-            updatePlayIcons(false);
-            showToast('YouTube bot challenge triggered! Use Demos or Local Files.');
-            updateTrackInfo('Stream Error', 'Use Demos or Local Files', null);
+            if (currentAudioSessionId === thisSession && curAudioEl.error?.code !== 20) {
+                updatePlayIcons(false);
+                showToast('Stream buffer notice: Retrying or switch to Demos.');
+            }
         };
         attachTimeEvents(curAudioEl);
 
     } catch (_) {
-        updatePlayIcons(false);
-        showToast('Stream error! Use DEMOS or local MP3.');
-        updateTrackInfo('Playback Error', 'Use Demos or Local File', null);
+        if (currentAudioSessionId === thisSession) {
+            updatePlayIcons(false);
+            showToast('Stream connection notice: Use DEMOS or local MP3.');
+        }
     }
 }
 
@@ -1595,10 +1742,24 @@ document.getElementById('close-guide-btn')?.addEventListener('click',  () => { g
 document.getElementById('dismiss-guide-btn')?.addEventListener('click',() => { guideModal.style.display = 'none'; });
 guideModal?.addEventListener('click', e => { if (e.target === guideModal) guideModal.style.display = 'none'; });
 
+const lyricsHud = document.getElementById('lyrics-hud');
+const lyricsBtn = document.getElementById('lyrics-btn');
+lyricsBtn?.addEventListener('click', () => {
+    isLyricsOpen = !isLyricsOpen;
+    lyricsBtn.classList.toggle('active', isLyricsOpen);
+    if (lyricsHud) lyricsHud.style.display = isLyricsOpen ? 'flex' : 'none';
+});
+document.getElementById('lyrics-close-btn')?.addEventListener('click', () => {
+    isLyricsOpen = false;
+    lyricsBtn?.classList.remove('active');
+    if (lyricsHud) lyricsHud.style.display = 'none';
+});
+
 window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
     if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
     else if (e.code === 'KeyM') muteBtn?.click();
+    else if (e.code === 'KeyY') lyricsBtn?.click();
     else if (e.code === 'KeyR') document.getElementById('reset-cam-btn')?.click();
     else if (e.code === 'KeyF') document.getElementById('fullscreen-btn')?.click();
     else if (e.code === 'KeyU') fxMufflerBtn?.click();

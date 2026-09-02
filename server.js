@@ -295,6 +295,108 @@ app.get('/api/playlist', async (req, res) => {
     }
 });
 
+function cleanTitleForLyrics(str) {
+    if (!str) return '';
+    return str
+        .replace(/\(official\s*(music\s*)?(video|audio|visualizer|lyric\s*video|hd|4k)\)/gi, '')
+        .replace(/\[official\s*(music\s*)?(video|audio|visualizer|lyric\s*video|hd|4k)\]/gi, '')
+        .replace(/\(lyrics?\)/gi, '')
+        .replace(/\[lyrics?\]/gi, '')
+        .replace(/\(audio\)/gi, '')
+        .replace(/\[audio\]/gi, '')
+        .replace(/ft\.?|feat\.?/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function fetchLyrics(title, artist) {
+    return new Promise((resolve) => {
+        const cleanTitle = cleanTitleForLyrics(title);
+        const cleanArtist = cleanTitleForLyrics(artist);
+        
+        const tryDirect = (t, a) => {
+            return new Promise((res) => {
+                const targetUrl = `https://lrclib.net/api/get?track_name=${encodeURIComponent(t)}${a ? `&artist_name=${encodeURIComponent(a)}` : ''}`;
+                https.get(targetUrl, {
+                    headers: { 'User-Agent': 'WibeiVisualizer/2.0 (https://github.com/evinjsubin/wibei)' }
+                }, (r) => {
+                    let d = '';
+                    r.on('data', c => data += c);
+                    r.on('end', () => {
+                        try {
+                            const j = JSON.parse(d);
+                            if (j && (j.syncedLyrics || j.plainLyrics)) {
+                                res(j);
+                            } else {
+                                res(null);
+                            }
+                        } catch (_) { res(null); }
+                    });
+                }).on('error', () => res(null));
+            });
+        };
+
+        const trySearch = (q) => {
+            return new Promise((res) => {
+                const targetUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(q)}`;
+                https.get(targetUrl, {
+                    headers: { 'User-Agent': 'WibeiVisualizer/2.0 (https://github.com/evinjsubin/wibei)' }
+                }, (r) => {
+                    let d = '';
+                    r.on('data', c => d += c);
+                    r.on('end', () => {
+                        try {
+                            const list = JSON.parse(d);
+                            if (Array.isArray(list) && list.length > 0) {
+                                const match = list.find(item => item.syncedLyrics || item.plainLyrics) || list[0];
+                                res(match);
+                            } else {
+                                res(null);
+                            }
+                        } catch (_) { res(null); }
+                    });
+                }).on('error', () => res(null));
+            });
+        };
+
+        tryDirect(cleanTitle, cleanArtist).then(result => {
+            if (result) return resolve(result);
+            trySearch(`${cleanTitle} ${cleanArtist}`).then(searchRes => {
+                if (searchRes) return resolve(searchRes);
+                trySearch(cleanTitle).then(titleRes => {
+                    resolve(titleRes);
+                });
+            });
+        });
+    });
+}
+
+app.get('/api/lyrics', async (req, res) => {
+    const { title, artist } = req.query;
+    if (!title) return res.status(400).json({ found: false, error: 'Title required' });
+
+    log('LYRICS', `Searching lyrics for: "${title}" by "${artist || 'Unknown'}"`);
+    try {
+        const lyricsData = await fetchLyrics(title, artist);
+        if (lyricsData && (lyricsData.syncedLyrics || lyricsData.plainLyrics)) {
+            log('LYRICS', `Found lyrics for "${lyricsData.trackName || title}" (${lyricsData.syncedLyrics ? 'Synced' : 'Plain'})`);
+            res.json({
+                found: true,
+                trackName: lyricsData.trackName || title,
+                artistName: lyricsData.artistName || artist,
+                syncedLyrics: lyricsData.syncedLyrics || null,
+                plainLyrics: lyricsData.plainLyrics || null
+            });
+        } else {
+            log('LYRICS', `No lyrics found for: "${title}"`);
+            res.json({ found: false });
+        }
+    } catch (e) {
+        log('LYRICS-ERR', `Failed to fetch lyrics: ${e.message}`);
+        res.json({ found: false, error: e.message });
+    }
+});
+
 app.get('/metadata', (req, res) => {
     const url = req.query.url;
     if (!url) return res.status(400).send('URL required');

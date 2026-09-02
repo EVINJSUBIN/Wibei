@@ -284,6 +284,10 @@
         </div>
 
         <div class="transport-right">
+            <button id="lyrics-btn" class="lyrics-pill-btn" title="Toggle Synchronized Lyrics (Y)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                <span>LYRICS</span>
+            </button>
             <div class="vu-meter-strip" id="master-vu" title="Live Audio Energy Meter">
                 <span></span><span></span><span></span><span></span><span></span><span></span>
             </div>
@@ -295,6 +299,20 @@
             </div>
         </div>
     </footer>
+
+    <!-- Floating Synchronized Lyrics HUD -->
+    <div class="lyrics-hud" id="lyrics-hud" style="display:none;">
+        <div class="lyrics-hud-header">
+            <div class="lyrics-hud-meta">
+                <span class="lyrics-badge">SYNCED LYRICS</span>
+                <span class="lyrics-track-title" id="lyrics-track-title">Synthwave Pulse</span>
+            </div>
+            <button class="lyrics-hud-close" id="lyrics-close-btn" title="Close Lyrics">&times;</button>
+        </div>
+        <div class="lyrics-hud-body" id="lyrics-hud-body">
+            <div class="lyrics-empty-msg">Play a song to load real-time synchronized karaoke lyrics...</div>
+        </div>
+    </div>
 
     <div id="toast-banner" class="toast-card" style="display:none;">
         <span class="toast-symbol">⚡</span>
@@ -328,6 +346,7 @@
                     <div class="sc-entry"><kbd>SPACE</kbd> <span>Play / Pause</span></div>
                     <div class="sc-entry"><kbd>J / K</kbd> <span>Prev / Next Track</span></div>
                     <div class="sc-entry"><kbd>L / S</kbd> <span>Repeat / Shuffle</span></div>
+                    <div class="sc-entry"><kbd>Y</kbd> <span>Synchronized Lyrics</span></div>
                     <div class="sc-entry"><kbd>1/2/3/4</kbd> <span>Geometry Modes</span></div>
                     <div class="sc-entry"><kbd>T</kbd> <span>Cycle Vibe Theme</span></div>
                     <div class="sc-entry"><kbd>U / B</kbd> <span>Muffler / Bass</span></div>
