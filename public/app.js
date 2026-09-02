@@ -138,7 +138,7 @@ const THEMES = {
 let currentTheme = 'phonk';
 let autoHue = 0;
 let currentVis   = 'pulse';
-let currentBg    = 'dots';
+let currentBg    = 'vibe';
 let isAutoCam    = false;
 let autoCamAngle = 0;
 let bgBassLevel  = 0;
@@ -244,6 +244,74 @@ function spawnRing() {
 }
 spawnRing();
 
+let comicGlyphs = [];
+let cyberDrops = [];
+let lofiOrbs = [];
+let lightningBolts = [];
+let lastMoodSwitchTime = 0;
+let autoDetectedMood = 'phonk';
+
+function initCyberDrops() {
+    cyberDrops = [];
+    const cols = Math.floor((bgCanvas?.width || window.innerWidth) / 22);
+    for (let i = 0; i < cols; i++) {
+        cyberDrops.push({
+            x: i * 22,
+            y: Math.random() * (bgCanvas?.height || window.innerHeight),
+            speed: 2 + Math.random() * 4.5,
+            chars: '0101λΨ⚡♫✦<>#*'
+        });
+    }
+}
+
+function initLofiOrbs() {
+    lofiOrbs = [];
+    const w = bgCanvas?.width || window.innerWidth;
+    const h = bgCanvas?.height || window.innerHeight;
+    for (let i = 0; i < 16; i++) {
+        lofiOrbs.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: 30 + Math.random() * 70,
+            speedX: (Math.random() - 0.5) * 0.4,
+            speedY: -0.2 - Math.random() * 0.3,
+            alpha: 0.04 + Math.random() * 0.08,
+            hue: Math.random() > 0.5 ? 24 : 270
+        });
+    }
+}
+
+initCyberDrops();
+initLofiOrbs();
+
+function spawnComicGlyph(text, x, y) {
+    const glyphs = ['POW!', 'BOOM!', '✦', '⚡', '★', 'BASS', '♫', 'DROP!'];
+    comicGlyphs.push({
+        text: text || glyphs[Math.floor(Math.random() * glyphs.length)],
+        x: x || (bgCanvas.width * 0.2 + Math.random() * bgCanvas.width * 0.6),
+        y: y || (bgCanvas.height * 0.3 + Math.random() * bgCanvas.height * 0.4),
+        alpha: 0.9,
+        scale: 0.8 + Math.random() * 0.6,
+        rot: (Math.random() - 0.5) * 0.4,
+        vy: -1.2 - Math.random() * 1.5,
+        color: ['#facc15', '#06b6d4', '#f43f5e'][Math.floor(Math.random() * 3)]
+    });
+}
+
+function spawnLightning() {
+    const startX = Math.random() * bgCanvas.width;
+    const segments = [];
+    let curX = startX, curY = 0;
+    while (curY < bgCanvas.height) {
+        const nextX = curX + (Math.random() - 0.5) * 60;
+        const nextY = curY + 20 + Math.random() * 40;
+        segments.push({ x1: curX, y1: curY, x2: nextX, y2: nextY });
+        curX = nextX;
+        curY = nextY;
+    }
+    lightningBolts.push({ segments, alpha: 0.85 });
+}
+
 function getActiveAccentColor() {
     const th = THEMES[currentTheme] || THEMES.phonk;
     if (th.isAuto) {
@@ -292,11 +360,149 @@ function drawRingsFrame() {
     });
 }
 
+// 1. Comic / Pop Art Background (Halftone Grid, Speed Burst Rays, Comic Sound Glyphs)
+function drawComicFrame() {
+    const w = bgCanvas.width, h = bgCanvas.height;
+    
+    // Halftone pop dot grid
+    const spacing = 38;
+    const dotMaxR = 2.5 + bgBassLevel * 6;
+    bgCtx.fillStyle = 'rgba(250, 204, 21, 0.07)';
+    for (let x = spacing / 2; x < w; x += spacing) {
+        for (let y = spacing / 2; y < h; y += spacing) {
+            bgCtx.beginPath();
+            bgCtx.arc(x, y, Math.max(1, dotMaxR * 0.35), 0, Math.PI * 2);
+            bgCtx.fill();
+        }
+    }
+
+    // Comic radial burst lines on drops
+    if (bgBassLevel > 0.48) {
+        bgCtx.save();
+        bgCtx.translate(w / 2, h / 2);
+        bgCtx.strokeStyle = 'rgba(244, 63, 94, 0.1)';
+        bgCtx.lineWidth = 1.5;
+        const rays = 12;
+        for (let i = 0; i < rays; i++) {
+            const a = (i / rays) * Math.PI * 2 + performance.now() * 0.0005;
+            bgCtx.beginPath();
+            bgCtx.moveTo(0, 0);
+            bgCtx.lineTo(Math.cos(a) * w, Math.sin(a) * h);
+            bgCtx.stroke();
+        }
+        bgCtx.restore();
+    }
+
+    if (bgBassLevel > 0.6 && Math.random() < 0.08 && comicGlyphs.length < 6) {
+        spawnComicGlyph();
+    }
+
+    comicGlyphs = comicGlyphs.filter(g => g.alpha > 0.02);
+    comicGlyphs.forEach(g => {
+        g.y += g.vy;
+        g.alpha -= 0.015;
+        bgCtx.save();
+        bgCtx.translate(g.x, g.y);
+        bgCtx.rotate(g.rot);
+        bgCtx.font = `bold ${Math.round(18 * g.scale)}px "JetBrains Mono", monospace`;
+        bgCtx.fillStyle = g.color;
+        bgCtx.globalAlpha = g.alpha;
+        bgCtx.fillText(g.text, 0, 0);
+        bgCtx.restore();
+    });
+}
+
+// 2. Phonk / Neo-Brutalist Lightning & Pulse Rings
+function drawPhonkFrame() {
+    const w = bgCanvas.width, h = bgCanvas.height;
+
+    if (bgBassLevel > 0.58 && Math.random() < 0.12 && lightningBolts.length < 3) {
+        spawnLightning();
+    }
+
+    lightningBolts = lightningBolts.filter(l => l.alpha > 0.05);
+    lightningBolts.forEach(l => {
+        l.alpha -= 0.08;
+        bgCtx.strokeStyle = `rgba(239, 68, 68, ${l.alpha})`;
+        bgCtx.lineWidth = 2;
+        l.segments.forEach(s => {
+            bgCtx.beginPath();
+            bgCtx.moveTo(s.x1, s.y1);
+            bgCtx.lineTo(s.x2, s.y2);
+            bgCtx.stroke();
+        });
+    });
+
+    drawRingsFrame();
+}
+
+// 3. Lofi Sunset Dreamy Bokeh Horizon
+function drawLofiFrame() {
+    const w = bgCanvas.width, h = bgCanvas.height;
+
+    const grad = bgCtx.createLinearGradient(0, h * 0.4, 0, h);
+    grad.addColorStop(0, 'rgba(192, 132, 252, 0)');
+    grad.addColorStop(0.7, 'rgba(251, 146, 60, 0.05)');
+    grad.addColorStop(1, 'rgba(56, 189, 248, 0.03)');
+    bgCtx.fillStyle = grad;
+    bgCtx.fillRect(0, 0, w, h);
+
+    lofiOrbs.forEach(orb => {
+        orb.x += orb.speedX;
+        orb.y += orb.speedY * (1 + bgBassLevel * 0.8);
+        if (orb.y < -orb.r) { orb.y = h + orb.r; orb.x = Math.random() * w; }
+        if (orb.x < -orb.r || orb.x > w + orb.r) orb.x = Math.random() * w;
+
+        const pulseR = orb.r * (1 + bgBassLevel * 0.25);
+        const orbGrad = bgCtx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, pulseR);
+        const colStr = orb.hue === 24 ? '251, 146, 60' : '192, 132, 252';
+        orbGrad.addColorStop(0, `rgba(${colStr}, ${orb.alpha * 1.5})`);
+        orbGrad.addColorStop(1, `rgba(${colStr}, 0)`);
+        
+        bgCtx.fillStyle = orbGrad;
+        bgCtx.beginPath();
+        bgCtx.arc(orb.x, orb.y, pulseR, 0, Math.PI * 2);
+        bgCtx.fill();
+    });
+
+    drawDotsFrame();
+}
+
+// 4. Cyber Matrix Falling Phosphor Rain & Scanlines
+function drawCyberFrame() {
+    const w = bgCanvas.width, h = bgCanvas.height;
+
+    bgCtx.font = '10px "JetBrains Mono", monospace';
+    bgCtx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+    cyberDrops.forEach(d => {
+        d.y += d.speed * (1 + bgBassLevel * 1.4);
+        if (d.y > h) d.y = -20;
+        const char = d.chars[Math.floor((d.y * 0.1) % d.chars.length)];
+        bgCtx.fillText(char, d.x, d.y);
+    });
+
+    bgCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    for (let y = 0; y < h; y += 4) {
+        bgCtx.fillRect(0, y, w, 1);
+    }
+}
+
+function drawVibeFrame() {
+    const th = THEMES[currentTheme] || THEMES.phonk;
+    const mode = th.isAuto ? autoDetectedMood : currentTheme;
+    if (mode === 'comic') drawComicFrame();
+    else if (mode === 'phonk') drawPhonkFrame();
+    else if (mode === 'lofi') drawLofiFrame();
+    else if (mode === 'cyber') drawCyberFrame();
+    else drawDotsFrame();
+}
+
 function animateBg() {
     requestAnimationFrame(animateBg);
     bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
     bgCtx.globalAlpha = 1;
-    if (currentBg === 'dots')  drawDotsFrame();
+    if (currentBg === 'vibe') drawVibeFrame();
+    else if (currentBg === 'dots') drawDotsFrame();
     else if (currentBg === 'rings') drawRingsFrame();
     bgCtx.globalAlpha = 1;
 }
@@ -454,6 +660,63 @@ function initThree() {
     threeAnimate();
 }
 
+function detectSongMoodAndGeometry(bassAvg, midAvg, trebleAvg) {
+    const now = performance.now();
+    if (now - lastMoodSwitchTime < 3500) return;
+
+    let targetMood = 'phonk';
+    let targetVis = 'pulse';
+
+    if (bassAvg > 0.42 && (bassAvg - midAvg) > 0.08) {
+        targetMood = 'phonk';
+        targetVis = 'pulse';
+    } else if (midAvg > 0.32 && trebleAvg > 0.20) {
+        targetMood = 'comic';
+        targetVis = 'grid';
+    } else if (bassAvg < 0.28 && midAvg < 0.28) {
+        targetMood = 'lofi';
+        targetVis = 'wave';
+    } else if (trebleAvg > 0.30) {
+        targetMood = 'cyber';
+        targetVis = 'orb';
+    }
+
+    if (targetMood !== autoDetectedMood) {
+        autoDetectedMood = targetMood;
+        lastMoodSwitchTime = now;
+
+        const th = THEMES[currentTheme];
+        if (th && th.isAuto) {
+            const detectedTheme = THEMES[targetMood];
+            if (detectedTheme) {
+                document.documentElement.style.setProperty('--accent', detectedTheme.accent);
+                document.documentElement.style.setProperty('--accent-glow', detectedTheme.accentGlow);
+                document.documentElement.style.setProperty('--bg', detectedTheme.bg);
+                document.documentElement.style.setProperty('--panel', detectedTheme.panelBg);
+                document.documentElement.style.setProperty('--border', detectedTheme.border);
+                
+                const pl = scene?.children.find(c => c.isPointLight);
+                if (pl) pl.color.setHex(detectedTheme.lightColor);
+                if (bloomPass) bloomPass.strength = detectedTheme.bloomStrength;
+            }
+
+            if (currentVis !== targetVis) {
+                currentVis = targetVis;
+                pulseGrp.visible = currentVis === 'pulse';
+                waveGrp.visible  = currentVis === 'wave';
+                vgridGrp.visible = currentVis === 'grid';
+                orbGrp.visible   = currentVis === 'orb';
+                if (geometryBadge) geometryBadge.innerText = targetVis.toUpperCase();
+                document.querySelectorAll('#style-segmented .seg-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.value === targetVis);
+                });
+            }
+
+            if (telemetryMode) telemetryMode.innerText = `AUTO: ${targetMood.toUpperCase()}`;
+        }
+    }
+}
+
 function threeAnimate() {
     requestAnimationFrame(threeAnimate);
     const time = performance.now() * 0.001;
@@ -523,6 +786,8 @@ function threeAnimate() {
         masterVuSpans.forEach((span, idx) => {
             span.style.height = idx < activeVu ? `${4 + idx * 2}px` : '3px';
         });
+
+        detectSongMoodAndGeometry(bassAvg, midAvg, trebleAvg);
 
         const th = THEMES[currentTheme] || THEMES.phonk;
         if (th.isAuto) {
