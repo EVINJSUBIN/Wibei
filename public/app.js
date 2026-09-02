@@ -35,12 +35,108 @@ let pulseBars = [], waveBars = [], vgridBars = [], orbVertices = [];
 let orbMesh, orbWireMesh;
 
 const THEMES = {
-    gold:    { accent: '#facc15', glow: 'rgba(250, 204, 21, 0.35)', color: 0xfacc15 },
-    cyan:    { accent: '#06b6d4', glow: 'rgba(6, 182, 212, 0.35)', color: 0x06b6d4 },
-    magenta: { accent: '#f43f5e', glow: 'rgba(244, 63, 94, 0.35)', color: 0xf43f5e },
-    rainbow: { accent: '#facc15', glow: 'rgba(250, 204, 21, 0.35)', color: 0xffffff, isRainbow: true }
+    phonk: {
+        name: 'Phonk / Drift',
+        accent: '#ef4444',
+        accentGlow: 'rgba(239, 68, 68, 0.45)',
+        accentDim: 'rgba(239, 68, 68, 0.15)',
+        bg: '#08040d',
+        panelBg: '#12081c',
+        border: '#2a143d',
+        borderHover: '#4e2373',
+        color: 0xef4444,
+        secondaryColor: 0xa855f7,
+        lightColor: 0xef4444,
+        bloomStrength: 1.8,
+        getColor: (idx, total) => idx % 2 === 0 ? 0xef4444 : 0xa855f7
+    },
+    comic: {
+        name: 'Comic / Pop',
+        accent: '#facc15',
+        accentGlow: 'rgba(250, 204, 21, 0.45)',
+        accentDim: 'rgba(250, 204, 21, 0.15)',
+        bg: '#080d16',
+        panelBg: '#0f172a',
+        border: '#1e293b',
+        borderHover: '#334155',
+        color: 0xfacc15,
+        secondaryColor: 0x06b6d4,
+        lightColor: 0xfacc15,
+        bloomStrength: 1.4,
+        getColor: (idx, total) => {
+            const step = idx % 3;
+            if (step === 0) return 0xfacc15;
+            if (step === 1) return 0x06b6d4;
+            return 0xf43f5e;
+        }
+    },
+    lofi: {
+        name: 'Lofi Sunset',
+        accent: '#fb923c',
+        accentGlow: 'rgba(251, 146, 60, 0.45)',
+        accentDim: 'rgba(251, 146, 60, 0.15)',
+        bg: '#0f0c18',
+        panelBg: '#181426',
+        border: '#2a2240',
+        borderHover: '#423663',
+        color: 0xfb923c,
+        secondaryColor: 0xc084fc,
+        lightColor: 0xfb923c,
+        bloomStrength: 1.25,
+        getColor: (idx, total) => {
+            const t = idx / total;
+            return new THREE.Color().setHSL(0.05 + t * 0.18, 0.95, 0.6).getHex();
+        }
+    },
+    cyber: {
+        name: 'Cyber Matrix',
+        accent: '#10b981',
+        accentGlow: 'rgba(16, 185, 129, 0.45)',
+        accentDim: 'rgba(16, 185, 129, 0.15)',
+        bg: '#040d07',
+        panelBg: '#08170e',
+        border: '#102e1c',
+        borderHover: '#1c4d30',
+        color: 0x10b981,
+        secondaryColor: 0x34d399,
+        lightColor: 0x10b981,
+        bloomStrength: 1.5,
+        getColor: (idx, total) => idx % 4 === 0 ? 0x34d399 : 0x10b981
+    },
+    serious: {
+        name: 'Serious Void',
+        accent: '#f8fafc',
+        accentGlow: 'rgba(248, 250, 252, 0.3)',
+        accentDim: 'rgba(248, 250, 252, 0.08)',
+        bg: '#070707',
+        panelBg: '#0f0f0f',
+        border: '#202020',
+        borderHover: '#333333',
+        color: 0xf8fafc,
+        secondaryColor: 0x94a3b8,
+        lightColor: 0xf8fafc,
+        bloomStrength: 0.9,
+        getColor: (idx, total) => (idx % 8 === 0 ? 0xffffff : 0x64748b)
+    },
+    auto: {
+        name: 'Dynamic Auto Mood',
+        accent: '#ef4444',
+        accentGlow: 'rgba(239, 68, 68, 0.45)',
+        accentDim: 'rgba(239, 68, 68, 0.15)',
+        bg: '#09090b',
+        panelBg: '#131316',
+        border: '#27272a',
+        borderHover: '#3f3f46',
+        color: 0xef4444,
+        secondaryColor: 0x06b6d4,
+        lightColor: 0xef4444,
+        bloomStrength: 1.4,
+        isAuto: true,
+        getColor: (idx, total) => new THREE.Color().setHSL((idx / total) % 1, 0.9, 0.55).getHex()
+    }
 };
-let currentTheme = 'gold';
+let currentTheme = 'phonk';
+let autoHue = 0;
 let currentVis   = 'pulse';
 let currentBg    = 'dots';
 let isAutoCam    = false;
@@ -148,8 +244,16 @@ function spawnRing() {
 }
 spawnRing();
 
+function getActiveAccentColor() {
+    const th = THEMES[currentTheme] || THEMES.phonk;
+    if (th.isAuto) {
+        return '#' + new THREE.Color().setHSL(autoHue, 0.9, 0.55).getHexString();
+    }
+    return th.accent;
+}
+
 function drawDotsFrame() {
-    const th = THEMES[currentTheme];
+    const accentCol = getActiveAccentColor();
     const boost = 1 + bgBassLevel * 1.8;
     particles.forEach(p => {
         p.y -= p.speed * boost;
@@ -158,14 +262,14 @@ function drawDotsFrame() {
         if (p.x < -4 || p.x > bgCanvas.width + 4) p.x = Math.random() * bgCanvas.width;
         bgCtx.beginPath();
         bgCtx.arc(p.x, p.y, p.r * (1 + bgBassLevel * 0.6), 0, Math.PI * 2);
-        bgCtx.fillStyle   = th.accent;
+        bgCtx.fillStyle   = accentCol;
         bgCtx.globalAlpha = p.alpha * (1 + bgBassLevel * 0.7);
         bgCtx.fill();
     });
 }
 
 function drawRingsFrame() {
-    const th = THEMES[currentTheme];
+    const accentCol = getActiveAccentColor();
     const expandSpeed = 0.6 + bgBassLevel * 2.5;
     const spawnEvery = Math.max(500, 1600 - bgBassLevel * 1000);
 
@@ -175,7 +279,7 @@ function drawRingsFrame() {
         ringSpawnTimer = 0;
     }
 
-    bgCtx.strokeStyle = th.accent;
+    bgCtx.strokeStyle = accentCol;
     rings = rings.filter(r => r.alpha > 0.003);
     rings.forEach(ring => {
         ring.r    += expandSpeed;
@@ -202,9 +306,10 @@ let shockwaves = [];
 function triggerBeatShockwave(energy) {
     if (!shockwaveGroup) return;
     const geom = new THREE.RingGeometry(0.1, 0.6, 32);
-    const th = THEMES[currentTheme];
+    const th = THEMES[currentTheme] || THEMES.phonk;
+    const shockColor = th.isAuto ? new THREE.Color().setHSL(autoHue, 0.9, 0.55).getHex() : (th.secondaryColor || th.color);
     const mat = new THREE.MeshBasicMaterial({
-        color: th.color,
+        color: shockColor,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: Math.min(1.0, 0.4 + energy * 0.8)
@@ -253,10 +358,8 @@ function initThree() {
     bGeo.translate(0, 0.5, 0);
 
     function makeMat(idx = 0, total = 128) {
-        let col = THEMES[currentTheme].color;
-        if (THEMES[currentTheme].isRainbow) {
-            col = new THREE.Color().setHSL(idx / total, 0.9, 0.55).getHex();
-        }
+        const th = THEMES[currentTheme] || THEMES.phonk;
+        const col = th.getColor ? th.getColor(idx, total) : th.color;
         return new THREE.MeshStandardMaterial({
             color:             col,
             emissive:          col,
@@ -397,9 +500,16 @@ function threeAnimate() {
     }
 
     if (hasAudio) {
-        let bassSum = 0;
-        for (let i = 0; i < 8; i++) bassSum += dataArr[i];
-        bgBassLevel = (bassSum / 8) / 255;
+        let bassSum = 0, midSum = 0, trebleSum = 0;
+        const totalBins = dataArr.length;
+        for (let i = 0; i < 12; i++) bassSum += dataArr[i];
+        for (let i = 12; i < 48; i++) midSum += dataArr[i];
+        for (let i = 48; i < totalBins; i++) trebleSum += dataArr[i];
+
+        const bassAvg = (bassSum / 12) / 255;
+        const midAvg = (midSum / 36) / 255;
+        const trebleAvg = (trebleSum / (totalBins - 48)) / 255;
+        bgBassLevel = bassAvg;
 
         if (bgBassLevel - lastBassEnergy > 0.32 && bgBassLevel > 0.55) {
             triggerBeatShockwave(bgBassLevel);
@@ -414,6 +524,22 @@ function threeAnimate() {
             span.style.height = idx < activeVu ? `${4 + idx * 2}px` : '3px';
         });
 
+        const th = THEMES[currentTheme] || THEMES.phonk;
+        if (th.isAuto) {
+            const targetHue = (bassAvg * 0.05 + midAvg * 0.45 + trebleAvg * 0.85) % 1.0;
+            autoHue = lerp(autoHue, targetHue, 0.06);
+            const dynamicColor = new THREE.Color().setHSL(autoHue, 0.9, 0.55);
+            const hexStr = '#' + dynamicColor.getHexString();
+
+            if (frameCounter % 5 === 0) {
+                document.documentElement.style.setProperty('--accent', hexStr);
+                document.documentElement.style.setProperty('--accent-glow', `rgba(${Math.round(dynamicColor.r * 255)}, ${Math.round(dynamicColor.g * 255)}, ${Math.round(dynamicColor.b * 255)}, 0.4)`);
+            }
+
+            const pl = scene?.children.find(c => c.isPointLight);
+            if (pl) pl.color.setHex(dynamicColor.getHex());
+        }
+
         if (currentVis === 'pulse') {
             const half = pulseBars.length / 2;
             for (let i = 0; i < pulseBars.length; i++) {
@@ -421,18 +547,33 @@ function threeAnimate() {
                 const bin = Math.min(dataArr.length - 1, Math.floor((sym / half) * dataArr.length * 0.7));
                 const val = dataArr[bin] || 0;
                 pulseBars[i].scale.y += (Math.max(0.8, 1 + (val / 255) * 17) - pulseBars[i].scale.y) * 0.28;
+                if (th.isAuto) {
+                    const c = new THREE.Color().setHSL((autoHue + (i / pulseBars.length) * 0.25) % 1, 0.9, 0.55);
+                    pulseBars[i].material.color.copy(c);
+                    pulseBars[i].material.emissive.copy(c);
+                }
             }
         } else if (currentVis === 'wave') {
             for (let i = 0; i < waveBars.length; i++) {
                 const bin = Math.floor((i / waveBars.length) * dataArr.length * 0.65);
                 const val = dataArr[bin] || 0;
                 waveBars[i].scale.y += (Math.max(0.8, 1 + (val / 255) * 19) - waveBars[i].scale.y) * 0.28;
+                if (th.isAuto) {
+                    const c = new THREE.Color().setHSL((autoHue + (i / waveBars.length) * 0.35) % 1, 0.9, 0.55);
+                    waveBars[i].material.color.copy(c);
+                    waveBars[i].material.emissive.copy(c);
+                }
             }
         } else if (currentVis === 'grid') {
             for (let i = 0; i < vgridBars.length; i++) {
                 const bin = Math.floor((i / vgridBars.length) * dataArr.length * 0.55);
                 const val = dataArr[bin] || 0;
                 vgridBars[i].scale.y += (Math.max(0.6, 1 + (val / 255) * 13) - vgridBars[i].scale.y) * 0.28;
+                if (th.isAuto) {
+                    const c = new THREE.Color().setHSL((autoHue + (i / vgridBars.length) * 0.3) % 1, 0.9, 0.55);
+                    vgridBars[i].material.color.copy(c);
+                    vgridBars[i].material.emissive.copy(c);
+                }
             }
         } else if (currentVis === 'orb' && orbMesh) {
             const pos = orbMesh.geometry.attributes.position;
@@ -445,6 +586,11 @@ function threeAnimate() {
                 pos.setXYZ(i, orig.x * factor, orig.y * factor, orig.z * factor);
             }
             pos.needsUpdate = true;
+            if (th.isAuto) {
+                const c = new THREE.Color().setHSL(autoHue, 0.9, 0.55);
+                orbMesh.material.color.copy(c);
+                orbMesh.material.emissive.copy(c);
+            }
         }
     } else {
         bgBassLevel *= 0.95;
@@ -659,6 +805,10 @@ document.querySelectorAll('.preset-row').forEach(row => {
     row.addEventListener('click', () => {
         document.querySelectorAll('.preset-row').forEach(r => r.classList.remove('active'));
         row.classList.add('active');
+        const title = row.dataset.title || '';
+        if (title.includes('Synthwave')) applyTheme('cyber');
+        else if (title.includes('Lofi')) applyTheme('lofi');
+        else if (title.includes('Acoustic')) applyTheme('serious');
         playDirectAudio(row.dataset.src, row.dataset.title, row.dataset.artist);
     });
 });
@@ -844,33 +994,52 @@ autoCamBtn?.addEventListener('click', () => {
     showToast(`Auto-Pilot Orbit: ${isAutoCam ? 'ACTIVE' : 'OFF'}`);
 });
 
-document.querySelectorAll('.color-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-        document.querySelectorAll('.color-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        currentTheme = chip.dataset.theme;
-        const th = THEMES[currentTheme];
+function updateAllBarMaterials() {
+    const th = THEMES[currentTheme] || THEMES.phonk;
+    const updateMat = (arr, total) => arr.forEach((b, idx) => {
+        const col = th.getColor ? th.getColor(idx, total) : th.color;
+        b.material.color.setHex(col);
+        b.material.emissive.setHex(col);
+    });
+    updateMat(pulseBars, pulseBars.length);
+    updateMat(waveBars, waveBars.length);
+    updateMat(vgridBars, vgridBars.length);
 
-        document.documentElement.style.setProperty('--accent', th.accent);
-        document.documentElement.style.setProperty('--accent-glow', th.glow);
+    if (orbMesh) {
+        orbMesh.material.color.setHex(th.color);
+        orbMesh.material.emissive.setHex(th.color);
+    }
+}
 
-        const updateMat = (arr, total) => arr.forEach((b, idx) => {
-            let col = th.color;
-            if (th.isRainbow) col = new THREE.Color().setHSL(idx / total, 0.9, 0.55).getHex();
-            b.material.color.setHex(col);
-            b.material.emissive.setHex(col);
-        });
-        updateMat(pulseBars, pulseBars.length);
-        updateMat(waveBars, waveBars.length);
-        updateMat(vgridBars, vgridBars.length);
+function applyTheme(themeKey, skipToast = false) {
+    if (!THEMES[themeKey]) return;
+    currentTheme = themeKey;
+    const th = THEMES[themeKey];
 
-        if (orbMesh) {
-            orbMesh.material.color.setHex(th.color);
-            orbMesh.material.emissive.setHex(th.color);
-        }
+    document.querySelectorAll('.vibe-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.theme === themeKey);
+    });
 
-        const pl = scene.children.find(c => c.isPointLight);
-        if (pl) pl.color.setHex(th.color);
+    const root = document.documentElement;
+    root.style.setProperty('--accent', th.accent);
+    root.style.setProperty('--accent-glow', th.accentGlow);
+    root.style.setProperty('--accent-dim', th.accentDim);
+    root.style.setProperty('--bg', th.bg);
+    root.style.setProperty('--panel', th.panelBg);
+    root.style.setProperty('--border', th.border);
+    root.style.setProperty('--border-hover', th.borderHover);
+
+    const pl = scene?.children.find(c => c.isPointLight);
+    if (pl) pl.color.setHex(th.lightColor);
+    if (bloomPass) bloomPass.strength = th.bloomStrength;
+
+    updateAllBarMaterials();
+    if (!skipToast) showToast(`Aesthetic Vibe: ${th.name.toUpperCase()}`);
+}
+
+document.querySelectorAll('.vibe-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        applyTheme(btn.dataset.theme);
     });
 });
 
@@ -934,6 +1103,11 @@ window.addEventListener('keydown', e => {
     else if (e.code === 'KeyU') fxMufflerBtn?.click();
     else if (e.code === 'KeyB') fxBassBtn?.click();
     else if (e.code === 'KeyA') autoCamBtn?.click();
+    else if (e.code === 'KeyT') {
+        const keys = Object.keys(THEMES);
+        const nextIdx = (keys.indexOf(currentTheme) + 1) % keys.length;
+        applyTheme(keys[nextIdx]);
+    }
     else if (e.key === '1') document.querySelector('.seg-btn[data-value="pulse"]')?.click();
     else if (e.key === '2') document.querySelector('.seg-btn[data-value="wave"]')?.click();
     else if (e.key === '3') document.querySelector('.seg-btn[data-value="grid"]')?.click();
@@ -966,4 +1140,5 @@ themeToggleBtn?.addEventListener('click', () => {
 });
 
 initThree();
+applyTheme(currentTheme, true);
 applyThemeMode(isLightMode);

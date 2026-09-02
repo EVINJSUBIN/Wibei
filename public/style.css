@@ -2,16 +2,20 @@
     --bg: #0d0d0d;
     --panel: #141414;
     --border: #262626;
+    --border-hover: #3a3a3a;
     --text: #eaeaea;
     --dim: #777;
-    --accent: #facc15;
+    --accent: #ef4444;
+    --accent-glow: rgba(239, 68, 68, 0.35);
     --font: 'JetBrains Mono', monospace;
+    --radius: 4px;
 }
 
 body.theme-light {
     --bg: #fafafa;
     --panel: #ffffff;
     --border: #e5e5e5;
+    --border-hover: #cccccc;
     --text: #111;
     --dim: #666;
 }
@@ -29,6 +33,11 @@ body {
     overflow: hidden;
     height: 100vh;
     user-select: none;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+.control-deck, .master-transport, .brand-group, .telemetry-pill, .tactile-btn {
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 #bg-canvas, #threejs-container { position: fixed; inset: 0; }
@@ -296,18 +305,51 @@ body {
 .fx-switch-btn.active { border-color: var(--accent); color: var(--accent); }
 .fx-status { font-size: 9px; }
 
-.palette-row { display: flex; gap: 4px; }
-.color-chip {
-    flex: 1;
-    height: 16px;
-    border: 1px solid var(--border);
-    cursor: pointer;
+.vibe-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 3px;
 }
-.chip-gold { background: #facc15; }
-.chip-cyan { background: #06b6d4; }
-.chip-rose { background: #f43f5e; }
-.chip-rainbow { background: linear-gradient(135deg, #facc15, #06b6d4, #f43f5e); }
-.color-chip.active { border: 1px solid #fff; }
+.vibe-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-size: 8px;
+    font-weight: 700;
+    padding: 6px 2px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+}
+.vibe-btn:hover {
+    border-color: var(--dim);
+    color: var(--text);
+}
+.vibe-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(255, 255, 255, 0.05);
+}
+.vibe-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.dot-phonk { background: linear-gradient(135deg, #ef4444, #a855f7); }
+.dot-comic { background: linear-gradient(135deg, #facc15, #06b6d4, #f43f5e); }
+.dot-lofi { background: linear-gradient(135deg, #fb923c, #c084fc); }
+.dot-cyber { background: linear-gradient(135deg, #10b981, #34d399); }
+.dot-serious { background: linear-gradient(135deg, #f8fafc, #94a3b8); }
+.dot-auto { background: conic-gradient(#ef4444, #facc15, #10b981, #06b6d4, #a855f7, #ef4444); animation: vibeSpin 4s linear infinite; }
+
+@keyframes vibeSpin {
+    to { transform: rotate(360deg); }
+}
 
 .cam-toggle-row { display: flex; gap: 2px; }
 .toggle-tool-btn {
