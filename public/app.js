@@ -688,10 +688,10 @@ searchInp?.addEventListener('input', () => {
                 const card = document.createElement('div');
                 card.className = 'suggestion-card';
                 card.innerHTML = `
-                    ${item.thumbnail ? `<img class="suggestion-thumb" src="${item.thumbnail}" alt="">` : `<div class="suggestion-thumb" style="background:#1e293b;display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:12px;">♪</div>`}
-                    <div>
+                    ${item.thumbnail ? `<img class="suggestion-thumb" src="${item.thumbnail}" alt="" onerror="this.style.display='none'">` : `<div class="suggestion-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:12px;">♪</div>`}
+                    <div class="suggestion-info">
                         <div class="suggestion-title">${item.title}</div>
-                        <div class="suggestion-channel">${item.uploader}</div>
+                        <div class="suggestion-channel">${item.uploader || 'YouTube Stream'}</div>
                     </div>
                 `;
                 card.onclick = () => {

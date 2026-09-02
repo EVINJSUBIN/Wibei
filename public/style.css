@@ -147,32 +147,107 @@ body {
 .preset-details { display: flex; flex-direction: column; }
 .preset-sub { font-size: 9px; color: var(--dim); }
 
-.search-box { display: flex; gap: 2px; }
+.search-box {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
 .search-box input {
     flex: 1;
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 6px 8px;
+    padding: 7px 10px;
     font-size: 11px;
     outline: none;
+    border-radius: var(--radius);
+    transition: border-color 0.15s;
 }
+.search-box input:focus { border-color: var(--accent); }
 .search-submit {
     background: var(--border);
     border: none;
     color: var(--text);
-    padding: 0 8px;
+    padding: 0 10px;
+    border-radius: var(--radius);
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.search-submit:hover {
+    background: var(--accent);
+    color: #000;
 }
 .search-results-list {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    margin-top: 4px;
-    max-height: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
     overflow-y: auto;
+    overflow-x: hidden;
+    margin-top: 4px;
 }
-.search-res-item { padding: 6px 8px; font-size: 10px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.search-res-item:hover { color: var(--accent); }
+.search-results-list::-webkit-scrollbar { width: 3px; }
+.search-results-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+}
+.suggestion-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.12s ease;
+    overflow: hidden;
+}
+.suggestion-card:hover {
+    background: rgba(250, 204, 21, 0.08);
+    border-color: var(--accent);
+}
+.suggestion-thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 3px;
+    object-fit: cover;
+    background: #181818;
+    flex-shrink: 0;
+}
+.suggestion-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    text-align: left;
+}
+.suggestion-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+.suggestion-card:hover .suggestion-title {
+    color: var(--accent);
+}
+.suggestion-channel {
+    font-size: 9px;
+    font-family: var(--font);
+    color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
 
 .deck-action-btn {
     width: 100%;
@@ -365,9 +440,3 @@ body {
     .control-deck { display: none; }
     .transport-track, .transport-right { width: auto; }
 }
-
-.suggestion-card { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border); cursor: pointer; }
-.suggestion-card:hover { background: var(--bg); color: var(--accent); }
-.suggestion-thumb { width: 40px; height: 30px; object-fit: cover; border: 1px solid var(--border); }
-.suggestion-title { font-size: 10px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
-.suggestion-channel { font-size: 8px; color: var(--dim); }
