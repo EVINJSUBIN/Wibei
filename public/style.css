@@ -365,3 +365,9 @@ body {
     .control-deck { display: none; }
     .transport-track, .transport-right { width: auto; }
 }
+
+.suggestion-card { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.suggestion-card:hover { background: var(--bg); color: var(--accent); }
+.suggestion-thumb { width: 40px; height: 30px; object-fit: cover; border: 1px solid var(--border); }
+.suggestion-title { font-size: 10px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px; }
+.suggestion-channel { font-size: 8px; color: var(--dim); }
