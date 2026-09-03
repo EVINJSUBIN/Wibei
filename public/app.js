@@ -31,8 +31,9 @@ const FX_SPEEDS = [1.0, 1.25, 0.85];
 let scene, camera, renderer, composer, bloomPass;
 let visualizerRoot, shockwaveGroup;
 let pulseGrp, waveGrp, vgridGrp, orbGrp, vgridFloor;
-let pulseBars = [], waveBars = [], vgridBars = [], orbVertices = [];
-let orbMesh, orbWireMesh;
+let pulseBars = [], waveBars = [], waveMirrorBars = [], vgridBars = [], orbVertices = [];
+let orbMesh, orbWireMesh, orbInnerCore, orbRing1, orbRing2;
+let pulseGyroCore, pulseHalo, waveHorizon;
 
 let matrixRipplePhase = 0;
 let matrixShockwaves = [];
@@ -307,8 +308,26 @@ function initLofiOrbs() {
     }
 }
 
+let voidStars = [];
+function initVoidStars() {
+    voidStars = [];
+    const w = bgCanvas?.width || window.innerWidth;
+    const h = bgCanvas?.height || window.innerHeight;
+    for (let i = 0; i < 120; i++) {
+        voidStars.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: 0.6 + Math.random() * 1.5,
+            alpha: 0.15 + Math.random() * 0.65,
+            twinkleSpeed: 0.02 + Math.random() * 0.05,
+            twinklePhase: Math.random() * Math.PI * 2
+        });
+    }
+}
+
 initCyberDrops();
 initLofiOrbs();
+initVoidStars();
 
 function spawnComicGlyph(text, x, y) {
     const glyphs = ['POW!', 'BOOM!', '✦', '⚡', '★', 'BASS', '♫', 'DROP!'];
@@ -513,6 +532,57 @@ function drawCyberFrame() {
     }
 }
 
+function hexToRgba(hex, alpha) {
+    if (!hex) return `rgba(255, 255, 255, ${alpha})`;
+    if (hex.startsWith('rgba')) return hex;
+    if (hex.startsWith('rgb')) return hex.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
+    let c = hex.replace('#', '');
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    const num = parseInt(c, 16);
+    return `rgba(${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}, ${alpha})`;
+}
+
+function drawAtmosphericAura() {
+    const w = bgCanvas.width, h = bgCanvas.height;
+    const cx = w / 2, cy = h / 2;
+    const th = THEMES[currentTheme] || THEMES.phonk;
+    const accentCol = getActiveAccentColor();
+    const secCol = th.secondaryColor ? ('#' + new THREE.Color(th.secondaryColor).getHexString()) : accentCol;
+
+    // 1. Center pulsing radial audio nebula
+    const maxR = Math.max(w, h) * (0.42 + bgBassLevel * 0.22);
+    const auraGrad = bgCtx.createRadialGradient(cx, cy, 10, cx, cy, maxR);
+    const coreAlpha = 0.10 + bgBassLevel * 0.18;
+    const midAlpha  = 0.04 + bgBassLevel * 0.08;
+    auraGrad.addColorStop(0, hexToRgba(accentCol, coreAlpha));
+    auraGrad.addColorStop(0.45, hexToRgba(secCol, midAlpha));
+    auraGrad.addColorStop(0.85, hexToRgba(accentCol, 0.01));
+    auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    bgCtx.fillStyle = auraGrad;
+    bgCtx.fillRect(0, 0, w, h);
+
+    // 2. Cinematic perimeter vignette
+    const vigGrad = bgCtx.createRadialGradient(cx, cy, Math.min(w, h) * 0.45, cx, cy, Math.max(w, h) * 0.75);
+    vigGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vigGrad.addColorStop(1, 'rgba(0, 0, 0, 0.52)');
+    bgCtx.fillStyle = vigGrad;
+    bgCtx.fillRect(0, 0, w, h);
+}
+
+function drawSeriousFrame() {
+    const time = performance.now() * 0.001;
+    voidStars.forEach(s => {
+        const tw = Math.sin(time * 3 + s.twinklePhase) * 0.3;
+        const alpha = clamp(s.alpha + tw + bgBassLevel * 0.4, 0.1, 1.0);
+        bgCtx.beginPath();
+        bgCtx.arc(s.x, s.y, s.r * (1 + bgBassLevel * 0.5), 0, Math.PI * 2);
+        bgCtx.fillStyle = `rgba(248, 250, 252, ${alpha})`;
+        bgCtx.fill();
+    });
+    drawDotsFrame();
+}
+
 function drawVibeFrame() {
     const th = THEMES[currentTheme] || THEMES.phonk;
     const mode = th.isAuto ? autoDetectedMood : currentTheme;
@@ -520,6 +590,7 @@ function drawVibeFrame() {
     else if (mode === 'phonk') drawPhonkFrame();
     else if (mode === 'lofi') drawLofiFrame();
     else if (mode === 'cyber') drawCyberFrame();
+    else if (mode === 'serious') drawSeriousFrame();
     else drawDotsFrame();
 }
 
@@ -527,6 +598,10 @@ function animateBg() {
     requestAnimationFrame(animateBg);
     bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
     bgCtx.globalAlpha = 1;
+
+    // Atmospheric volumetric radial aura & vignette
+    drawAtmosphericAura();
+
     if (currentBg === 'vibe') drawVibeFrame();
     else if (currentBg === 'dots') drawDotsFrame();
     else if (currentBg === 'rings') drawRingsFrame();
@@ -601,6 +676,7 @@ function initThree() {
         });
     }
 
+    // 1. PULSE RING // Dual Accelerator, Rotating Gyro-Core & Base Halo
     pulseGrp = new THREE.Group();
     const ringCount = 128, ringR = 22;
     for (let i = 0; i < ringCount; i++) {
@@ -611,24 +687,85 @@ function initThree() {
         pulseGrp.add(m);
         pulseBars.push(m);
     }
+
+    const thInit = THEMES[currentTheme] || THEMES.phonk;
+
+    // Center Rotating Energy Gyro-Core
+    const gyroGeo = new THREE.OctahedronGeometry(4.8, 0);
+    const gyroMat = new THREE.MeshStandardMaterial({
+        color: thInit.color,
+        emissive: thInit.color,
+        emissiveIntensity: 1.2,
+        wireframe: true,
+        roughness: 0.1,
+        metalness: 0.9
+    });
+    pulseGyroCore = new THREE.Mesh(gyroGeo, gyroMat);
+    pulseGrp.add(pulseGyroCore);
+
+    // Glowing Halo Base Ring
+    const haloGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
+    const haloMat = new THREE.MeshBasicMaterial({
+        color: thInit.color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.35
+    });
+    pulseHalo = new THREE.Mesh(haloGeo, haloMat);
+    pulseGrp.add(pulseHalo);
+
     visualizerRoot.add(pulseGrp);
 
+    // 2. WAVE RIBBON // 3D Curved Highway, Dual Mirrored Spectrum & Center Beam
     waveGrp = new THREE.Group();
-    const waveN = 64;
+    const waveN = 72;
+    waveBars = [];
+    waveMirrorBars = [];
+
+    const wavePillarGeo = new THREE.BoxGeometry(0.85, 1, 0.85);
+    wavePillarGeo.translate(0, 0.5, 0);
+
+    const waveMirrorGeo = new THREE.BoxGeometry(0.85, 1, 0.85);
+    waveMirrorGeo.translate(0, -0.5, 0);
+
     for (let i = 0; i < waveN; i++) {
-        const m = new THREE.Mesh(bGeo, makeMat(i, waveN));
-        m.position.set((i - waveN / 2) * 1.25, -6, 0);
-        waveGrp.add(m);
-        waveBars.push(m);
+        const norm = (i - waveN / 2) / (waveN / 2);
+        const x = (i - waveN / 2) * 1.35;
+        // Subtle 3D cylindrical arc in Z wrapping toward viewer
+        const z = -Math.pow(norm * 2.6, 2) * 1.1;
+
+        // Upper frequency bar
+        const mUp = new THREE.Mesh(wavePillarGeo, makeMat(i, waveN));
+        mUp.position.set(x, -5, z);
+        waveGrp.add(mUp);
+        waveBars.push(mUp);
+
+        // Lower mirrored reflection bar
+        const mDown = new THREE.Mesh(waveMirrorGeo, makeMat(i, waveN));
+        mDown.position.set(x, -5.2, z);
+        waveGrp.add(mDown);
+        waveMirrorBars.push(mDown);
     }
+
+    // Glowing central horizon line
+    const horizGeo = new THREE.BoxGeometry(waveN * 1.35 + 4, 0.18, 0.4);
+    const horizMat = new THREE.MeshBasicMaterial({
+        color: thInit.color,
+        transparent: true,
+        opacity: 0.55
+    });
+    waveHorizon = new THREE.Mesh(horizGeo, horizMat);
+    waveHorizon.position.set(0, -5.1, -1);
+    waveGrp.add(waveHorizon);
+
     waveGrp.visible = false;
     visualizerRoot.add(waveGrp);
 
+    // 3. GEOMETRY MATRIX // 18x18 Kinetic Voxel Terrain & Floor Grid
     vgridGrp = new THREE.Group();
     vgridGrp.position.set(0, -6, 0);
     vgridGrp.rotation.x = 0.42;
 
-    const thInit = THEMES[currentTheme] || THEMES.phonk;
     vgridFloor = new THREE.GridHelper(MATRIX_DIM * MATRIX_SPACING + 4, MATRIX_DIM, thInit.color, 0x1f1f2e);
     vgridFloor.position.y = -0.05;
     vgridFloor.material.transparent = true;
@@ -669,12 +806,15 @@ function initThree() {
     vgridGrp.visible = false;
     visualizerRoot.add(vgridGrp);
 
+    // 4. PULSAR CYBER CORE // Solid Pulsing Core, Deformed Geodesic Shell & Dual Gimbal Rings
     orbGrp = new THREE.Group();
+    
+    // Outer Deformed Wireframe Shell
     const sphereGeom = new THREE.IcosahedronGeometry(12, 3);
     const sphereMat = new THREE.MeshStandardMaterial({
-        color: THEMES[currentTheme].color,
-        emissive: THEMES[currentTheme].color,
-        emissiveIntensity: 0.7,
+        color: thInit.color,
+        emissive: thInit.color,
+        emissiveIntensity: 0.85,
         wireframe: true,
         roughness: 0.1,
         metalness: 0.9
@@ -686,6 +826,33 @@ function initThree() {
     for (let i = 0; i < pos.count; i++) {
         orbVertices.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
     }
+
+    // Inner Glowing Pulsar Core (Solid geodesic core)
+    const innerCoreGeo = new THREE.IcosahedronGeometry(6.5, 2);
+    const innerCoreMat = new THREE.MeshStandardMaterial({
+        color: thInit.color,
+        emissive: thInit.secondaryColor || thInit.color,
+        emissiveIntensity: 1.4,
+        roughness: 0.2,
+        metalness: 0.8
+    });
+    orbInnerCore = new THREE.Mesh(innerCoreGeo, innerCoreMat);
+    orbGrp.add(orbInnerCore);
+
+    // Dual Gimbal Orbital Rings
+    const ringGeo = new THREE.TorusGeometry(15.5, 0.14, 16, 80);
+    const ringMat1 = new THREE.MeshBasicMaterial({ color: thInit.color, transparent: true, opacity: 0.65 });
+    orbRing1 = new THREE.Mesh(ringGeo, ringMat1);
+    orbRing1.rotation.x = Math.PI / 4;
+    orbRing1.rotation.y = Math.PI / 6;
+    orbGrp.add(orbRing1);
+
+    const ringMat2 = new THREE.MeshBasicMaterial({ color: thInit.secondaryColor || thInit.color, transparent: true, opacity: 0.55 });
+    orbRing2 = new THREE.Mesh(ringGeo, ringMat2);
+    orbRing2.rotation.x = -Math.PI / 3;
+    orbRing2.rotation.y = -Math.PI / 4;
+    orbGrp.add(orbRing2);
+
     orbGrp.visible = false;
     visualizerRoot.add(orbGrp);
 
@@ -876,15 +1043,36 @@ function threeAnimate() {
                     pulseBars[i].material.emissive.copy(c);
                 }
             }
+
+            if (pulseGyroCore) {
+                pulseGyroCore.rotation.x += 0.02 + bgBassLevel * 0.04;
+                pulseGyroCore.rotation.y += 0.025 + bgBassLevel * 0.05;
+                const gyroScale = 1 + bgBassLevel * 0.65;
+                pulseGyroCore.scale.set(gyroScale, gyroScale, gyroScale);
+                pulseGyroCore.material.emissiveIntensity = 1.0 + bgBassLevel * 2.2;
+                if (th.isAuto) {
+                    const c = new THREE.Color().setHSL(autoHue, 0.9, 0.6);
+                    pulseGyroCore.material.color.copy(c);
+                    pulseGyroCore.material.emissive.copy(c);
+                }
+            }
         } else if (currentVis === 'wave') {
             for (let i = 0; i < waveBars.length; i++) {
                 const bin = Math.floor((i / waveBars.length) * dataArr.length * 0.65);
                 const val = dataArr[bin] || 0;
-                waveBars[i].scale.y += (Math.max(0.8, 1 + (val / 255) * 19) - waveBars[i].scale.y) * 0.28;
+                const targetH = Math.max(0.6, 1 + (val / 255) * 19);
+                waveBars[i].scale.y += (targetH - waveBars[i].scale.y) * 0.28;
+                if (waveMirrorBars[i]) {
+                    waveMirrorBars[i].scale.y += (targetH * 0.62 - waveMirrorBars[i].scale.y) * 0.28;
+                }
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL((autoHue + (i / waveBars.length) * 0.35) % 1, 0.9, 0.55);
                     waveBars[i].material.color.copy(c);
                     waveBars[i].material.emissive.copy(c);
+                    if (waveMirrorBars[i]) {
+                        waveMirrorBars[i].material.color.copy(c);
+                        waveMirrorBars[i].material.emissive.copy(c);
+                    }
                 }
             }
         } else if (currentVis === 'grid') {
@@ -945,10 +1133,27 @@ function threeAnimate() {
                 pos.setXYZ(i, orig.x * factor, orig.y * factor, orig.z * factor);
             }
             pos.needsUpdate = true;
+
+            if (orbInnerCore) {
+                const coreScale = 1 + bgBassLevel * 0.55;
+                orbInnerCore.scale.set(coreScale, coreScale, coreScale);
+                orbInnerCore.rotation.y -= 0.015;
+                orbInnerCore.rotation.x += 0.01;
+            }
+
+            if (orbRing1 && orbRing2) {
+                orbRing1.rotation.z += 0.012 + bgBassLevel * 0.02;
+                orbRing2.rotation.y += 0.015 + bgBassLevel * 0.025;
+            }
+
             if (th.isAuto) {
                 const c = new THREE.Color().setHSL(autoHue, 0.9, 0.55);
                 orbMesh.material.color.copy(c);
                 orbMesh.material.emissive.copy(c);
+                if (orbInnerCore) {
+                    orbInnerCore.material.color.copy(c);
+                    orbInnerCore.material.emissive.copy(c);
+                }
             }
         }
     } else {
@@ -964,11 +1169,19 @@ function threeAnimate() {
                 const tgt = Math.max(0.7, 1.35 + Math.sin(time * 1.2) * 0.2 + h);
                 pulseBars[i].scale.y += (tgt - pulseBars[i].scale.y) * 0.12;
             }
+            if (pulseGyroCore) {
+                pulseGyroCore.rotation.x += 0.01;
+                pulseGyroCore.rotation.y += 0.015;
+                pulseGyroCore.scale.set(1, 1, 1);
+            }
         } else if (currentVis === 'wave') {
             for (let i = 0; i < waveBars.length; i++) {
                 const n = i / waveBars.length;
                 const tgt = Math.max(0.7, 1.3 + Math.sin(n * Math.PI * 2 + time * 2) * 0.55);
                 waveBars[i].scale.y += (tgt - waveBars[i].scale.y) * 0.12;
+                if (waveMirrorBars[i]) {
+                    waveMirrorBars[i].scale.y += (tgt * 0.6 - waveMirrorBars[i].scale.y) * 0.12;
+                }
             }
         } else if (currentVis === 'grid') {
             for (let i = 0; i < vgridBars.length; i++) {
@@ -989,6 +1202,9 @@ function threeAnimate() {
                 pos.setXYZ(i, orig.x * (1 + wave), orig.y * (1 + wave), orig.z * (1 + wave));
             }
             pos.needsUpdate = true;
+            if (orbInnerCore) orbInnerCore.rotation.y -= 0.006;
+            if (orbRing1) orbRing1.rotation.z += 0.006;
+            if (orbRing2) orbRing2.rotation.y += 0.008;
         }
     }
 
@@ -1727,9 +1943,23 @@ function updateAllBarMaterials() {
     });
     updateMat(pulseBars, pulseBars.length);
     updateMat(waveBars, waveBars.length);
+    if (waveMirrorBars) updateMat(waveMirrorBars, waveMirrorBars.length);
 
     const colCenter = new THREE.Color(th.color);
     const colEdge = new THREE.Color(th.secondaryColor || th.color);
+
+    if (waveHorizon && waveHorizon.material) {
+        waveHorizon.material.color.copy(colCenter);
+    }
+
+    if (pulseGyroCore && pulseGyroCore.material) {
+        pulseGyroCore.material.color.copy(colCenter);
+        pulseGyroCore.material.emissive.copy(colCenter);
+    }
+    if (pulseHalo && pulseHalo.material) {
+        pulseHalo.material.color.copy(colCenter);
+    }
+
     vgridBars.forEach(b => {
         const t = b.userData ? clamp(b.userData.normDist, 0, 1) : 0;
         const col = colCenter.clone().lerp(colEdge, t);
@@ -1744,6 +1974,16 @@ function updateAllBarMaterials() {
     if (orbMesh) {
         orbMesh.material.color.setHex(th.color);
         orbMesh.material.emissive.setHex(th.color);
+    }
+    if (orbInnerCore) {
+        orbInnerCore.material.color.copy(colCenter);
+        orbInnerCore.material.emissive.copy(colEdge);
+    }
+    if (orbRing1 && orbRing1.material) {
+        orbRing1.material.color.copy(colCenter);
+    }
+    if (orbRing2 && orbRing2.material) {
+        orbRing2.material.color.copy(colEdge);
     }
 }
 
