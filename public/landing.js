@@ -151,6 +151,43 @@
         });
     });
 
+    // Polaroid stem audio preview
+    let stemAudio = null;
+    let currentStemCard = null;
+
+    document.querySelectorAll('.polaroid-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const src = card.dataset.src;
+            if (!src) return;
+
+            if (currentStemCard === card && stemAudio && !stemAudio.paused) {
+                stemAudio.pause();
+                card.classList.remove('playing');
+                currentStemCard = null;
+                return;
+            }
+
+            document.querySelectorAll('.polaroid-card').forEach(c => c.classList.remove('playing'));
+
+            if (stemAudio) {
+                stemAudio.pause();
+                stemAudio = null;
+            }
+
+            stemAudio = new Audio(src);
+            stemAudio.volume = 0.5;
+            stemAudio.play().then(() => {
+                card.classList.add('playing');
+                currentStemCard = card;
+            }).catch(() => {});
+
+            stemAudio.onended = () => {
+                card.classList.remove('playing');
+                currentStemCard = null;
+            };
+        });
+    });
+
     // Boot
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initWebGL);
