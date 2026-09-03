@@ -30,9 +30,16 @@ const FX_SPEEDS = [1.0, 1.25, 0.85];
 
 let scene, camera, renderer, composer, bloomPass;
 let visualizerRoot, shockwaveGroup;
-let pulseGrp, waveGrp, vgridGrp, orbGrp;
+let pulseGrp, waveGrp, vgridGrp, orbGrp, vgridFloor;
 let pulseBars = [], waveBars = [], vgridBars = [], orbVertices = [];
 let orbMesh, orbWireMesh;
+
+let matrixRipplePhase = 0;
+let matrixShockwaves = [];
+let lastMatrixShockwaveTime = 0;
+const MATRIX_DIM = 18;
+const MATRIX_SPACING = 2.15;
+const MATRIX_MAX_DIST = Math.hypot((MATRIX_DIM / 2) * MATRIX_SPACING, (MATRIX_DIM / 2) * MATRIX_SPACING);
 
 const THEMES = {
     phonk: {
@@ -618,14 +625,46 @@ function initThree() {
     visualizerRoot.add(waveGrp);
 
     vgridGrp = new THREE.Group();
-    const gCols = 16, gRows = 8;
-    for (let i = 0; i < gCols * gRows; i++) {
-        const m = new THREE.Mesh(bGeo, makeMat(i, gCols * gRows));
-        const x = (i % gCols) - gCols / 2;
-        const z = Math.floor(i / gCols) - gRows / 2;
-        m.position.set(x * 2.5, -10, z * 2.5);
-        vgridGrp.add(m);
-        vgridBars.push(m);
+    vgridGrp.position.set(0, -6, 0);
+    vgridGrp.rotation.x = 0.42;
+
+    const thInit = THEMES[currentTheme] || THEMES.phonk;
+    vgridFloor = new THREE.GridHelper(MATRIX_DIM * MATRIX_SPACING + 4, MATRIX_DIM, thInit.color, 0x1f1f2e);
+    vgridFloor.position.y = -0.05;
+    vgridFloor.material.transparent = true;
+    vgridFloor.material.opacity = 0.35;
+    vgridGrp.add(vgridFloor);
+
+    const gridPillarGeo = new THREE.BoxGeometry(1.6, 1, 1.6);
+    gridPillarGeo.translate(0, 0.5, 0);
+
+    const colCenter = new THREE.Color(thInit.color);
+    const colEdge = new THREE.Color(thInit.secondaryColor || thInit.color);
+
+    const halfDim = (MATRIX_DIM - 1) / 2;
+    for (let r = 0; r < MATRIX_DIM; r++) {
+        for (let c = 0; c < MATRIX_DIM; c++) {
+            const x = (c - halfDim) * MATRIX_SPACING;
+            const z = (r - halfDim) * MATRIX_SPACING;
+            const dist = Math.hypot(x, z);
+            const normDist = clamp(dist / MATRIX_MAX_DIST, 0, 1);
+            const angle = Math.atan2(z, x);
+
+            const col = colCenter.clone().lerp(colEdge, normDist);
+            const mat = new THREE.MeshStandardMaterial({
+                color: col,
+                emissive: col,
+                emissiveIntensity: 0.85,
+                roughness: 0.18,
+                metalness: 0.82
+            });
+
+            const m = new THREE.Mesh(gridPillarGeo, mat);
+            m.position.set(x, 0, z);
+            m.userData = { x, z, dist, normDist, angle };
+            vgridGrp.add(m);
+            vgridBars.push(m);
+        }
     }
     vgridGrp.visible = false;
     visualizerRoot.add(vgridGrp);
@@ -849,14 +888,50 @@ function threeAnimate() {
                 }
             }
         } else if (currentVis === 'grid') {
+            matrixRipplePhase += 0.045 + bgBassLevel * 0.18;
+
+            const nowMs = performance.now();
+            if (bgBassLevel > 0.44 && nowMs - lastMatrixShockwaveTime > 320) {
+                matrixShockwaves.push({
+                    radius: 0,
+                    speed: 0.95 + bgBassLevel * 1.5,
+                    intensity: 1.0,
+                    maxRadius: MATRIX_MAX_DIST + 6
+                });
+                lastMatrixShockwaveTime = nowMs;
+            }
+
+            matrixShockwaves.forEach(sw => {
+                sw.radius += sw.speed;
+                sw.intensity *= 0.94;
+            });
+            matrixShockwaves = matrixShockwaves.filter(sw => sw.radius < sw.maxRadius && sw.intensity > 0.05);
+
+            const halfData = dataArr.length * 0.7;
             for (let i = 0; i < vgridBars.length; i++) {
-                const bin = Math.floor((i / vgridBars.length) * dataArr.length * 0.55);
-                const val = dataArr[bin] || 0;
-                vgridBars[i].scale.y += (Math.max(0.6, 1 + (val / 255) * 13) - vgridBars[i].scale.y) * 0.28;
+                const b = vgridBars[i];
+                const u = b.userData;
+                const bin = Math.min(dataArr.length - 1, Math.floor(u.normDist * halfData));
+                const audioVal = (dataArr[bin] || 0) / 255;
+                const wave = Math.sin(u.dist * 0.55 - matrixRipplePhase);
+
+                let shockBoost = 0;
+                for (let j = 0; j < matrixShockwaves.length; j++) {
+                    const sw = matrixShockwaves[j];
+                    const diff = Math.abs(u.dist - sw.radius);
+                    if (diff < 3.5) {
+                        shockBoost += Math.exp(-Math.pow(diff / 1.8, 2)) * sw.intensity * 8.0;
+                    }
+                }
+
+                const targetScaleY = Math.max(0.4, 0.8 + audioVal * 16 + wave * (0.8 + bgBassLevel * 3.5) + shockBoost);
+                b.scale.y += (targetScaleY - b.scale.y) * 0.32;
+                b.material.emissiveIntensity = 0.4 + audioVal * 1.6 + (shockBoost > 1 ? 1.5 : 0);
+
                 if (th.isAuto) {
-                    const c = new THREE.Color().setHSL((autoHue + (i / vgridBars.length) * 0.3) % 1, 0.9, 0.55);
-                    vgridBars[i].material.color.copy(c);
-                    vgridBars[i].material.emissive.copy(c);
+                    const c = new THREE.Color().setHSL((autoHue + u.normDist * 0.4) % 1, 0.9, 0.55);
+                    b.material.color.copy(c);
+                    b.material.emissive.copy(c);
                 }
             }
         } else if (currentVis === 'orb' && orbMesh) {
@@ -897,11 +972,12 @@ function threeAnimate() {
             }
         } else if (currentVis === 'grid') {
             for (let i = 0; i < vgridBars.length; i++) {
-                const x = (i % 16) - 7.5;
-                const z = Math.floor(i / 16) - 3.5;
-                const d = Math.sqrt(x * x + z * z);
-                const tgt = Math.max(0.6, 1.1 + Math.sin(d * 0.7 - time * 2.5) * 0.5);
-                vgridBars[i].scale.y += (tgt - vgridBars[i].scale.y) * 0.12;
+                const b = vgridBars[i];
+                const u = b.userData;
+                const wave = Math.sin(u.dist * 0.45 - time * 2.5) * Math.cos(u.angle * 2 + time * 0.8);
+                const tgt = Math.max(0.4, 1.2 + wave * 1.5);
+                b.scale.y += (tgt - b.scale.y) * 0.14;
+                b.material.emissiveIntensity = 0.45 + (wave * 0.35 + 0.35);
             }
         } else if (currentVis === 'orb' && orbMesh) {
             orbMesh.rotation.y += 0.008;
@@ -1651,7 +1727,19 @@ function updateAllBarMaterials() {
     });
     updateMat(pulseBars, pulseBars.length);
     updateMat(waveBars, waveBars.length);
-    updateMat(vgridBars, vgridBars.length);
+
+    const colCenter = new THREE.Color(th.color);
+    const colEdge = new THREE.Color(th.secondaryColor || th.color);
+    vgridBars.forEach(b => {
+        const t = b.userData ? clamp(b.userData.normDist, 0, 1) : 0;
+        const col = colCenter.clone().lerp(colEdge, t);
+        b.material.color.copy(col);
+        b.material.emissive.copy(col);
+    });
+
+    if (vgridFloor && vgridFloor.material) {
+        vgridFloor.material.color.copy(colCenter);
+    }
 
     if (orbMesh) {
         orbMesh.material.color.setHex(th.color);
