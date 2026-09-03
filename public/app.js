@@ -50,36 +50,6 @@ const THEMES = {
         bloomStrength: 1.8,
         getColor: (idx, total) => idx % 2 === 0 ? 0xef4444 : 0xa855f7
     },
-    scrapbook: {
-        name: 'Field Notes / Scrapbook',
-        accent: '#d4a373',
-        accentGlow: 'rgba(212, 163, 115, 0.45)',
-        accentDim: 'rgba(212, 163, 115, 0.15)',
-        bg: '#181411',
-        panelBg: 'rgba(32, 26, 21, 0.92)',
-        border: '#4a3b2c',
-        borderHover: '#d4a373',
-        color: 0xd4a373,
-        secondaryColor: 0xe07a5f,
-        lightColor: 0xffeedb,
-        bloomStrength: 1.05,
-        getColor: (idx, total) => idx % 2 === 0 ? 0xd4a373 : 0xe07a5f
-    },
-    retro: {
-        name: 'Retro 8-Bit Console',
-        accent: '#84cc16',
-        accentGlow: 'rgba(132, 204, 22, 0.5)',
-        accentDim: 'rgba(132, 204, 22, 0.15)',
-        bg: '#0f1710',
-        panelBg: 'rgba(18, 28, 19, 0.92)',
-        border: '#274e2a',
-        borderHover: '#84cc16',
-        color: 0x84cc16,
-        secondaryColor: 0xeab308,
-        lightColor: 0xa3e635,
-        bloomStrength: 1.3,
-        getColor: (idx, total) => idx % 3 === 0 ? 0x84cc16 : idx % 3 === 1 ? 0xeab308 : 0xef4444
-    },
     comic: {
         name: 'Comic / Pop',
         accent: '#facc15',
@@ -536,104 +506,6 @@ function drawCyberFrame() {
     }
 }
 
-let paperScraps = [];
-let retroStars = [];
-
-function initPaperScraps() {
-    paperScraps = [];
-    const w = bgCanvas?.width || window.innerWidth;
-    const h = bgCanvas?.height || window.innerHeight;
-    const glyphs = ['✦', '✿', '☻', '♫', '🗎', '★', '🌿', '🌱'];
-    for (let i = 0; i < 18; i++) {
-        paperScraps.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
-            char: glyphs[Math.floor(Math.random() * glyphs.length)],
-            speedY: -0.3 - Math.random() * 0.6,
-            drift: (Math.random() - 0.5) * 0.5,
-            rot: Math.random() * Math.PI * 2,
-            rotSpeed: (Math.random() - 0.5) * 0.02,
-            alpha: 0.12 + Math.random() * 0.2,
-            size: 11 + Math.random() * 12
-        });
-    }
-}
-
-function initRetroStars() {
-    retroStars = [];
-    const w = bgCanvas?.width || window.innerWidth;
-    const h = bgCanvas?.height || window.innerHeight;
-    for (let i = 0; i < 35; i++) {
-        retroStars.push({
-            x: Math.random() * w,
-            y: Math.random() * h,
-            size: Math.random() > 0.6 ? 4 : 2,
-            speedY: 0.5 + Math.random() * 2,
-            color: Math.random() > 0.5 ? '#84cc16' : '#eab308'
-        });
-    }
-}
-
-initPaperScraps();
-initRetroStars();
-
-// 5. Field Notes & Scrapbook Craft Texture & Floating Scraps
-function drawScrapbookFrame() {
-    const w = bgCanvas.width, h = bgCanvas.height;
-
-    bgCtx.strokeStyle = 'rgba(212, 163, 115, 0.04)';
-    bgCtx.lineWidth = 1;
-    const gridStep = 32;
-    for (let x = 0; x < w; x += gridStep) {
-        bgCtx.beginPath();
-        bgCtx.moveTo(x, 0);
-        bgCtx.lineTo(x, h);
-        bgCtx.stroke();
-    }
-    for (let y = 0; y < h; y += gridStep) {
-        bgCtx.beginPath();
-        bgCtx.moveTo(0, y);
-        bgCtx.lineTo(w, y);
-        bgCtx.stroke();
-    }
-
-    paperScraps.forEach(p => {
-        p.y += p.speedY * (1 + bgBassLevel * 1.5);
-        p.x += p.drift;
-        p.rot += p.rotSpeed;
-        if (p.y < -30) { p.y = h + 30; p.x = Math.random() * w; }
-        if (p.x < -30 || p.x > w + 30) p.x = Math.random() * w;
-
-        bgCtx.save();
-        bgCtx.translate(p.x, p.y);
-        bgCtx.rotate(p.rot);
-        bgCtx.font = `${Math.round(p.size * (1 + bgBassLevel * 0.3))}px "JetBrains Mono", sans-serif`;
-        bgCtx.fillStyle = 'rgba(212, 163, 115, ' + (p.alpha * (1 + bgBassLevel * 0.5)) + ')';
-        bgCtx.fillText(p.char, 0, 0);
-        bgCtx.restore();
-    });
-
-    drawDotsFrame();
-}
-
-// 6. Retro 8-Bit Console Pixel Canvas
-function drawRetroFrame() {
-    const w = bgCanvas.width, h = bgCanvas.height;
-
-    retroStars.forEach(s => {
-        s.y += s.speedY * (1 + bgBassLevel * 2.2);
-        if (s.y > h) { s.y = -5; s.x = Math.random() * w; }
-        bgCtx.fillStyle = s.color;
-        bgCtx.globalAlpha = 0.35 + bgBassLevel * 0.45;
-        bgCtx.fillRect(Math.floor(s.x / 4) * 4, Math.floor(s.y / 4) * 4, s.size, s.size);
-    });
-
-    bgCtx.fillStyle = 'rgba(0, 0, 0, 0.22)';
-    for (let y = 0; y < h; y += 3) {
-        bgCtx.fillRect(0, y, w, 1);
-    }
-}
-
 function drawVibeFrame() {
     const th = THEMES[currentTheme] || THEMES.phonk;
     const mode = th.isAuto ? autoDetectedMood : currentTheme;
@@ -641,8 +513,6 @@ function drawVibeFrame() {
     else if (mode === 'phonk') drawPhonkFrame();
     else if (mode === 'lofi') drawLofiFrame();
     else if (mode === 'cyber') drawCyberFrame();
-    else if (mode === 'scrapbook') drawScrapbookFrame();
-    else if (mode === 'retro') drawRetroFrame();
     else drawDotsFrame();
 }
 
@@ -1186,9 +1056,7 @@ function playTrackAtIndex(idx) {
         if (t.includes('synth') || t.includes('cyber')) applyTheme('cyber');
         else if (t.includes('lofi') || t.includes('chill')) applyTheme('lofi');
         else if (t.includes('phonk') || t.includes('drift')) applyTheme('phonk');
-        else if (t.includes('acoustic') || t.includes('harmony') || t.includes('piano') || t.includes('folk')) applyTheme('scrapbook');
-        else if (t.includes('retro') || t.includes('8bit') || t.includes('game') || t.includes('chiptune')) applyTheme('retro');
-        else if (t.includes('pop') || t.includes('comic')) applyTheme('comic');
+        else if (t.includes('acoustic') || t.includes('piano')) applyTheme('serious');
 
         playDirectAudio(track.src, track.title, track.artist);
     }

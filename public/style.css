@@ -341,42 +341,11 @@ body {
     flex-shrink: 0;
 }
 .dot-phonk { background: linear-gradient(135deg, #ef4444, #a855f7); }
-.dot-scrapbook { background: linear-gradient(135deg, #d4a373, #e07a5f, #81b29a); }
-.dot-retro { background: linear-gradient(135deg, #84cc16, #eab308, #ef4444); }
 .dot-comic { background: linear-gradient(135deg, #facc15, #06b6d4, #f43f5e); }
 .dot-lofi { background: linear-gradient(135deg, #fb923c, #c084fc); }
 .dot-cyber { background: linear-gradient(135deg, #10b981, #34d399); }
 .dot-serious { background: linear-gradient(135deg, #f8fafc, #94a3b8); }
 .dot-auto { background: conic-gradient(#ef4444, #facc15, #10b981, #06b6d4, #a855f7, #ef4444); animation: vibeSpin 4s linear infinite; }
-
-/* Scrapbook Washi Tape & Polaroid Touches */
-.washi-tape {
-    position: absolute;
-    height: 10px;
-    background: rgba(254, 243, 199, 0.45);
-    border: 1px dashed rgba(217, 119, 6, 0.3);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
-    z-index: 10;
-    pointer-events: none;
-}
-.washi-album {
-    top: -4px;
-    left: 4px;
-    width: 22px;
-    height: 7px;
-    transform: rotate(-12deg);
-    background: rgba(251, 191, 36, 0.5);
-}
-.polaroid-art {
-    border-radius: 4px !important;
-    border: 2px solid rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-    transform: rotate(-2deg);
-    transition: transform 0.2s ease;
-}
-.polaroid-art:hover {
-    transform: rotate(0deg) scale(1.05);
-}
 
 @keyframes vibeSpin {
     to { transform: rotate(360deg); }

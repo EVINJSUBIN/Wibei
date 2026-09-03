@@ -3,184 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wibei — 3D Audio Spectrogram & Sound Lab</title>
+    <title>wibei</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="landing.css">
 </head>
 <body>
     <canvas id="hero-webgl-canvas"></canvas>
 
-    <!-- Floating Top Nav Pill -->
-    <nav class="floating-nav-pill">
-        <a href="#hero" class="nav-brand"><span>✦</span> WIBEI</a>
-        <div class="nav-links">
-            <a href="app.html" class="nav-link highlight">LAUNCH STUDIO</a>
-            <a href="#stems" class="nav-link">STEMS</a>
-            <a href="#dsp" class="nav-link">DSP LAB</a>
-            <a href="#vibes" class="nav-link">VIBES</a>
-            <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" class="nav-link">GITHUB</a>
-        </div>
-    </nav>
-
-    <main class="scrapbook-container" id="hero">
-        
-        <!-- Hero Field Notes Journal Card -->
-        <header class="scrapbook-card hero-card">
-            <div class="washi-tape tape-top-left"></div>
-            <div class="washi-tape tape-top-right"></div>
-            
-            <div class="stamp-badge">HACK CLUB // STARDANCE ☻</div>
-            <div class="handwritten-tag">"collect waves, not noise."</div>
-            
-            <h1 class="hero-title">wibei</h1>
-            <p class="hero-sub">Handcrafted 3D Audio Spectrograph & Real-Time DSP Laboratory</p>
-
-            <p class="hero-desc">
-                An open-source acoustic visualizer built by hand. Route lossless streams, experiment with real-time biquad audio nodes, and morph 3D geometry matrixes with zero latency.
-            </p>
-
-            <div class="hero-actions">
-                <a href="app.html" class="pill-action-btn primary-btn">
-                    <span>LAUNCH STUDIO INTERFACE</span>
-                    <span class="btn-arrow">→</span>
-                </a>
-                <a href="https://github.com/EVINJSUBIN/Wibei" target="_blank" class="pill-action-btn secondary-btn">
-                    <span>SOURCE CODE</span>
-                </a>
-            </div>
+    <div class="content-container">
+        <header>
+            <h1>wibei</h1>
+            <p class="subtitle">3D audio spectrograph & DSP lab</p>
         </header>
 
-        <!-- Polaroid Audio Stems Section -->
-        <section class="scrapbook-section" id="stems">
-            <div class="section-title-wrap">
-                <span class="section-tag">01 // LOSSLESS STEMS</span>
-                <h2>Interactive Audio Stems</h2>
-                <p class="section-hint">Click any polaroid to preview audio and test acoustic FFT physics live.</p>
-            </div>
+        <div class="actions">
+            <a href="app.html" class="btn active">[ launch studio ]</a>
+            <a href="https://github.com/EVINJSUBIN/Wibei" class="btn" target="_blank">[ source code ]</a>
+        </div>
 
-            <div class="polaroid-grid">
-                <!-- Polaroid 1: Synthwave -->
-                <div class="polaroid-card stem-card" data-src="/audio/synthwave.mp3" data-title="Synthwave Pulse" data-theme="cyber">
-                    <div class="washi-tape tape-polaroid"></div>
-                    <div class="polaroid-photo">
-                        <div class="stem-wave-preview">
-                            <span></span><span></span><span></span><span></span><span></span>
-                        </div>
-                        <span class="stem-badge">128 BPM</span>
-                    </div>
-                    <div class="polaroid-caption">
-                        <strong>Synthwave Pulse</strong>
-                        <span class="handwritten-note">retro synth / 808 drop</span>
-                    </div>
-                </div>
-
-                <!-- Polaroid 2: Lofi -->
-                <div class="polaroid-card stem-card" data-src="/audio/lofi.mp3" data-title="Lofi Chill Beats" data-theme="lofi">
-                    <div class="washi-tape tape-polaroid tape-peach"></div>
-                    <div class="polaroid-photo">
-                        <div class="stem-wave-preview">
-                            <span></span><span></span><span></span><span></span><span></span>
-                        </div>
-                        <span class="stem-badge">85 BPM</span>
-                    </div>
-                    <div class="polaroid-caption">
-                        <strong>Lofi Chill Beats</strong>
-                        <span class="handwritten-note">field notes / dusk breeze</span>
-                    </div>
-                </div>
-
-                <!-- Polaroid 3: Acoustic -->
-                <div class="polaroid-card stem-card" data-src="/audio/chill.mp3" data-title="Acoustic Harmony" data-theme="scrapbook">
-                    <div class="washi-tape tape-polaroid tape-olive"></div>
-                    <div class="polaroid-photo">
-                        <div class="stem-wave-preview">
-                            <span></span><span></span><span></span><span></span><span></span>
-                        </div>
-                        <span class="stem-badge">100 BPM</span>
-                    </div>
-                    <div class="polaroid-caption">
-                        <strong>Acoustic Harmony</strong>
-                        <span class="handwritten-note">warm strings / organic</span>
-                    </div>
-                </div>
-            </div>
+        <section>
+            <p>Built for Hack Club Stardance by <a href="https://github.com/EVINJSUBIN" target="_blank">@EVINJSUBIN</a> and <a href="https://github.com/aamosm" target="_blank">@aamosm</a>.</p>
+            <br>
+            <p>Route lossless audio, experiment with real-time DSP filter nodes (biquad), and render acoustic harmonics in 3D space with zero latency.</p>
         </section>
 
-        <!-- Sticky Post-It Note DSP Lab & 90s Console Box -->
-        <section class="dual-column-grid" id="dsp">
-            
-            <!-- Post-It DSP Rack -->
-            <div class="postit-card">
-                <div class="washi-tape tape-postit"></div>
-                <div class="postit-header">
-                    <span class="postit-pin">📌</span>
-                    <h3>SOUND SHAPER DSP</h3>
-                </div>
-                <p class="postit-note">Test Web Audio API biquad filter nodes in real-time:</p>
-                <div class="dsp-stack">
-                    <button class="sound-demo-btn active" data-mode="clean">
-                        <span class="check-box">✓</span>
-                        <span>01. Clean Passthrough (20kHz Flat)</span>
-                    </button>
-                    <button class="sound-demo-btn" data-mode="muffler">
-                        <span class="check-box">✓</span>
-                        <span>02. Underwater Muffler (450Hz Lowpass)</span>
-                    </button>
-                    <button class="sound-demo-btn" data-mode="bass">
-                        <span class="check-box">✓</span>
-                        <span>03. 808 Bass Drive (+16dB Lowshelf)</span>
-                    </button>
-                    <button class="sound-demo-btn" data-mode="nightcore">
-                        <span class="check-box">✓</span>
-                        <span>04. Nightcore Pitch (+6dB Highshelf)</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Retro 90s Console / Scrapbook Spec Box -->
-            <div class="scrapbook-card spec-card">
-                <div class="washi-tape tape-top-right"></div>
-                <span class="section-tag">02 // 3D ENGINES</span>
-                <h3>Matrix Geometries</h3>
-                <ul class="spec-list">
-                    <li><strong>Radial Pulse:</strong> 128 radial frequency towers scaling with sub-bass kick transients.</li>
-                    <li><strong>Wave Ribbon:</strong> 64-channel continuous harmonic wave.</li>
-                    <li><strong>3D Voxel Matrix:</strong> 16x8 spatial voxel grid with depth reverberation.</li>
-                    <li><strong>Pulsar Sphere:</strong> Geodesic icosahedron deformed by harmonic bins.</li>
-                </ul>
-                <div class="retro-badge-row">
-                    <span class="retro-pill">ИГРУШКИ БЕЗ WI-FI</span>
-                    <span class="retro-pill">100% CLIENT WEBGL</span>
-                </div>
-            </div>
-
+        <section>
+            <h3>Engines</h3>
+            <ul>
+                <li><strong>Radial Pulse:</strong> 128 towers scaling radially with sub-bass kick transients.</li>
+                <li><strong>Waveform:</strong> 64-channel linear frequency analyzer.</li>
+                <li><strong>Matrix:</strong> 16x8 spatial voxel grid.</li>
+                <li><strong>Pulsar Sphere:</strong> Geodesic icosahedron deformed by harmonic bins.</li>
+            </ul>
         </section>
 
-        <!-- Aesthetic Vibes Grid -->
-        <section class="scrapbook-card vibes-section" id="vibes">
-            <div class="washi-tape tape-top-left"></div>
-            <span class="section-tag">03 // REAL-TIME AESTHETICS</span>
-            <h3>Atmospheric Vibe Matrix</h3>
-            <p class="vibe-desc">The visualizer automatically listens to song structure and switches palettes & background physics:</p>
-            
-            <div class="vibe-pills-wrap">
-                <span class="vibe-sample-pill vibe-phonk">🩸 PHONK // Crimson & Toxic Lightning</span>
-                <span class="vibe-sample-pill vibe-scrapbook">📔 SCRAPBOOK // Kraft Paper & Botanical</span>
-                <span class="vibe-sample-pill vibe-retro">👾 8-BIT RETRO // Game Boy & Phosphor</span>
-                <span class="vibe-sample-pill vibe-comic">💥 COMIC POP // Halftone & Action Glyphs</span>
-                <span class="vibe-sample-pill vibe-lofi">🌅 LO-FI SUNSET // Peach & Lavender Dusk</span>
-                <span class="vibe-sample-pill vibe-cyber">🟢 CYBER MATRIX // Phosphor Rain & CRT</span>
-            </div>
+        <section>
+            <h3>Aesthetic Vibes</h3>
+            <ul>
+                <li><strong>Phonk / Drift:</strong> Blood Crimson &amp; Toxic Violet neon bloom with heavy bass physics.</li>
+                <li><strong>Comic / Pop:</strong> High-contrast tri-color palette with comic vibrancy.</li>
+                <li><strong>Lofi Sunset:</strong> Peach, Lavender &amp; Dusk atmosphere.</li>
+                <li><strong>Cyber Matrix:</strong> Acid green phosphors with digital terminal feel.</li>
+                <li><strong>Serious Void:</strong> Distraction-free monochrome mixing spectrograph.</li>
+                <li><strong>Dynamic Auto:</strong> Real-time FFT mood engine that shifts the entire app with the music.</li>
+            </ul>
         </section>
 
-        <!-- Footer -->
-        <footer class="scrapbook-footer">
-            <p>Crafted by <a href="https://github.com/EVINJSUBIN" target="_blank">@EVINJSUBIN</a> &amp; <a href="https://github.com/aamosm" target="_blank">@aamosm</a> for <strong>Hack Club Stardance</strong>.</p>
-            <p class="footer-sub">MIT License // 100% Client-Side Web Audio API &amp; Three.js.</p>
+        <section>
+            <h3>Test DSP</h3>
+            <div class="dsp-grid">
+                <button class="sound-demo-btn active" data-mode="clean">clean</button>
+                <button class="sound-demo-btn" data-mode="muffler">muffler</button>
+                <button class="sound-demo-btn" data-mode="bass">bass drive</button>
+                <button class="sound-demo-btn" data-mode="nightcore">nightcore</button>
+            </div>
+        </section>
+        
+        <footer>
+            <p>MIT License. 100% Client-Side WebGL & Web Audio API.</p>
         </footer>
-
-    </main>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="landing.js"></script>
