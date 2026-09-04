@@ -295,27 +295,59 @@ app.get('/api/playlist', async (req, res) => {
     }
 });
 
-function cleanTitleForLyrics(str) {
-    if (!str) return '';
-    return str
-        .replace(/\(official\s*(music\s*)?(video|audio|visualizer|lyric\s*video|hd|4k)\)/gi, '')
-        .replace(/\[official\s*(music\s*)?(video|audio|visualizer|lyric\s*video|hd|4k)\]/gi, '')
-        .replace(/\(lyrics?\)/gi, '')
-        .replace(/\[lyrics?\]/gi, '')
-        .replace(/\(audio\)/gi, '')
-        .replace(/\[audio\]/gi, '')
-        .replace(/ft\.?|feat\.?/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+function parseArtistAndTitle(rawTitle = '', rawArtist = '') {
+    let clean = (str = '') => {
+        return str
+            .replace(/\(official\s*(music\s*)?(video|audio|visualizer|lyric\s*video|hd|4k|clip)\)/gi, '')
+            .replace(/\[official\s*(music\s*)?(video|audio|visualizer|lyric\s*video|hd|4k|clip)\]/gi, '')
+            .replace(/\((visualizer|lyrics?|audio|video|official|hd|4k|remastered|extended)\)/gi, '')
+            .replace(/\[(visualizer|lyrics?|audio|video|official|hd|4k|remastered|extended)\]/gi, '')
+            .replace(/\(feat\.?[^)]*\)/gi, '')
+            .replace(/\[feat\.?[^\]]*\]/gi, '')
+            .replace(/ft\.?\s+[a-zA-Z0-9_\s]+/gi, '')
+            .replace(/\(prod\.?[^)]*\)/gi, '')
+            .replace(/\[prod\.?[^\]]*\]/gi, '')
+            .replace(/\(slowed(\s*\+\s*reverb)?\)/gi, '')
+            .replace(/\[slowed(\s*\+\s*reverb)?\]/gi, '')
+            .replace(/\(bass\s*boosted\)/gi, '')
+            .replace(/\[bass\s*boosted\]/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+
+    let title = clean(rawTitle);
+    let artist = clean(rawArtist);
+
+    // If title has "Artist - Track" or "Artist : Track"
+    const separators = [' - ', ' – ', ' — ', ' : '];
+    for (const sep of separators) {
+        if (title.includes(sep)) {
+            const parts = title.split(sep);
+            if (parts.length >= 2) {
+                const possibleArtist = parts[0].trim();
+                const possibleTitle = parts.slice(1).join(sep).trim();
+                if (possibleArtist.length > 0 && possibleTitle.length > 0) {
+                    artist = clean(possibleArtist);
+                    title = clean(possibleTitle);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Clean up VEVO or Topic suffixes in artist names
+    artist = artist.replace(/vevo$/i, '').replace(/\s*-\s*topic$/i, '').trim();
+
+    return { title, artist, rawTitle, rawArtist };
 }
 
-function fetchLyrics(title, artist) {
+function fetchLyrics(rawTitle, rawArtist) {
     return new Promise((resolve) => {
-        const cleanTitle = cleanTitleForLyrics(title);
-        const cleanArtist = cleanTitleForLyrics(artist);
-        
+        const { title, artist } = parseArtistAndTitle(rawTitle, rawArtist);
+
         const tryDirect = (t, a) => {
             return new Promise((res) => {
+                if (!t) return res(null);
                 const targetUrl = `https://lrclib.net/api/get?track_name=${encodeURIComponent(t)}${a ? `&artist_name=${encodeURIComponent(a)}` : ''}`;
                 https.get(targetUrl, {
                     headers: { 'User-Agent': 'WibeiVisualizer/2.0 (https://github.com/evinjsubin/wibei)' }
@@ -338,7 +370,8 @@ function fetchLyrics(title, artist) {
 
         const trySearch = (q) => {
             return new Promise((res) => {
-                const targetUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(q)}`;
+                if (!q || !q.trim()) return res(null);
+                const targetUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(q.trim())}`;
                 https.get(targetUrl, {
                     headers: { 'User-Agent': 'WibeiVisualizer/2.0 (https://github.com/evinjsubin/wibei)' }
                 }, (r) => {
@@ -348,7 +381,8 @@ function fetchLyrics(title, artist) {
                         try {
                             const list = JSON.parse(d);
                             if (Array.isArray(list) && list.length > 0) {
-                                const match = list.find(item => item.syncedLyrics || item.plainLyrics) || list[0];
+                                // Prefer synced lyrics
+                                const match = list.find(item => item.syncedLyrics) || list.find(item => item.plainLyrics) || list[0];
                                 res(match);
                             } else {
                                 res(null);
@@ -359,15 +393,71 @@ function fetchLyrics(title, artist) {
             });
         };
 
-        tryDirect(cleanTitle, cleanArtist).then(result => {
-            if (result) return resolve(result);
-            trySearch(`${cleanTitle} ${cleanArtist}`).then(searchRes => {
-                if (searchRes) return resolve(searchRes);
-                trySearch(cleanTitle).then(titleRes => {
-                    resolve(titleRes);
-                });
+        // Multi-stage cascading query strategy
+        (async () => {
+            // Stage 1: Exact track + artist
+            let result = await tryDirect(title, artist);
+            if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+
+            // Stage 2: Combined search string
+            if (artist && title) {
+                result = await trySearch(`${artist} ${title}`);
+                if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+            }
+
+            // Stage 3: Title-only search
+            result = await trySearch(title);
+            if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+
+            // Stage 4: Direct track-only without artist
+            result = await tryDirect(title, '');
+            if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+
+            // Stage 5: Fallback on raw original title
+            if (rawTitle && rawTitle !== title) {
+                result = await trySearch(rawTitle);
+                if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+            }
+
+            resolve(null);
+        })();
+    });
+}
+
+function enrichMetadataWithITunes(title, artist) {
+    return new Promise((resolve) => {
+        const { title: cleanT, artist: cleanA } = parseArtistAndTitle(title, artist);
+        const query = cleanA && cleanT ? `${cleanA} ${cleanT}` : (cleanT || title || '');
+        if (!query.trim()) return resolve(null);
+
+        const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`;
+        https.get(itunesUrl, { headers: { 'User-Agent': 'WibeiVisualizer/2.0' } }, (r) => {
+            let d = '';
+            r.on('data', c => d += c);
+            r.on('end', () => {
+                try {
+                    const json = JSON.parse(d);
+                    const item = json.results?.[0];
+                    if (item) {
+                        let highResArt = item.artworkUrl100 || null;
+                        if (highResArt) {
+                            highResArt = highResArt.replace('100x100bb', '600x600bb');
+                        }
+                        const year = item.releaseDate ? item.releaseDate.slice(0, 4) : null;
+                        return resolve({
+                            title: item.trackName || cleanT,
+                            artist: item.artistName || cleanA,
+                            album: item.collectionName || null,
+                            genre: item.primaryGenreName || null,
+                            year: year,
+                            thumbnail: highResArt,
+                            duration: Math.round((item.trackTimeMillis || 0) / 1000)
+                        });
+                    }
+                    resolve(null);
+                } catch (_) { resolve(null); }
             });
-        });
+        }).on('error', () => resolve(null));
     });
 }
 
@@ -397,7 +487,22 @@ app.get('/api/lyrics', async (req, res) => {
     }
 });
 
-app.get('/metadata', (req, res) => {
+app.get('/api/meta-enrich', async (req, res) => {
+    const { title, artist } = req.query;
+    if (!title && !artist) return res.json({ enriched: false });
+
+    try {
+        const data = await enrichMetadataWithITunes(title, artist);
+        if (data) {
+            return res.json({ enriched: true, ...data });
+        }
+        res.json({ enriched: false });
+    } catch (e) {
+        res.json({ enriched: false, error: e.message });
+    }
+});
+
+app.get('/metadata', async (req, res) => {
     const url = req.query.url;
     if (!url) return res.status(400).send('URL required');
   
@@ -420,18 +525,39 @@ app.get('/metadata', (req, res) => {
     let out = '';
     ytdlp.stdout.on('data', d => out += d);
 
-    ytdlp.on('error', (err) => {
+    ytdlp.on('error', async (err) => {
         log('METADATA-ERR', `Failed to fetch metadata: ${err.message}`);
-        if (!res.headersSent) res.json({ title: 'Unknown', uploader: 'Unknown', thumbnail: null });
+        // Attempt fast iTunes fallback
+        const itunesFallback = await enrichMetadataWithITunes(url, '');
+        if (!res.headersSent) {
+            res.json(itunesFallback || { title: url, uploader: 'Unknown', thumbnail: null });
+        }
     });
 
-    ytdlp.on('close', () => {
+    ytdlp.on('close', async () => {
         try {
             const data = JSON.parse(out);
+            const { title: cleanT, artist: cleanA } = parseArtistAndTitle(data.title, data.uploader);
             log('METADATA', `Resolved: "${data.title}" by ${data.uploader}`);
-            res.json({ title: data.title, uploader: data.uploader, thumbnail: data.thumbnail, duration: data.duration });
+
+            // Enrich in parallel with iTunes for 600x600 artwork and official genre
+            let enriched = null;
+            try {
+                enriched = await enrichMetadataWithITunes(cleanT, cleanA);
+            } catch (_) {}
+
+            res.json({
+                title: enriched?.title || cleanT || data.title,
+                uploader: enriched?.artist || cleanA || data.uploader,
+                thumbnail: enriched?.thumbnail || data.thumbnail,
+                duration: enriched?.duration || data.duration,
+                genre: enriched?.genre || data.genre || null,
+                album: enriched?.album || data.album || null,
+                year: enriched?.year || (data.upload_date ? data.upload_date.slice(0, 4) : null)
+            });
         } catch (e) {
-            res.json({ title: 'Unknown', uploader: 'Unknown', thumbnail: null });
+            const fallback = await enrichMetadataWithITunes(url, '');
+            res.json(fallback || { title: url, uploader: 'Unknown', thumbnail: null });
         }
     });
 });

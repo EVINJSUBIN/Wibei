@@ -154,14 +154,183 @@ let autoCamAngle = 0;
 let bgBassLevel  = 0;
 let lastBassEnergy = 0;
 
+// Silky 3D Orbit Drag & Inertia Physics Engine
 let mouseX = 0, mouseY = 0;
-let targetRotX = 0, targetRotY = 0;
-let isDragging = false;
-let prevMouse = { x: 0, y: 0 };
+let orbitRotX = 0.12;       // pitch (clamped to prevent upside-down flipping)
+let orbitRotY = 0.0;        // yaw
+let orbitVelX = 0.0;        // pitch velocity
+let orbitVelY = 0.0;        // yaw velocity
+let isOrbitDragging = false;
+let prevPointerPos = { x: 0, y: 0 };
+let camRadius = 60;
+let targetCamRadius = 60;
+let pinchStartDist = 0;
+let dragDepth = 0;
 
 let lastFpsTime = performance.now();
 let frameCounter = 0;
 let currentFps = 60;
+
+class MusicTypeClassifier {
+    constructor() {
+        this.currentGenre = 'SYNTHWAVE';
+        this.currentBpm = 118;
+        this.confidence = 0.8;
+        this.beatTimestamps = [];
+        this.lastBeatTime = 0;
+        this.energyHistory = [];
+        this.rollingBpmEstimates = [];
+        this.metaGenre = null;
+        this.metaTitle = '';
+        this.metaArtist = '';
+        this.lastClassifyTime = 0;
+    }
+
+    setMetadata(meta = {}) {
+        this.metaGenre = meta.genre || null;
+        this.metaTitle = meta.title || '';
+        this.metaArtist = meta.artist || meta.uploader || '';
+        this.beatTimestamps = [];
+        this.rollingBpmEstimates = [];
+        this.evaluateMetaHints();
+    }
+
+    evaluateMetaHints() {
+        const text = `${this.metaTitle} ${this.metaArtist} ${this.metaGenre || ''}`.toLowerCase();
+        if (/phonk|drift|cowbell|kordhell|interworld|dvrst|goxxvh/i.test(text)) {
+            this.setGenre('PHONK / DRIFT', 142);
+        } else if (/lo-?fi|chill|study|sleep|relax|mellow|sunset/i.test(text)) {
+            this.setGenre('LO-FI / CHILL', 80);
+        } else if (/synthwave|retrowave|outrun|cyberpunk|80s/i.test(text)) {
+            this.setGenre('SYNTHWAVE', 118);
+        } else if (/edm|cyber|techno|trance|house|club|dance|rave/i.test(text)) {
+            this.setGenre('CYBER / EDM', 128);
+        } else if (/trap|hip-?hop|rap|808|drill/i.test(text)) {
+            this.setGenre('TRAP / HIP-HOP', 140);
+        } else if (/rock|metal|punk|guitar|heavy|grunge/i.test(text)) {
+            this.setGenre('ROCK / METAL', 125);
+        } else if (/ambient|classical|piano|orchestr|space/i.test(text)) {
+            this.setGenre('AMBIENT / SPACE', 72);
+        } else if (/pop|modern|hit/i.test(text)) {
+            this.setGenre('POP / MODERN', 120);
+        }
+    }
+
+    setGenre(genre, defaultBpm) {
+        this.currentGenre = genre;
+        if (defaultBpm && this.rollingBpmEstimates.length === 0) {
+            this.currentBpm = defaultBpm;
+        }
+        this.updateBadge();
+    }
+
+    processFrame(freqData, sampleRate = 44100) {
+        if (!freqData || freqData.length === 0) return;
+        const now = performance.now();
+
+        let subSum = 0, bassSum = 0, midSum = 0, trebleSum = 0, totalSum = 0;
+        let weightedFreqSum = 0;
+
+        const binCount = freqData.length;
+        const binHz = (sampleRate / 2) / binCount;
+
+        for (let i = 0; i < binCount; i++) {
+            const v = freqData[i] / 255;
+            const freq = i * binHz;
+            totalSum += v;
+            weightedFreqSum += freq * v;
+
+            if (freq < 80) subSum += v;
+            else if (freq < 250) bassSum += v;
+            else if (freq < 2500) midSum += v;
+            else if (freq < 12000) trebleSum += v;
+        }
+
+        if (totalSum < 6) return;
+
+        const subRatio = subSum / (totalSum + 0.001);
+        const bassRatio = (subSum + bassSum) / (totalSum + 0.001);
+        const midRatio = midSum / (totalSum + 0.001);
+        const trebleRatio = trebleSum / (totalSum + 0.001);
+        const spectralCentroid = weightedFreqSum / (totalSum + 0.001);
+
+        // Real-time Beat / Transient Onset Tracker for BPM
+        const bassEnergy = subSum * 1.5 + bassSum;
+        this.energyHistory.push(bassEnergy);
+        if (this.energyHistory.length > 50) this.energyHistory.shift();
+
+        const avgPast = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
+        const isOnset = bassEnergy > avgPast * 1.34 && (now - this.lastBeatTime > 270);
+
+        if (isOnset) {
+            if (this.lastBeatTime > 0) {
+                const ioi = now - this.lastBeatTime;
+                if (ioi >= 310 && ioi <= 1250) {
+                    let bpm = Math.round(60000 / ioi);
+                    if (bpm < 65) bpm *= 2;
+                    if (bpm > 185) bpm = Math.round(bpm / 2);
+                    this.rollingBpmEstimates.push(bpm);
+                    if (this.rollingBpmEstimates.length > 9) this.rollingBpmEstimates.shift();
+
+                    // Stable median calculation
+                    const sorted = [...this.rollingBpmEstimates].sort((a, b) => a - b);
+                    this.currentBpm = sorted[Math.floor(sorted.length / 2)];
+                    this.updateBadge();
+                }
+            }
+            this.lastBeatTime = now;
+        }
+
+        // Periodic heuristic classification refinement (every 2.2s)
+        if (now - this.lastClassifyTime > 2200) {
+            this.lastClassifyTime = now;
+            this.classifyFeatures({
+                subRatio,
+                bassRatio,
+                midRatio,
+                trebleRatio,
+                spectralCentroid,
+                bpm: this.currentBpm
+            });
+        }
+    }
+
+    classifyFeatures({ subRatio, bassRatio, midRatio, trebleRatio, spectralCentroid, bpm }) {
+        const metaText = `${this.metaTitle} ${this.metaGenre || ''}`.toLowerCase();
+        let detected = this.currentGenre;
+
+        if (/phonk|drift/i.test(metaText) || (subRatio > 0.30 && bassRatio > 0.46 && bpm >= 120)) {
+            detected = 'PHONK / DRIFT';
+        } else if (/lo-?fi|chill/i.test(metaText) || (spectralCentroid < 1350 && bassRatio > 0.32 && bpm <= 98)) {
+            detected = 'LO-FI / CHILL';
+        } else if (/synthwave|retrowave/i.test(metaText) || (midRatio > 0.40 && bassRatio > 0.30 && bpm >= 100 && bpm <= 128)) {
+            detected = 'SYNTHWAVE';
+        } else if (/edm|cyber|techno|club/i.test(metaText) || (bassRatio > 0.40 && trebleRatio > 0.26 && bpm >= 120 && bpm <= 138)) {
+            detected = 'CYBER / EDM';
+        } else if (/trap|hip-?hop/i.test(metaText) || (subRatio > 0.34 && trebleRatio > 0.20)) {
+            detected = 'TRAP / HIP-HOP';
+        } else if (spectralCentroid > 2700 && midRatio > 0.36) {
+            detected = 'ROCK / METAL';
+        } else if (midRatio > 0.45 && trebleRatio > 0.20) {
+            detected = 'POP / MODERN';
+        } else if (bassRatio < 0.26 && midRatio < 0.32) {
+            detected = 'AMBIENT / SPACE';
+        }
+
+        if (detected !== this.currentGenre) {
+            this.currentGenre = detected;
+            this.updateBadge();
+        }
+    }
+
+    updateBadge() {
+        const genreTextEl = document.getElementById('genre-text');
+        const genreBpmEl = document.getElementById('genre-bpm');
+        if (genreTextEl) genreTextEl.innerText = this.currentGenre;
+        if (genreBpmEl) genreBpmEl.innerText = `${this.currentBpm} BPM`;
+    }
+}
+const musicClassifier = new MusicTypeClassifier();
 
 const playBtn        = document.getElementById('play-btn');
 const iconPlay       = document.querySelector('.icon-play');
@@ -220,7 +389,7 @@ function updatePlayIcons(playing) {
     if (artWrap) artWrap.classList.toggle('playing', playing);
 }
 
-function updateTrackInfo(title, artist, thumb) {
+function updateTrackInfo(title, artist, thumb, meta = null) {
     if (trackTitle)  trackTitle.innerText  = title || 'Unknown Track';
     if (trackArtist) trackArtist.innerText = artist || 'Unknown Artist';
     
@@ -228,11 +397,27 @@ function updateTrackInfo(title, artist, thumb) {
     if (lyricsTrackTitle) lyricsTrackTitle.innerText = `${title || 'Track'} // ${artist || 'Artist'}`;
 
     if (albumArt) {
-        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/'))) {
+        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/') || thumb.startsWith('blob:') || thumb.startsWith('data:'))) {
             albumArt.src = thumb;
         } else {
             albumArt.src = 'favicon.svg';
         }
+    }
+
+    // Feed metadata to classifier
+    musicClassifier.setMetadata({ title, artist, ...(meta || {}) });
+
+    // Background iTunes enrichment for online tracks lacking high-res art or genre
+    if (title && !meta?.thumbnail && (!thumb || thumb === 'favicon.svg') && !title.includes('Connecting') && !title.includes('Loading')) {
+        fetch(`/api/meta-enrich?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || '')}`)
+            .then(r => r.json())
+            .then(enriched => {
+                if (enriched?.enriched) {
+                    if (enriched.thumbnail && albumArt) albumArt.src = enriched.thumbnail;
+                    if (enriched.genre) musicClassifier.setMetadata({ title, artist, genre: enriched.genre });
+                }
+            })
+            .catch(() => {});
     }
     
     if (title && !title.includes('Connecting') && !title.includes('Loading') && !title.includes('Error')) {
@@ -979,24 +1164,86 @@ function initThree() {
     orbGrp.visible = false;
     visualizerRoot.add(orbGrp);
 
+    const isUI = el => el.closest('.top-bar, .control-deck, .master-transport, .modal-dialog, .toast-card, .lyrics-hud');
+
+    // Pointer & Mouse Drag Listeners with Inertia
     window.addEventListener('mousemove', e => {
         mouseX = (e.clientX / innerWidth) * 2 - 1;
         mouseY = -(e.clientY / innerHeight) * 2 + 1;
-        if (isDragging) {
-            targetRotY += (e.clientX - prevMouse.x) * 0.006;
-            targetRotX += (e.clientY - prevMouse.y) * 0.006;
-            prevMouse = { x: e.clientX, y: e.clientY };
+        if (isOrbitDragging) {
+            const dx = e.clientX - prevPointerPos.x;
+            const dy = e.clientY - prevPointerPos.y;
+            const sens = 0.0052;
+            orbitRotY += dx * sens;
+            orbitRotX += dy * sens;
+            orbitVelY = dx * sens * 0.72;
+            orbitVelX = dy * sens * 0.72;
+            orbitRotX = Math.max(-1.18, Math.min(1.18, orbitRotX));
+            prevPointerPos = { x: e.clientX, y: e.clientY };
         }
     });
 
-    const isUI = el => el.closest('.top-bar, .control-deck, .master-transport, .modal-dialog, .toast-card');
     window.addEventListener('mousedown', e => {
         if (!isUI(e.target)) {
-            isDragging = true;
-            prevMouse  = { x: e.clientX, y: e.clientY };
+            isOrbitDragging = true;
+            document.body.classList.add('three-dragging');
+            orbitVelX = 0;
+            orbitVelY = 0;
+            prevPointerPos = { x: e.clientX, y: e.clientY };
         }
     });
-    window.addEventListener('mouseup', () => { isDragging = false; });
+
+    const stopDragging = () => {
+        if (isOrbitDragging) {
+            isOrbitDragging = false;
+            document.body.classList.remove('three-dragging');
+        }
+    };
+    window.addEventListener('mouseup', stopDragging);
+    window.addEventListener('mouseleave', stopDragging);
+
+    // Mouse Wheel Zoom
+    window.addEventListener('wheel', e => {
+        const isScrollable = el => el.closest('.lyrics-hud-body, .playlist-container, .modal-content, .sugg-box');
+        if (!isScrollable(e.target)) {
+            targetCamRadius += Math.sign(e.deltaY) * 4.5;
+            targetCamRadius = Math.max(26, Math.min(95, targetCamRadius));
+        }
+    }, { passive: true });
+
+    // Touch Support (Single-Finger Orbit, Two-Finger Pinch Zoom)
+    window.addEventListener('touchstart', e => {
+        if (isUI(e.target)) return;
+        if (e.touches.length === 1) {
+            isOrbitDragging = true;
+            orbitVelX = 0; orbitVelY = 0;
+            prevPointerPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            isOrbitDragging = false;
+            pinchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', e => {
+        if (isOrbitDragging && e.touches.length === 1) {
+            const dx = e.touches[0].clientX - prevPointerPos.x;
+            const dy = e.touches[0].clientY - prevPointerPos.y;
+            const sens = 0.006;
+            orbitRotY += dx * sens;
+            orbitRotX += dy * sens;
+            orbitVelY = dx * sens * 0.72;
+            orbitVelX = dy * sens * 0.72;
+            orbitRotX = Math.max(-1.18, Math.min(1.18, orbitRotX));
+            prevPointerPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.touches.length === 2) {
+            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            const diff = (pinchStartDist - dist) * 0.18;
+            targetCamRadius = Math.max(26, Math.min(95, targetCamRadius + diff));
+            pinchStartDist = dist;
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => { isOrbitDragging = false; });
 
     window.addEventListener('resize', () => {
         camera.aspect = innerWidth / innerHeight;
@@ -1015,7 +1262,27 @@ function detectSongMoodAndGeometry(bassAvg, midAvg, trebleAvg) {
     let targetMood = 'phonk';
     let targetVis = 'pulse';
 
-    if (bassAvg > 0.42 && (bassAvg - midAvg) > 0.08) {
+    // Link with classifier genre if confidence is high
+    const g = musicClassifier.currentGenre;
+    if (g === 'PHONK / DRIFT' || g === 'TRAP / HIP-HOP') {
+        targetMood = 'phonk';
+        targetVis = 'pulse';
+    } else if (g === 'CYBER / EDM') {
+        targetMood = 'cyber';
+        targetVis = 'grid';
+    } else if (g === 'LO-FI / CHILL') {
+        targetMood = 'lofi';
+        targetVis = 'wave';
+    } else if (g === 'SYNTHWAVE') {
+        targetMood = 'comic';
+        targetVis = 'wave';
+    } else if (g === 'ROCK / METAL') {
+        targetMood = 'phonk';
+        targetVis = 'grid';
+    } else if (g === 'AMBIENT / SPACE') {
+        targetMood = 'serious';
+        targetVis = 'orb';
+    } else if (bassAvg > 0.42 && (bassAvg - midAvg) > 0.08) {
         targetMood = 'phonk';
         targetVis = 'pulse';
     } else if (midAvg > 0.32 && trebleAvg > 0.20) {
@@ -1080,14 +1347,28 @@ function threeAnimate() {
 
     if (isAutoCam) {
         autoCamAngle += 0.008 + bgBassLevel * 0.02;
-        const camDist = 58 - bgBassLevel * 10;
+        const camDist = targetCamRadius - bgBassLevel * 10;
         camera.position.x = Math.sin(autoCamAngle) * camDist;
         camera.position.z = Math.cos(autoCamAngle) * camDist;
         camera.position.y = 10 + Math.sin(autoCamAngle * 0.5) * 8;
         camera.lookAt(0, 0, 0);
     } else if (visualizerRoot) {
-        visualizerRoot.rotation.y += (targetRotY + mouseX * 0.15 - visualizerRoot.rotation.y) * 0.08;
-        visualizerRoot.rotation.x += (targetRotX - mouseY * 0.15 - visualizerRoot.rotation.x) * 0.08;
+        // Physics inertia step
+        if (!isOrbitDragging) {
+            orbitRotY += orbitVelY;
+            orbitRotX += orbitVelX;
+            orbitVelY *= 0.91; // fluid momentum decay
+            orbitVelX *= 0.91;
+            orbitRotX = Math.max(-1.18, Math.min(1.18, orbitRotX)); // strict pitch clamping
+        }
+
+        // Camera distance lerp for zoom
+        camRadius += (targetCamRadius - camRadius) * 0.12;
+        camera.position.z = camRadius;
+
+        // Visualizer orientation
+        visualizerRoot.rotation.y += (orbitRotY - visualizerRoot.rotation.y) * 0.12;
+        visualizerRoot.rotation.x += (orbitRotX - visualizerRoot.rotation.x) * 0.12;
     }
 
     shockwaves = shockwaves.filter(sw => sw.alpha > 0.01);
@@ -1111,6 +1392,7 @@ function threeAnimate() {
     }
 
     if (hasAudio) {
+        musicClassifier.processFrame(dataArr, audioCtx?.sampleRate || 44100);
         let bassSum = 0, midSum = 0, trebleSum = 0;
         const totalBins = dataArr.length;
         for (let i = 0; i < 12; i++) bassSum += dataArr[i];
@@ -1619,6 +1901,12 @@ async function loadLyricsForTrack(title, artist) {
     const hudBody = document.getElementById('lyrics-hud-body');
     if (!hudBody) return;
     hudBody.innerHTML = '<div class="lyrics-empty-msg">Searching synchronized lyrics... 🎵</div>';
+
+    const searchInpEl = document.getElementById('lyrics-search-inp');
+    if (searchInpEl && document.activeElement !== searchInpEl) {
+        searchInpEl.value = (artist && !artist.includes('Unknown') && !artist.includes('Streaming')) ? `${artist} - ${title}` : (title || '');
+    }
+
     currentLyrics = [];
     activeLyricIdx = -1;
     isLyricsSynced = false;
@@ -2013,27 +2301,51 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
 const fileUpload = document.getElementById('file-upload');
 document.getElementById('upload-btn')?.addEventListener('click', () => fileUpload?.click());
 
-function loadLocalFiles(filesList) {
+async function loadLocalFiles(filesList) {
     if (!filesList || filesList.length === 0) return;
     stopMic();
     const files = Array.from(filesList).filter(f => f.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac)$/i.test(f.name));
     if (files.length === 0) return;
 
-    files.forEach((file, idx) => {
-        const title = file.name.replace(/\.[^/.]+$/, '');
+    for (let idx = 0; idx < files.length; idx++) {
+        const file = files[idx];
+        const rawName = file.name.replace(/\.[^/.]+$/, '');
+        let title = rawName;
+        let artist = 'Local Audio';
+        let album = null, year = null, genre = null;
+        let thumb = 'favicon.svg';
+
+        // Extract genuine ID3 tags and embedded APIC artwork
+        if (typeof window.readAudioMetadata === 'function') {
+            try {
+                const id3 = await window.readAudioMetadata(file);
+                if (id3) {
+                    if (id3.title) title = id3.title;
+                    if (id3.artist) artist = id3.artist;
+                    if (id3.album) album = id3.album;
+                    if (id3.year) year = id3.year;
+                    if (id3.genre) genre = id3.genre;
+                    if (id3.pictureUrl) thumb = id3.pictureUrl;
+                }
+            } catch (_) {}
+        }
+
         const trackObj = {
             id: Date.now() + Math.random(),
             title: title,
-            artist: 'Local Audio',
+            artist: artist,
+            album: album,
+            year: year,
+            genre: genre,
             src: URL.createObjectURL(file),
-            thumb: 'favicon.svg',
+            thumb: thumb,
             type: 'local'
         };
         addToPlaylist(trackObj, idx === 0 && (!curAudioEl || curAudioEl.paused));
-    });
+    }
 
     if (sourceBadge) sourceBadge.innerText = 'LOCAL';
-    showToast(`Added ${files.length} track(s) to playlist`);
+    showToast(`Loaded ${files.length} track(s) with metadata`);
 }
 
 fileUpload?.addEventListener('change', e => {
@@ -2041,17 +2353,25 @@ fileUpload?.addEventListener('change', e => {
 });
 
 const dropzone = document.getElementById('drag-dropzone');
-window.addEventListener('dragover', e => {
+let dragEnterDepth = 0;
+window.addEventListener('dragenter', e => {
     e.preventDefault();
+    dragEnterDepth++;
     if (dropzone) dropzone.classList.add('active');
 });
+window.addEventListener('dragover', e => {
+    e.preventDefault();
+});
 window.addEventListener('dragleave', e => {
-    if (e.relatedTarget === null && dropzone) {
+    e.preventDefault();
+    dragEnterDepth = Math.max(0, dragEnterDepth - 1);
+    if (dragEnterDepth === 0 && dropzone) {
         dropzone.classList.remove('active');
     }
 });
 window.addEventListener('drop', e => {
     e.preventDefault();
+    dragEnterDepth = 0;
     if (dropzone) dropzone.classList.remove('active');
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
@@ -2267,7 +2587,8 @@ muteBtn?.addEventListener('click', () => {
 });
 
 document.getElementById('reset-cam-btn')?.addEventListener('click', () => {
-    targetRotX = 0; targetRotY = 0;
+    orbitRotX = 0.12; orbitRotY = 0; orbitVelX = 0; orbitVelY = 0;
+    targetCamRadius = 60;
     isAutoCam = false;
     autoCamBtn?.classList.remove('active');
     if (visualizerRoot) { visualizerRoot.rotation.x = 0; visualizerRoot.rotation.y = 0; }
@@ -2298,6 +2619,23 @@ document.getElementById('lyrics-close-btn')?.addEventListener('click', () => {
     isLyricsOpen = false;
     lyricsBtn?.classList.remove('active');
     if (lyricsHud) lyricsHud.style.display = 'none';
+});
+
+const lyricsSearchInp = document.getElementById('lyrics-search-inp');
+const lyricsSearchBtn = document.getElementById('lyrics-search-btn');
+
+function triggerManualLyricsSearch() {
+    const q = lyricsSearchInp?.value.trim();
+    if (q) {
+        loadLyricsForTrack(q, '');
+    }
+}
+lyricsSearchBtn?.addEventListener('click', triggerManualLyricsSearch);
+lyricsSearchInp?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        triggerManualLyricsSearch();
+    }
 });
 
 window.addEventListener('keydown', e => {

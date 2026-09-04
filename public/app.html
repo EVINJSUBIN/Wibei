@@ -252,7 +252,14 @@
                         <span></span><span></span><span></span><span></span>
                     </div>
                 </div>
-                <span id="track-artist" class="track-artist">RetroWave Studio</span>
+                <div class="artist-sub-row">
+                    <span id="track-artist" class="track-artist">RetroWave Studio</span>
+                    <div id="music-genre-badge" class="music-genre-badge" title="Live Audio Classifier">
+                        <span class="genre-dot"></span>
+                        <span id="genre-text">SYNTHWAVE</span>
+                        <span id="genre-bpm" class="genre-bpm">118 BPM</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -309,6 +316,12 @@
             </div>
             <button class="lyrics-hud-close" id="lyrics-close-btn" title="Close Lyrics">&times;</button>
         </div>
+        <div class="lyrics-hud-search-bar">
+            <input type="text" id="lyrics-search-inp" class="lyrics-search-input" placeholder="Search lyrics (e.g. Artist - Song)...">
+            <button id="lyrics-search-btn" class="lyrics-search-action-btn" title="Search Lyrics">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </button>
+        </div>
         <div class="lyrics-hud-body" id="lyrics-hud-body">
             <div class="lyrics-empty-msg">Play a song to load real-time synchronized karaoke lyrics...</div>
         </div>
@@ -358,6 +371,7 @@
         </div>
     </div>
 
+    <script src="id3.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
