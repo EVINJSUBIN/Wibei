@@ -31,11 +31,9 @@ const FX_SPEEDS = [1.0, 1.25, 0.85];
 let scene, camera, renderer, composer, bloomPass, bgTexture;
 let visualizerRoot, shockwaveGroup;
 let pulseGrp, waveGrp, vgridGrp, orbGrp, vgridFloor;
-let pulseBars = [], pulseInnerBars = [], waveBars = [], waveMirrorBars = [], wavePeakBeads = [], vgridBars = [], orbVertices = [];
+let pulseBars = [], waveBars = [], waveMirrorBars = [], vgridBars = [], orbVertices = [];
 let orbMesh, orbWireMesh, orbInnerCore, orbRing1, orbRing2, orbRing3, orbEquatorBeacons = [], orbParticles;
-let pulseGyroCore, pulseHalo, pulseFloor, waveHorizon, waveFloor;
-let wavePeakY = [];
-let pulseInnerGrp, pulseOuterGrp;
+let pulseGyroCore, pulseHalo, waveHorizon;
 
 let matrixRipplePhase = 0;
 let matrixShockwaves = [];
@@ -872,54 +870,22 @@ function initThree() {
         });
     }
 
-    // 1. PULSE RING // Dual Accelerator (Outer Towers + Inner Iris), Floor Grid, Base Halo & Gyro Reactor
+    // 1. PULSE RING // Dual Accelerator, Rotating Gyro-Core & Base Halo
     pulseGrp = new THREE.Group();
-    const ringCount = 96, ringR = 21;
-    const innerRingCount = 48, innerR = 13.5;
+    const ringCount = 128, ringR = 22;
 
-    // Cyber Stage Floor Grid for Ring (matches the floor perspective depth of Grid)
-    pulseFloor = new THREE.GridHelper(56, 20, thInit.color, 0x181824);
-    pulseFloor.position.y = -10;
-    pulseFloor.rotation.x = 0.35;
-    pulseFloor.material.transparent = true;
-    pulseFloor.material.opacity = 0.35;
-    pulseGrp.add(pulseFloor);
-
-    pulseOuterGrp = new THREE.Group();
-    pulseGrp.add(pulseOuterGrp);
-
-    pulseInnerGrp = new THREE.Group();
-    pulseGrp.add(pulseInnerGrp);
-
-    // Smooth Tapered Cylindrical Rod for Outer Ring
-    const ringRodGeo = new THREE.CylinderGeometry(0.35, 0.55, 1, 16);
+    // Smooth Tapered Cylindrical Rod for Pulse Ring
+    const ringRodGeo = new THREE.CylinderGeometry(0.38, 0.58, 1, 16);
     ringRodGeo.translate(0, 0.5, 0);
 
-    // Inner Inverted Spikes
-    const innerRodGeo = new THREE.CylinderGeometry(0.45, 0.25, 1, 16);
-    innerRodGeo.translate(0, -0.5, 0);
-
     pulseBars = [];
-    pulseInnerBars = [];
-
-    // Outer Ring Towers
     for (let i = 0; i < ringCount; i++) {
         const m = new THREE.Mesh(ringRodGeo, makeMat(i, ringCount));
         const a = (i / ringCount) * Math.PI * 2;
         m.position.set(Math.cos(a) * ringR, Math.sin(a) * ringR, 0);
         m.rotation.z = a - Math.PI / 2;
-        pulseOuterGrp.add(m);
+        pulseGrp.add(m);
         pulseBars.push(m);
-    }
-
-    // Inner Iris Spikes (counter-pointing toward center)
-    for (let i = 0; i < innerRingCount; i++) {
-        const m = new THREE.Mesh(innerRodGeo, makeMat(i + ringCount, innerRingCount));
-        const a = (i / innerRingCount) * Math.PI * 2;
-        m.position.set(Math.cos(a) * innerR, Math.sin(a) * innerR, 0);
-        m.rotation.z = a - Math.PI / 2;
-        pulseInnerGrp.add(m);
-        pulseInnerBars.push(m);
     }
 
     // Center Rotating Energy Gyro-Core
@@ -935,76 +901,49 @@ function initThree() {
     pulseGyroCore = new THREE.Mesh(gyroGeo, gyroMat);
     pulseGrp.add(pulseGyroCore);
 
-    // Dual Glowing Halo Base Rings
-    const haloOuterGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
+    // Glowing Halo Base Ring
+    const haloGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
     const haloMat = new THREE.MeshBasicMaterial({
         color: thInit.color,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.35
     });
-    pulseHalo = new THREE.Mesh(haloOuterGeo, haloMat);
+    pulseHalo = new THREE.Mesh(haloGeo, haloMat);
     pulseGrp.add(pulseHalo);
-
-    const haloInnerGeo = new THREE.RingGeometry(innerR - 0.35, innerR + 0.35, 48);
-    const haloInnerMesh = new THREE.Mesh(haloInnerGeo, haloMat);
-    pulseGrp.add(haloInnerMesh);
 
     visualizerRoot.add(pulseGrp);
 
-    // 2. WAVE RIBBON // 3D Curved Highway, Floor Reflection Grid, Mirror Spectrum, Horizon Beam & Peak Beads
+    // 2. WAVE RIBBON // 3D Curved Highway, Dual Mirrored Spectrum & Center Beam
     waveGrp = new THREE.Group();
     const waveN = 72;
     waveBars = [];
     waveMirrorBars = [];
-    wavePeakBeads = [];
-    wavePeakY = new Array(waveN).fill(0);
-
-    // Cyber Highway Floor Grid
-    waveFloor = new THREE.GridHelper(90, 22, thInit.color, 0x181826);
-    waveFloor.position.set(0, -9.5, 4);
-    waveFloor.rotation.x = 0.22;
-    waveFloor.material.transparent = true;
-    waveFloor.material.opacity = 0.35;
-    waveGrp.add(waveFloor);
 
     // Smooth Cylindrical Wave Pillars
-    const wavePillarGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 16);
+    const wavePillarGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
     wavePillarGeo.translate(0, 0.5, 0);
 
-    const waveMirrorGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 16);
+    const waveMirrorGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
     waveMirrorGeo.translate(0, -0.5, 0);
-
-    const beadGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.15, 16);
-    const beadMat = new THREE.MeshBasicMaterial({
-        color: thInit.secondaryColor || thInit.color,
-        transparent: true,
-        opacity: 0.95
-    });
 
     for (let i = 0; i < waveN; i++) {
         const norm = (i - waveN / 2) / (waveN / 2);
         const x = (i - waveN / 2) * 1.35;
-        // Parabolic 3D curvature wrapping toward camera
-        const z = -Math.pow(norm * 2.5, 2) * 1.4;
+        // Subtle 3D cylindrical arc in Z wrapping toward viewer
+        const z = -Math.pow(norm * 2.6, 2) * 1.1;
 
-        // Upper frequency pillar
+        // Upper frequency bar
         const mUp = new THREE.Mesh(wavePillarGeo, makeMat(i, waveN));
         mUp.position.set(x, -5, z);
         waveGrp.add(mUp);
         waveBars.push(mUp);
 
-        // Lower mirrored reflection pillar
+        // Lower mirrored reflection bar
         const mDown = new THREE.Mesh(waveMirrorGeo, makeMat(i, waveN));
         mDown.position.set(x, -5.2, z);
         waveGrp.add(mDown);
         waveMirrorBars.push(mDown);
-
-        // Floating Studio Peak Bead
-        const mBead = new THREE.Mesh(beadGeo, beadMat.clone());
-        mBead.position.set(x, -4.6, z);
-        waveGrp.add(mBead);
-        wavePeakBeads.push(mBead);
     }
 
     // Glowing central horizon line
@@ -1015,7 +954,7 @@ function initThree() {
         opacity: 0.55
     });
     waveHorizon = new THREE.Mesh(horizGeo, horizMat);
-    waveHorizon.position.set(0, -5.1, -0.5);
+    waveHorizon.position.set(0, -5.1, -1);
     waveGrp.add(waveHorizon);
 
     waveGrp.visible = false;
@@ -1451,30 +1390,12 @@ function threeAnimate() {
                 }
             }
 
-            // Inner Iris Spikes
-            const innerHalf = pulseInnerBars.length / 2;
-            for (let i = 0; i < pulseInnerBars.length; i++) {
-                const sym = i < innerHalf ? i : pulseInnerBars.length - 1 - i;
-                const bin = Math.min(dataArr.length - 1, Math.floor((sym / innerHalf) * 36));
-                const val = dataArr[bin] || 0;
-                pulseInnerBars[i].scale.y += (Math.max(0.6, 1 + (val / 255) * 12) - pulseInnerBars[i].scale.y) * 0.32;
-                if (th.isAuto) {
-                    const c = new THREE.Color().setHSL((autoHue + 0.45 + (i / pulseInnerBars.length) * 0.2) % 1, 0.9, 0.55);
-                    pulseInnerBars[i].material.color.copy(c);
-                    pulseInnerBars[i].material.emissive.copy(c);
-                }
-            }
-
-            // Dual Counter-Rotating Aperture
-            if (pulseOuterGrp) pulseOuterGrp.rotation.z += 0.003 + bgBassLevel * 0.008;
-            if (pulseInnerGrp) pulseInnerGrp.rotation.z -= 0.005 + bgBassLevel * 0.012;
-
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.02 + bgBassLevel * 0.04;
                 pulseGyroCore.rotation.y += 0.025 + bgBassLevel * 0.05;
-                const gyroScale = 1 + bgBassLevel * 0.55;
+                const gyroScale = 1 + bgBassLevel * 0.65;
                 pulseGyroCore.scale.set(gyroScale, gyroScale, gyroScale);
-                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.35;
+                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.4;
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL(autoHue, 0.9, 0.6);
                     pulseGyroCore.material.color.copy(c);
@@ -1489,17 +1410,6 @@ function threeAnimate() {
                 waveBars[i].scale.y += (targetH - waveBars[i].scale.y) * 0.28;
                 if (waveMirrorBars[i]) {
                     waveMirrorBars[i].scale.y += (targetH * 0.62 - waveMirrorBars[i].scale.y) * 0.28;
-                }
-
-                // Studio Peak Beads Gravity Physics
-                if (wavePeakBeads[i]) {
-                    const barTop = -5 + waveBars[i].scale.y;
-                    if (barTop >= (wavePeakY[i] || -4.6)) {
-                        wavePeakY[i] = barTop;
-                    } else {
-                        wavePeakY[i] = Math.max(-4.6, (wavePeakY[i] || -4.6) - 0.16);
-                    }
-                    wavePeakBeads[i].position.y = wavePeakY[i] + 0.26;
                 }
 
                 if (th.isAuto) {
@@ -1622,16 +1532,6 @@ function threeAnimate() {
                 const tgt = Math.max(0.7, 1.35 + Math.sin(time * 1.2) * 0.2 + h);
                 pulseBars[i].scale.y += (tgt - pulseBars[i].scale.y) * 0.12;
             }
-            if (pulseInnerBars) {
-                for (let i = 0; i < pulseInnerBars.length; i++) {
-                    const a = (i / pulseInnerBars.length) * Math.PI * 2;
-                    const h = Math.sin(a * 3 - time * 1.5) * 0.35;
-                    const tgt = Math.max(0.6, 1.2 + h);
-                    pulseInnerBars[i].scale.y += (tgt - pulseInnerBars[i].scale.y) * 0.12;
-                }
-            }
-            if (pulseOuterGrp) pulseOuterGrp.rotation.z += 0.0015;
-            if (pulseInnerGrp) pulseInnerGrp.rotation.z -= 0.0025;
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.01;
                 pulseGyroCore.rotation.y += 0.015;
@@ -1644,9 +1544,6 @@ function threeAnimate() {
                 waveBars[i].scale.y += (tgt - waveBars[i].scale.y) * 0.12;
                 if (waveMirrorBars[i]) {
                     waveMirrorBars[i].scale.y += (tgt * 0.6 - waveMirrorBars[i].scale.y) * 0.12;
-                }
-                if (wavePeakBeads[i]) {
-                    wavePeakBeads[i].position.y = -5 + waveBars[i].scale.y + 0.26;
                 }
             }
         } else if (currentVis === 'grid') {
@@ -2459,26 +2356,13 @@ function updateAllBarMaterials() {
         b.material.emissive.setHex(col);
     });
     updateMat(pulseBars, pulseBars.length);
-    if (pulseInnerBars) updateMat(pulseInnerBars, pulseInnerBars.length);
     updateMat(waveBars, waveBars.length);
     if (waveMirrorBars) updateMat(waveMirrorBars, waveMirrorBars.length);
-
-    if (wavePeakBeads) {
-        wavePeakBeads.forEach(b => {
-            b.material.color.copy(colEdge);
-        });
-    }
 
     if (waveHorizon && waveHorizon.material) {
         waveHorizon.material.color.copy(colCenter);
     }
-    if (waveFloor && waveFloor.material) {
-        waveFloor.material.color.copy(colCenter);
-    }
 
-    if (pulseFloor && pulseFloor.material) {
-        pulseFloor.material.color.copy(colCenter);
-    }
     if (pulseGyroCore && pulseGyroCore.material) {
         pulseGyroCore.material.color.copy(colCenter);
         pulseGyroCore.material.emissive.copy(colCenter);
