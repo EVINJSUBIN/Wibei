@@ -823,6 +823,7 @@ function triggerBeatShockwave(energy) {
 }
 
 function initThree() {
+    const thInit = THEMES[currentTheme] || THEMES.phonk;
     const container = document.getElementById('threejs-container');
     scene  = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
@@ -1364,7 +1365,8 @@ function threeAnimate() {
 
         // Camera distance lerp for zoom
         camRadius += (targetCamRadius - camRadius) * 0.12;
-        camera.position.z = camRadius;
+        camera.position.set(0, 10, camRadius);
+        camera.lookAt(0, 0, 0);
 
         // Visualizer orientation
         visualizerRoot.rotation.y += (orbitRotY - visualizerRoot.rotation.y) * 0.12;
