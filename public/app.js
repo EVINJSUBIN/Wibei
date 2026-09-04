@@ -31,9 +31,11 @@ const FX_SPEEDS = [1.0, 1.25, 0.85];
 let scene, camera, renderer, composer, bloomPass, bgTexture;
 let visualizerRoot, shockwaveGroup;
 let pulseGrp, waveGrp, vgridGrp, orbGrp, vgridFloor;
-let pulseBars = [], waveBars = [], waveMirrorBars = [], vgridBars = [], orbVertices = [];
+let pulseBars = [], pulseInnerBars = [], waveBars = [], waveMirrorBars = [], wavePeakBeads = [], vgridBars = [], orbVertices = [];
 let orbMesh, orbWireMesh, orbInnerCore, orbRing1, orbRing2, orbRing3, orbEquatorBeacons = [], orbParticles;
-let pulseGyroCore, pulseHalo, waveHorizon;
+let pulseGyroCore, pulseHalo, pulseFloor, waveHorizon, waveFloor;
+let wavePeakY = [];
+let pulseInnerGrp, pulseOuterGrp;
 
 let matrixRipplePhase = 0;
 let matrixShockwaves = [];
@@ -152,183 +154,14 @@ let autoCamAngle = 0;
 let bgBassLevel  = 0;
 let lastBassEnergy = 0;
 
-// Silky 3D Orbit Drag & Inertia Physics Engine
 let mouseX = 0, mouseY = 0;
-let orbitRotX = 0.12;       // pitch (clamped to prevent upside-down flipping)
-let orbitRotY = 0.0;        // yaw
-let orbitVelX = 0.0;        // pitch velocity
-let orbitVelY = 0.0;        // yaw velocity
-let isOrbitDragging = false;
-let prevPointerPos = { x: 0, y: 0 };
-let camRadius = 60;
-let targetCamRadius = 60;
-let pinchStartDist = 0;
-let dragDepth = 0;
+let targetRotX = 0, targetRotY = 0;
+let isDragging = false;
+let prevMouse = { x: 0, y: 0 };
 
 let lastFpsTime = performance.now();
 let frameCounter = 0;
 let currentFps = 60;
-
-class MusicTypeClassifier {
-    constructor() {
-        this.currentGenre = 'SYNTHWAVE';
-        this.currentBpm = 118;
-        this.confidence = 0.8;
-        this.beatTimestamps = [];
-        this.lastBeatTime = 0;
-        this.energyHistory = [];
-        this.rollingBpmEstimates = [];
-        this.metaGenre = null;
-        this.metaTitle = '';
-        this.metaArtist = '';
-        this.lastClassifyTime = 0;
-    }
-
-    setMetadata(meta = {}) {
-        this.metaGenre = meta.genre || null;
-        this.metaTitle = meta.title || '';
-        this.metaArtist = meta.artist || meta.uploader || '';
-        this.beatTimestamps = [];
-        this.rollingBpmEstimates = [];
-        this.evaluateMetaHints();
-    }
-
-    evaluateMetaHints() {
-        const text = `${this.metaTitle} ${this.metaArtist} ${this.metaGenre || ''}`.toLowerCase();
-        if (/phonk|drift|cowbell|kordhell|interworld|dvrst|goxxvh/i.test(text)) {
-            this.setGenre('PHONK / DRIFT', 142);
-        } else if (/lo-?fi|chill|study|sleep|relax|mellow|sunset/i.test(text)) {
-            this.setGenre('LO-FI / CHILL', 80);
-        } else if (/synthwave|retrowave|outrun|cyberpunk|80s/i.test(text)) {
-            this.setGenre('SYNTHWAVE', 118);
-        } else if (/edm|cyber|techno|trance|house|club|dance|rave/i.test(text)) {
-            this.setGenre('CYBER / EDM', 128);
-        } else if (/trap|hip-?hop|rap|808|drill/i.test(text)) {
-            this.setGenre('TRAP / HIP-HOP', 140);
-        } else if (/rock|metal|punk|guitar|heavy|grunge/i.test(text)) {
-            this.setGenre('ROCK / METAL', 125);
-        } else if (/ambient|classical|piano|orchestr|space/i.test(text)) {
-            this.setGenre('AMBIENT / SPACE', 72);
-        } else if (/pop|modern|hit/i.test(text)) {
-            this.setGenre('POP / MODERN', 120);
-        }
-    }
-
-    setGenre(genre, defaultBpm) {
-        this.currentGenre = genre;
-        if (defaultBpm && this.rollingBpmEstimates.length === 0) {
-            this.currentBpm = defaultBpm;
-        }
-        this.updateBadge();
-    }
-
-    processFrame(freqData, sampleRate = 44100) {
-        if (!freqData || freqData.length === 0) return;
-        const now = performance.now();
-
-        let subSum = 0, bassSum = 0, midSum = 0, trebleSum = 0, totalSum = 0;
-        let weightedFreqSum = 0;
-
-        const binCount = freqData.length;
-        const binHz = (sampleRate / 2) / binCount;
-
-        for (let i = 0; i < binCount; i++) {
-            const v = freqData[i] / 255;
-            const freq = i * binHz;
-            totalSum += v;
-            weightedFreqSum += freq * v;
-
-            if (freq < 80) subSum += v;
-            else if (freq < 250) bassSum += v;
-            else if (freq < 2500) midSum += v;
-            else if (freq < 12000) trebleSum += v;
-        }
-
-        if (totalSum < 6) return;
-
-        const subRatio = subSum / (totalSum + 0.001);
-        const bassRatio = (subSum + bassSum) / (totalSum + 0.001);
-        const midRatio = midSum / (totalSum + 0.001);
-        const trebleRatio = trebleSum / (totalSum + 0.001);
-        const spectralCentroid = weightedFreqSum / (totalSum + 0.001);
-
-        // Real-time Beat / Transient Onset Tracker for BPM
-        const bassEnergy = subSum * 1.5 + bassSum;
-        this.energyHistory.push(bassEnergy);
-        if (this.energyHistory.length > 50) this.energyHistory.shift();
-
-        const avgPast = this.energyHistory.reduce((a, b) => a + b, 0) / this.energyHistory.length;
-        const isOnset = bassEnergy > avgPast * 1.34 && (now - this.lastBeatTime > 270);
-
-        if (isOnset) {
-            if (this.lastBeatTime > 0) {
-                const ioi = now - this.lastBeatTime;
-                if (ioi >= 310 && ioi <= 1250) {
-                    let bpm = Math.round(60000 / ioi);
-                    if (bpm < 65) bpm *= 2;
-                    if (bpm > 185) bpm = Math.round(bpm / 2);
-                    this.rollingBpmEstimates.push(bpm);
-                    if (this.rollingBpmEstimates.length > 9) this.rollingBpmEstimates.shift();
-
-                    // Stable median calculation
-                    const sorted = [...this.rollingBpmEstimates].sort((a, b) => a - b);
-                    this.currentBpm = sorted[Math.floor(sorted.length / 2)];
-                    this.updateBadge();
-                }
-            }
-            this.lastBeatTime = now;
-        }
-
-        // Periodic heuristic classification refinement (every 2.2s)
-        if (now - this.lastClassifyTime > 2200) {
-            this.lastClassifyTime = now;
-            this.classifyFeatures({
-                subRatio,
-                bassRatio,
-                midRatio,
-                trebleRatio,
-                spectralCentroid,
-                bpm: this.currentBpm
-            });
-        }
-    }
-
-    classifyFeatures({ subRatio, bassRatio, midRatio, trebleRatio, spectralCentroid, bpm }) {
-        const metaText = `${this.metaTitle} ${this.metaGenre || ''}`.toLowerCase();
-        let detected = this.currentGenre;
-
-        if (/phonk|drift/i.test(metaText) || (subRatio > 0.30 && bassRatio > 0.46 && bpm >= 120)) {
-            detected = 'PHONK / DRIFT';
-        } else if (/lo-?fi|chill/i.test(metaText) || (spectralCentroid < 1350 && bassRatio > 0.32 && bpm <= 98)) {
-            detected = 'LO-FI / CHILL';
-        } else if (/synthwave|retrowave/i.test(metaText) || (midRatio > 0.40 && bassRatio > 0.30 && bpm >= 100 && bpm <= 128)) {
-            detected = 'SYNTHWAVE';
-        } else if (/edm|cyber|techno|club/i.test(metaText) || (bassRatio > 0.40 && trebleRatio > 0.26 && bpm >= 120 && bpm <= 138)) {
-            detected = 'CYBER / EDM';
-        } else if (/trap|hip-?hop/i.test(metaText) || (subRatio > 0.34 && trebleRatio > 0.20)) {
-            detected = 'TRAP / HIP-HOP';
-        } else if (spectralCentroid > 2700 && midRatio > 0.36) {
-            detected = 'ROCK / METAL';
-        } else if (midRatio > 0.45 && trebleRatio > 0.20) {
-            detected = 'POP / MODERN';
-        } else if (bassRatio < 0.26 && midRatio < 0.32) {
-            detected = 'AMBIENT / SPACE';
-        }
-
-        if (detected !== this.currentGenre) {
-            this.currentGenre = detected;
-            this.updateBadge();
-        }
-    }
-
-    updateBadge() {
-        const genreTextEl = document.getElementById('genre-text');
-        const genreBpmEl = document.getElementById('genre-bpm');
-        if (genreTextEl) genreTextEl.innerText = this.currentGenre;
-        if (genreBpmEl) genreBpmEl.innerText = `${this.currentBpm} BPM`;
-    }
-}
-const musicClassifier = new MusicTypeClassifier();
 
 const playBtn        = document.getElementById('play-btn');
 const iconPlay       = document.querySelector('.icon-play');
@@ -387,6 +220,79 @@ function updatePlayIcons(playing) {
     if (artWrap) artWrap.classList.toggle('playing', playing);
 }
 
+const CLIENT_GENRE_TAXONOMY = [
+    {
+        genre: 'phonk',
+        label: 'PHONK // DRIFT',
+        mood: 'High-Voltage / Aggressive',
+        theme: 'phonk',
+        color: '#ef4444',
+        regex: /\b(phonk|drift|cowbell|memphis|kordhell|playaphonk|dxrk|lxst cxntury|interworld|shadowraze|mishashi|montagem|automotivo|brazilian funk|funk rj|funk mandelao|sp funk|funk brasileiro|wave phonk|drift phonk|aggregressive phonk|speed up phonk)\b/i
+    },
+    {
+        genre: 'cyber',
+        label: 'CYBER // SYNTHWAVE',
+        mood: 'Futuristic / Electronic',
+        theme: 'cyber',
+        color: '#10b981',
+        regex: /\b(synthwave|retrowave|cyberpunk|cyber|darksynth|electronic|edm|techno|trance|dubstep|dnb|drum and bass|drum & bass|future bass|house music|electro|industrial|glitch|chiptune|eurobeat|hardstyle|carpenter brut|perturbator|kavinsky|daft punk|skrillex|deadmau5|avicii|nightcall)\b/i
+    },
+    {
+        genre: 'lofi',
+        label: 'LOFI // CHILL',
+        mood: 'Cozy / Nostalgic',
+        theme: 'lofi',
+        color: '#fb923c',
+        regex: /\b(lofi|lo-fi|chillhop|chill hop|study beats|chill beats|relaxing beats|sleep beats|coffee shop|cozy|rainy day|jazz hop|mellow|nostalgic|bedroom pop|downtempo|ambient chill|lofi girl|chilledcow|sleepy beats|quiet night|peaceful)\b/i
+    },
+    {
+        genre: 'comic',
+        label: 'POP // ENERGETIC',
+        mood: 'Vibrant / Dance',
+        theme: 'comic',
+        color: '#facc15',
+        regex: /\b(pop|dance pop|hyperpop|k-pop|kpop|j-pop|jpop|anime|kawaii|vocaloid|hatsune miku|funk|disco|groove|upbeat|cheerful|party|happy|blackpink|bts|twice|newjeans|aespa|taylor swift|dua lipa|ariana grande|charli xcx|billie eilish|the weeknd|bruno mars)\b/i
+    },
+    {
+        genre: 'serious',
+        label: 'SERIOUS // ACOUSTIC',
+        mood: 'Deep / Cinematic',
+        theme: 'serious',
+        color: '#f8fafc',
+        regex: /\b(classical|piano solo|piano|acoustic|orchestra|symphony|cinematic|film score|soundtrack|hans zimmer|chopin|beethoven|mozart|bach|debussy|ludovico einaudi|max richter|philip glass|violin|cello|meditation|dark ambient|drone|minimalist|neoclassical|instrumental acoustic)\b/i
+    },
+    {
+        genre: 'hiphop',
+        label: 'TRAP // HIP-HOP',
+        mood: 'Heavy 808 / Rhythm',
+        theme: 'phonk',
+        color: '#a855f7',
+        regex: /\b(hip hop|hip-hop|rap|trap|drill|boombap|boom bap|freestyle|bars|808 mafia|metro boomin|travis scott|drake|kendrick|kanye|eminem|future|21 savage|playboi carti|lil uzi|gunna|lil baby|central cee)\b/i
+    }
+];
+
+function classifyTrackLocally(title = '', artist = '', album = '') {
+    const text = `${title} ${artist} ${album}`;
+    for (const item of CLIENT_GENRE_TAXONOMY) {
+        if (item.regex.test(text)) {
+            return {
+                genre: item.genre,
+                label: item.label,
+                mood: item.mood,
+                theme: item.theme,
+                color: item.color
+            };
+        }
+    }
+    return {
+        genre: 'cyber',
+        label: 'NEO // ELECTRONIC',
+        mood: 'Dynamic Spectrum',
+        theme: 'cyber',
+        color: '#10b981'
+    };
+}
+
 function updateTrackInfo(title, artist, thumb, meta = null) {
     if (trackTitle)  trackTitle.innerText  = title || 'Unknown Track';
     if (trackArtist) trackArtist.innerText = artist || 'Unknown Artist';
@@ -395,27 +301,47 @@ function updateTrackInfo(title, artist, thumb, meta = null) {
     if (lyricsTrackTitle) lyricsTrackTitle.innerText = `${title || 'Track'} // ${artist || 'Artist'}`;
 
     if (albumArt) {
-        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/') || thumb.startsWith('blob:') || thumb.startsWith('data:'))) {
+        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/') || thumb.startsWith('data:'))) {
             albumArt.src = thumb;
         } else {
             albumArt.src = 'favicon.svg';
         }
     }
 
-    // Feed metadata to classifier
-    musicClassifier.setMetadata({ title, artist, ...(meta || {}) });
+    // Determine classification
+    const classification = meta?.classification || classifyTrackLocally(title, artist, meta?.album);
+    
+    // Update genre badge
+    const genreBadge = document.getElementById('track-genre-badge');
+    if (genreBadge) {
+        genreBadge.innerText = classification.label || 'NEO // ELECTRONIC';
+        if (classification.color) {
+            genreBadge.style.color = classification.color;
+            genreBadge.style.borderColor = classification.color;
+        }
+    }
 
-    // Background iTunes enrichment for online tracks lacking high-res art or genre
-    if (title && !meta?.thumbnail && (!thumb || thumb === 'favicon.svg') && !title.includes('Connecting') && !title.includes('Loading')) {
-        fetch(`/api/meta-enrich?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || '')}`)
-            .then(r => r.json())
-            .then(enriched => {
-                if (enriched?.enriched) {
-                    if (enriched.thumbnail && albumArt) albumArt.src = enriched.thumbnail;
-                    if (enriched.genre) musicClassifier.setMetadata({ title, artist, genre: enriched.genre });
-                }
-            })
-            .catch(() => {});
+    // Update album / year metadata
+    const albumMetaEl = document.getElementById('track-album-meta');
+    if (albumMetaEl) {
+        if (meta?.album || meta?.releaseYear) {
+            albumMetaEl.innerText = `${meta.album || 'Studio Master'}${meta.releaseYear ? ` • ${meta.releaseYear}` : ''}`;
+        } else {
+            albumMetaEl.innerText = meta?.uploader ? `Via ${meta.uploader}` : 'Digital Master';
+        }
+    }
+
+    // Update format tag
+    const formatTagEl = document.getElementById('track-format-tag');
+    if (formatTagEl) {
+        formatTagEl.innerText = meta?.format || (meta?.duration ? `${fmtTime(meta.duration)} // HQ` : 'DSP-3D');
+    }
+
+    // Auto-steer visualizer theme if auto theme is active or if user hasn't explicitly locked it
+    if (currentTheme === 'auto' || THEMES[currentTheme]?.isAuto) {
+        if (classification.theme && THEMES[classification.theme]) {
+            applyTheme(classification.theme, true);
+        }
     }
     
     if (title && !title.includes('Connecting') && !title.includes('Loading') && !title.includes('Error')) {
@@ -821,7 +747,6 @@ function triggerBeatShockwave(energy) {
 }
 
 function initThree() {
-    const thInit = THEMES[currentTheme] || THEMES.phonk;
     const container = document.getElementById('threejs-container');
     scene  = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1000);
@@ -870,22 +795,54 @@ function initThree() {
         });
     }
 
-    // 1. PULSE RING // Dual Accelerator, Rotating Gyro-Core & Base Halo
+    // 1. PULSE RING // Dual Accelerator (Outer Towers + Inner Iris), Floor Grid, Base Halo & Gyro Reactor
     pulseGrp = new THREE.Group();
-    const ringCount = 128, ringR = 22;
+    const ringCount = 96, ringR = 21;
+    const innerRingCount = 48, innerR = 13.5;
 
-    // Smooth Tapered Cylindrical Rod for Pulse Ring
-    const ringRodGeo = new THREE.CylinderGeometry(0.38, 0.58, 1, 16);
+    // Cyber Stage Floor Grid for Ring (matches the floor perspective depth of Grid)
+    pulseFloor = new THREE.GridHelper(56, 20, thInit.color, 0x181824);
+    pulseFloor.position.y = -10;
+    pulseFloor.rotation.x = 0.35;
+    pulseFloor.material.transparent = true;
+    pulseFloor.material.opacity = 0.35;
+    pulseGrp.add(pulseFloor);
+
+    pulseOuterGrp = new THREE.Group();
+    pulseGrp.add(pulseOuterGrp);
+
+    pulseInnerGrp = new THREE.Group();
+    pulseGrp.add(pulseInnerGrp);
+
+    // Smooth Tapered Cylindrical Rod for Outer Ring
+    const ringRodGeo = new THREE.CylinderGeometry(0.35, 0.55, 1, 16);
     ringRodGeo.translate(0, 0.5, 0);
 
+    // Inner Inverted Spikes
+    const innerRodGeo = new THREE.CylinderGeometry(0.45, 0.25, 1, 16);
+    innerRodGeo.translate(0, -0.5, 0);
+
     pulseBars = [];
+    pulseInnerBars = [];
+
+    // Outer Ring Towers
     for (let i = 0; i < ringCount; i++) {
         const m = new THREE.Mesh(ringRodGeo, makeMat(i, ringCount));
         const a = (i / ringCount) * Math.PI * 2;
         m.position.set(Math.cos(a) * ringR, Math.sin(a) * ringR, 0);
         m.rotation.z = a - Math.PI / 2;
-        pulseGrp.add(m);
+        pulseOuterGrp.add(m);
         pulseBars.push(m);
+    }
+
+    // Inner Iris Spikes (counter-pointing toward center)
+    for (let i = 0; i < innerRingCount; i++) {
+        const m = new THREE.Mesh(innerRodGeo, makeMat(i + ringCount, innerRingCount));
+        const a = (i / innerRingCount) * Math.PI * 2;
+        m.position.set(Math.cos(a) * innerR, Math.sin(a) * innerR, 0);
+        m.rotation.z = a - Math.PI / 2;
+        pulseInnerGrp.add(m);
+        pulseInnerBars.push(m);
     }
 
     // Center Rotating Energy Gyro-Core
@@ -901,49 +858,76 @@ function initThree() {
     pulseGyroCore = new THREE.Mesh(gyroGeo, gyroMat);
     pulseGrp.add(pulseGyroCore);
 
-    // Glowing Halo Base Ring
-    const haloGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
+    // Dual Glowing Halo Base Rings
+    const haloOuterGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
     const haloMat = new THREE.MeshBasicMaterial({
         color: thInit.color,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.35
     });
-    pulseHalo = new THREE.Mesh(haloGeo, haloMat);
+    pulseHalo = new THREE.Mesh(haloOuterGeo, haloMat);
     pulseGrp.add(pulseHalo);
+
+    const haloInnerGeo = new THREE.RingGeometry(innerR - 0.35, innerR + 0.35, 48);
+    const haloInnerMesh = new THREE.Mesh(haloInnerGeo, haloMat);
+    pulseGrp.add(haloInnerMesh);
 
     visualizerRoot.add(pulseGrp);
 
-    // 2. WAVE RIBBON // 3D Curved Highway, Dual Mirrored Spectrum & Center Beam
+    // 2. WAVE RIBBON // 3D Curved Highway, Floor Reflection Grid, Mirror Spectrum, Horizon Beam & Peak Beads
     waveGrp = new THREE.Group();
     const waveN = 72;
     waveBars = [];
     waveMirrorBars = [];
+    wavePeakBeads = [];
+    wavePeakY = new Array(waveN).fill(0);
+
+    // Cyber Highway Floor Grid
+    waveFloor = new THREE.GridHelper(90, 22, thInit.color, 0x181826);
+    waveFloor.position.set(0, -9.5, 4);
+    waveFloor.rotation.x = 0.22;
+    waveFloor.material.transparent = true;
+    waveFloor.material.opacity = 0.35;
+    waveGrp.add(waveFloor);
 
     // Smooth Cylindrical Wave Pillars
-    const wavePillarGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
+    const wavePillarGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 16);
     wavePillarGeo.translate(0, 0.5, 0);
 
-    const waveMirrorGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
+    const waveMirrorGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 16);
     waveMirrorGeo.translate(0, -0.5, 0);
+
+    const beadGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.15, 16);
+    const beadMat = new THREE.MeshBasicMaterial({
+        color: thInit.secondaryColor || thInit.color,
+        transparent: true,
+        opacity: 0.95
+    });
 
     for (let i = 0; i < waveN; i++) {
         const norm = (i - waveN / 2) / (waveN / 2);
         const x = (i - waveN / 2) * 1.35;
-        // Subtle 3D cylindrical arc in Z wrapping toward viewer
-        const z = -Math.pow(norm * 2.6, 2) * 1.1;
+        // Parabolic 3D curvature wrapping toward camera
+        const z = -Math.pow(norm * 2.5, 2) * 1.4;
 
-        // Upper frequency bar
+        // Upper frequency pillar
         const mUp = new THREE.Mesh(wavePillarGeo, makeMat(i, waveN));
         mUp.position.set(x, -5, z);
         waveGrp.add(mUp);
         waveBars.push(mUp);
 
-        // Lower mirrored reflection bar
+        // Lower mirrored reflection pillar
         const mDown = new THREE.Mesh(waveMirrorGeo, makeMat(i, waveN));
         mDown.position.set(x, -5.2, z);
         waveGrp.add(mDown);
         waveMirrorBars.push(mDown);
+
+        // Floating Studio Peak Bead
+        const mBead = new THREE.Mesh(beadGeo, beadMat.clone());
+        mBead.position.set(x, -4.6, z);
+        waveGrp.add(mBead);
+        wavePeakBeads.push(mBead);
     }
 
     // Glowing central horizon line
@@ -954,7 +938,7 @@ function initThree() {
         opacity: 0.55
     });
     waveHorizon = new THREE.Mesh(horizGeo, horizMat);
-    waveHorizon.position.set(0, -5.1, -1);
+    waveHorizon.position.set(0, -5.1, -0.5);
     waveGrp.add(waveHorizon);
 
     waveGrp.visible = false;
@@ -1104,86 +1088,24 @@ function initThree() {
     orbGrp.visible = false;
     visualizerRoot.add(orbGrp);
 
-    const isUI = el => el.closest('.top-bar, .control-deck, .master-transport, .modal-dialog, .toast-card, .lyrics-hud');
-
-    // Pointer & Mouse Drag Listeners with Inertia
     window.addEventListener('mousemove', e => {
         mouseX = (e.clientX / innerWidth) * 2 - 1;
         mouseY = -(e.clientY / innerHeight) * 2 + 1;
-        if (isOrbitDragging) {
-            const dx = e.clientX - prevPointerPos.x;
-            const dy = e.clientY - prevPointerPos.y;
-            const sens = 0.0052;
-            orbitRotY += dx * sens;
-            orbitRotX += dy * sens;
-            orbitVelY = dx * sens * 0.72;
-            orbitVelX = dy * sens * 0.72;
-            orbitRotX = Math.max(-1.18, Math.min(1.18, orbitRotX));
-            prevPointerPos = { x: e.clientX, y: e.clientY };
+        if (isDragging) {
+            targetRotY += (e.clientX - prevMouse.x) * 0.006;
+            targetRotX += (e.clientY - prevMouse.y) * 0.006;
+            prevMouse = { x: e.clientX, y: e.clientY };
         }
     });
 
+    const isUI = el => el.closest('.top-bar, .control-deck, .master-transport, .modal-dialog, .toast-card');
     window.addEventListener('mousedown', e => {
         if (!isUI(e.target)) {
-            isOrbitDragging = true;
-            document.body.classList.add('three-dragging');
-            orbitVelX = 0;
-            orbitVelY = 0;
-            prevPointerPos = { x: e.clientX, y: e.clientY };
+            isDragging = true;
+            prevMouse  = { x: e.clientX, y: e.clientY };
         }
     });
-
-    const stopDragging = () => {
-        if (isOrbitDragging) {
-            isOrbitDragging = false;
-            document.body.classList.remove('three-dragging');
-        }
-    };
-    window.addEventListener('mouseup', stopDragging);
-    window.addEventListener('mouseleave', stopDragging);
-
-    // Mouse Wheel Zoom
-    window.addEventListener('wheel', e => {
-        const isScrollable = el => el.closest('.lyrics-hud-body, .playlist-container, .modal-content, .sugg-box');
-        if (!isScrollable(e.target)) {
-            targetCamRadius += Math.sign(e.deltaY) * 4.5;
-            targetCamRadius = Math.max(26, Math.min(95, targetCamRadius));
-        }
-    }, { passive: true });
-
-    // Touch Support (Single-Finger Orbit, Two-Finger Pinch Zoom)
-    window.addEventListener('touchstart', e => {
-        if (isUI(e.target)) return;
-        if (e.touches.length === 1) {
-            isOrbitDragging = true;
-            orbitVelX = 0; orbitVelY = 0;
-            prevPointerPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        } else if (e.touches.length === 2) {
-            isOrbitDragging = false;
-            pinchStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-        }
-    }, { passive: true });
-
-    window.addEventListener('touchmove', e => {
-        if (isOrbitDragging && e.touches.length === 1) {
-            const dx = e.touches[0].clientX - prevPointerPos.x;
-            const dy = e.touches[0].clientY - prevPointerPos.y;
-            const sens = 0.006;
-            orbitRotY += dx * sens;
-            orbitRotX += dy * sens;
-            orbitVelY = dx * sens * 0.72;
-            orbitVelX = dy * sens * 0.72;
-            orbitRotX = Math.max(-1.18, Math.min(1.18, orbitRotX));
-            prevPointerPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        } else if (e.touches.length === 2) {
-            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            const diff = (pinchStartDist - dist) * 0.18;
-            targetCamRadius = Math.max(26, Math.min(95, targetCamRadius + diff));
-            pinchStartDist = dist;
-        }
-    }, { passive: true });
-
-    window.addEventListener('touchend', () => { isOrbitDragging = false; });
+    window.addEventListener('mouseup', () => { isDragging = false; });
 
     window.addEventListener('resize', () => {
         camera.aspect = innerWidth / innerHeight;
@@ -1202,27 +1124,7 @@ function detectSongMoodAndGeometry(bassAvg, midAvg, trebleAvg) {
     let targetMood = 'phonk';
     let targetVis = 'pulse';
 
-    // Link with classifier genre if confidence is high
-    const g = musicClassifier.currentGenre;
-    if (g === 'PHONK / DRIFT' || g === 'TRAP / HIP-HOP') {
-        targetMood = 'phonk';
-        targetVis = 'pulse';
-    } else if (g === 'CYBER / EDM') {
-        targetMood = 'cyber';
-        targetVis = 'grid';
-    } else if (g === 'LO-FI / CHILL') {
-        targetMood = 'lofi';
-        targetVis = 'wave';
-    } else if (g === 'SYNTHWAVE') {
-        targetMood = 'comic';
-        targetVis = 'wave';
-    } else if (g === 'ROCK / METAL') {
-        targetMood = 'phonk';
-        targetVis = 'grid';
-    } else if (g === 'AMBIENT / SPACE') {
-        targetMood = 'serious';
-        targetVis = 'orb';
-    } else if (bassAvg > 0.42 && (bassAvg - midAvg) > 0.08) {
+    if (bassAvg > 0.42 && (bassAvg - midAvg) > 0.08) {
         targetMood = 'phonk';
         targetVis = 'pulse';
     } else if (midAvg > 0.32 && trebleAvg > 0.20) {
@@ -1287,29 +1189,14 @@ function threeAnimate() {
 
     if (isAutoCam) {
         autoCamAngle += 0.008 + bgBassLevel * 0.02;
-        const camDist = targetCamRadius - bgBassLevel * 10;
+        const camDist = 58 - bgBassLevel * 10;
         camera.position.x = Math.sin(autoCamAngle) * camDist;
         camera.position.z = Math.cos(autoCamAngle) * camDist;
         camera.position.y = 10 + Math.sin(autoCamAngle * 0.5) * 8;
         camera.lookAt(0, 0, 0);
     } else if (visualizerRoot) {
-        // Physics inertia step
-        if (!isOrbitDragging) {
-            orbitRotY += orbitVelY;
-            orbitRotX += orbitVelX;
-            orbitVelY *= 0.91; // fluid momentum decay
-            orbitVelX *= 0.91;
-            orbitRotX = Math.max(-1.18, Math.min(1.18, orbitRotX)); // strict pitch clamping
-        }
-
-        // Camera distance lerp for zoom
-        camRadius += (targetCamRadius - camRadius) * 0.12;
-        camera.position.set(0, 10, camRadius);
-        camera.lookAt(0, 0, 0);
-
-        // Visualizer orientation
-        visualizerRoot.rotation.y += (orbitRotY - visualizerRoot.rotation.y) * 0.12;
-        visualizerRoot.rotation.x += (orbitRotX - visualizerRoot.rotation.x) * 0.12;
+        visualizerRoot.rotation.y += (targetRotY + mouseX * 0.15 - visualizerRoot.rotation.y) * 0.08;
+        visualizerRoot.rotation.x += (targetRotX - mouseY * 0.15 - visualizerRoot.rotation.x) * 0.08;
     }
 
     shockwaves = shockwaves.filter(sw => sw.alpha > 0.01);
@@ -1333,7 +1220,6 @@ function threeAnimate() {
     }
 
     if (hasAudio) {
-        musicClassifier.processFrame(dataArr, audioCtx?.sampleRate || 44100);
         let bassSum = 0, midSum = 0, trebleSum = 0;
         const totalBins = dataArr.length;
         for (let i = 0; i < 12; i++) bassSum += dataArr[i];
@@ -1390,12 +1276,30 @@ function threeAnimate() {
                 }
             }
 
+            // Inner Iris Spikes
+            const innerHalf = pulseInnerBars.length / 2;
+            for (let i = 0; i < pulseInnerBars.length; i++) {
+                const sym = i < innerHalf ? i : pulseInnerBars.length - 1 - i;
+                const bin = Math.min(dataArr.length - 1, Math.floor((sym / innerHalf) * 36));
+                const val = dataArr[bin] || 0;
+                pulseInnerBars[i].scale.y += (Math.max(0.6, 1 + (val / 255) * 12) - pulseInnerBars[i].scale.y) * 0.32;
+                if (th.isAuto) {
+                    const c = new THREE.Color().setHSL((autoHue + 0.45 + (i / pulseInnerBars.length) * 0.2) % 1, 0.9, 0.55);
+                    pulseInnerBars[i].material.color.copy(c);
+                    pulseInnerBars[i].material.emissive.copy(c);
+                }
+            }
+
+            // Dual Counter-Rotating Aperture
+            if (pulseOuterGrp) pulseOuterGrp.rotation.z += 0.003 + bgBassLevel * 0.008;
+            if (pulseInnerGrp) pulseInnerGrp.rotation.z -= 0.005 + bgBassLevel * 0.012;
+
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.02 + bgBassLevel * 0.04;
                 pulseGyroCore.rotation.y += 0.025 + bgBassLevel * 0.05;
-                const gyroScale = 1 + bgBassLevel * 0.65;
+                const gyroScale = 1 + bgBassLevel * 0.55;
                 pulseGyroCore.scale.set(gyroScale, gyroScale, gyroScale);
-                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.4;
+                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.35;
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL(autoHue, 0.9, 0.6);
                     pulseGyroCore.material.color.copy(c);
@@ -1410,6 +1314,17 @@ function threeAnimate() {
                 waveBars[i].scale.y += (targetH - waveBars[i].scale.y) * 0.28;
                 if (waveMirrorBars[i]) {
                     waveMirrorBars[i].scale.y += (targetH * 0.62 - waveMirrorBars[i].scale.y) * 0.28;
+                }
+
+                // Studio Peak Beads Gravity Physics
+                if (wavePeakBeads[i]) {
+                    const barTop = -5 + waveBars[i].scale.y;
+                    if (barTop >= (wavePeakY[i] || -4.6)) {
+                        wavePeakY[i] = barTop;
+                    } else {
+                        wavePeakY[i] = Math.max(-4.6, (wavePeakY[i] || -4.6) - 0.16);
+                    }
+                    wavePeakBeads[i].position.y = wavePeakY[i] + 0.26;
                 }
 
                 if (th.isAuto) {
@@ -1532,6 +1447,16 @@ function threeAnimate() {
                 const tgt = Math.max(0.7, 1.35 + Math.sin(time * 1.2) * 0.2 + h);
                 pulseBars[i].scale.y += (tgt - pulseBars[i].scale.y) * 0.12;
             }
+            if (pulseInnerBars) {
+                for (let i = 0; i < pulseInnerBars.length; i++) {
+                    const a = (i / pulseInnerBars.length) * Math.PI * 2;
+                    const h = Math.sin(a * 3 - time * 1.5) * 0.35;
+                    const tgt = Math.max(0.6, 1.2 + h);
+                    pulseInnerBars[i].scale.y += (tgt - pulseInnerBars[i].scale.y) * 0.12;
+                }
+            }
+            if (pulseOuterGrp) pulseOuterGrp.rotation.z += 0.0015;
+            if (pulseInnerGrp) pulseInnerGrp.rotation.z -= 0.0025;
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.01;
                 pulseGyroCore.rotation.y += 0.015;
@@ -1544,6 +1469,9 @@ function threeAnimate() {
                 waveBars[i].scale.y += (tgt - waveBars[i].scale.y) * 0.12;
                 if (waveMirrorBars[i]) {
                     waveMirrorBars[i].scale.y += (tgt * 0.6 - waveMirrorBars[i].scale.y) * 0.12;
+                }
+                if (wavePeakBeads[i]) {
+                    wavePeakBeads[i].position.y = -5 + waveBars[i].scale.y + 0.26;
                 }
             }
         } else if (currentVis === 'grid') {
@@ -1630,9 +1558,60 @@ function stopMic() {
 }
 
 let playlist = [
-    { id: 'demo-1', title: 'Synthwave Pulse', artist: 'RetroWave Studio', src: '/audio/synthwave.mp3', thumb: 'favicon.svg', type: 'demo' },
-    { id: 'demo-2', title: 'Lofi Chill Beats', artist: 'Lofi Studio', src: '/audio/lofi.mp3', thumb: 'favicon.svg', type: 'demo' },
-    { id: 'demo-3', title: 'Acoustic Harmony', artist: 'Ambient Vibes', src: '/audio/chill.mp3', thumb: 'favicon.svg', type: 'demo' }
+    { 
+        id: 'demo-1', 
+        title: 'Synthwave Pulse', 
+        artist: 'RetroWave Studio', 
+        album: 'Neon Horizons',
+        releaseYear: '2024',
+        format: 'LOSSLESS // 48kHz',
+        src: '/audio/synthwave.mp3', 
+        thumb: 'favicon.svg', 
+        type: 'demo',
+        classification: {
+            genre: 'cyber',
+            label: 'CYBER // SYNTHWAVE',
+            mood: 'Futuristic / Electronic',
+            theme: 'cyber',
+            color: '#10b981'
+        }
+    },
+    { 
+        id: 'demo-2', 
+        title: 'Lofi Chill Beats', 
+        artist: 'Lofi Studio', 
+        album: 'Midnight Coffee',
+        releaseYear: '2024',
+        format: '320kbps MP3',
+        src: '/audio/lofi.mp3', 
+        thumb: 'favicon.svg', 
+        type: 'demo',
+        classification: {
+            genre: 'lofi',
+            label: 'LOFI // CHILL',
+            mood: 'Cozy / Nostalgic',
+            theme: 'lofi',
+            color: '#fb923c'
+        }
+    },
+    { 
+        id: 'demo-3', 
+        title: 'Acoustic Harmony', 
+        artist: 'Ambient Vibes', 
+        album: 'Tranquil Echoes',
+        releaseYear: '2024',
+        format: '320kbps MP3',
+        src: '/audio/chill.mp3', 
+        thumb: 'favicon.svg', 
+        type: 'demo',
+        classification: {
+            genre: 'serious',
+            label: 'SERIOUS // ACOUSTIC',
+            mood: 'Deep / Cinematic',
+            theme: 'serious',
+            color: '#f8fafc'
+        }
+    }
 ];
 let currentTrackIdx = -1;
 let isShuffle = false;
@@ -1653,10 +1632,11 @@ function renderPlaylistUI() {
     playlist.forEach((track, idx) => {
         const item = document.createElement('div');
         item.className = `queue-item ${idx === currentTrackIdx ? 'active' : ''}`;
+        const genreBadgeText = track.classification?.label || (track.type === 'demo' ? 'DEMO STEM' : 'STREAM');
         item.innerHTML = `
             <div class="queue-item-info">
                 <span class="queue-item-title">${idx + 1}. ${track.title}</span>
-                <span class="queue-item-sub">${track.artist || 'Audio Track'}</span>
+                <span class="queue-item-sub">${track.artist || 'Audio Track'} • ${genreBadgeText}</span>
             </div>
             <button class="queue-remove-btn" title="Remove track">&times;</button>
         `;
@@ -1673,6 +1653,9 @@ function renderPlaylistUI() {
 
 function addToPlaylist(track, playImmediately = false) {
     track.id = track.id || (Date.now() + Math.random());
+    if (!track.classification) {
+        track.classification = classifyTrackLocally(track.title, track.artist, track.album);
+    }
     playlist.push(track);
     renderPlaylistUI();
     if (playImmediately || (playlist.length === 1 && (!curAudioEl || curAudioEl.paused))) {
@@ -1717,13 +1700,17 @@ function playTrackAtIndex(idx) {
     if (track.type === 'stream' || track.url) {
         playStream(track.url || track.src, track);
     } else {
-        const t = (track.title || '').toLowerCase();
-        if (t.includes('synth') || t.includes('cyber')) applyTheme('cyber');
-        else if (t.includes('lofi') || t.includes('chill')) applyTheme('lofi');
-        else if (t.includes('phonk') || t.includes('drift')) applyTheme('phonk');
-        else if (t.includes('acoustic') || t.includes('piano')) applyTheme('serious');
+        if (track.classification?.theme) {
+            applyTheme(track.classification.theme, true);
+        } else {
+            const t = (track.title || '').toLowerCase();
+            if (t.includes('synth') || t.includes('cyber')) applyTheme('cyber', true);
+            else if (t.includes('lofi') || t.includes('chill')) applyTheme('lofi', true);
+            else if (t.includes('phonk') || t.includes('drift')) applyTheme('phonk', true);
+            else if (t.includes('acoustic') || t.includes('piano')) applyTheme('serious', true);
+        }
 
-        playDirectAudio(track.src, track.title, track.artist);
+        playDirectAudio(track.src, track.title, track.artist, track);
     }
 }
 
@@ -1796,31 +1783,41 @@ function parseLRC(text) {
     return result.sort((a, b) => a.time - b.time);
 }
 
-async function loadLyricsForTrack(title, artist) {
+async function loadLyricsForTrack(title, artist, customQuery = null) {
     const hudBody = document.getElementById('lyrics-hud-body');
+    const statusBadge = document.getElementById('lyrics-status-badge');
     if (!hudBody) return;
+
     hudBody.innerHTML = '<div class="lyrics-empty-msg">Searching synchronized lyrics... 🎵</div>';
-
-    const searchInpEl = document.getElementById('lyrics-search-inp');
-    if (searchInpEl && document.activeElement !== searchInpEl) {
-        searchInpEl.value = (artist && !artist.includes('Unknown') && !artist.includes('Streaming')) ? `${artist} - ${title}` : (title || '');
-    }
-
     currentLyrics = [];
     activeLyricIdx = -1;
     isLyricsSynced = false;
+    if (statusBadge) statusBadge.innerText = 'SEARCHING...';
 
     try {
-        const res = await fetch(`/api/lyrics?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || '')}`);
+        const queryParam = customQuery 
+            ? `title=${encodeURIComponent(customQuery)}` 
+            : `title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || '')}`;
+
+        const res = await fetch(`/api/lyrics?${queryParam}`);
         const data = await res.json();
         
         if (!data.found) {
-            hudBody.innerHTML = `<div class="lyrics-empty-msg">No synchronized lyrics found for "${title}".<br><span style="opacity:0.6;font-size:9px;">Enjoy the visualizer!</span></div>`;
+            if (statusBadge) statusBadge.innerText = 'NO LYRICS';
+            hudBody.innerHTML = `
+                <div class="lyrics-empty-msg">
+                    No lyrics found for "<strong>${title}</strong>".<br>
+                    <span style="opacity:0.7;font-size:10px;margin-top:6px;display:inline-block;">Click 🔍 above to search manually with another title.</span>
+                </div>`;
             return;
         }
 
         if (data.syncedLyrics) {
             isLyricsSynced = true;
+            if (statusBadge) {
+                statusBadge.innerText = '● SYNCED KARAOKE';
+                statusBadge.style.color = 'var(--accent)';
+            }
             currentLyrics = parseLRC(data.syncedLyrics);
             if (currentLyrics.length === 0) {
                 renderPlainLyrics(data.plainLyrics || data.syncedLyrics);
@@ -1833,18 +1830,25 @@ async function loadLyricsForTrack(title, artist) {
                 lineEl.className = 'lyric-line';
                 lineEl.dataset.idx = idx;
                 lineEl.innerText = l.text;
+                lineEl.title = 'Click to seek audio here';
                 lineEl.addEventListener('click', () => {
                     if (curAudioEl) {
                         curAudioEl.currentTime = l.time;
+                        if (curAudioEl.paused) curAudioEl.play();
                     }
                 });
                 hudBody.appendChild(lineEl);
             });
         } else if (data.plainLyrics) {
+            if (statusBadge) {
+                statusBadge.innerText = '● PLAIN LYRICS';
+                statusBadge.style.color = 'var(--dim)';
+            }
             renderPlainLyrics(data.plainLyrics);
         }
     } catch (err) {
-        hudBody.innerHTML = '<div class="lyrics-empty-msg">Could not load lyrics.</div>';
+        if (statusBadge) statusBadge.innerText = 'ERROR';
+        hudBody.innerHTML = '<div class="lyrics-empty-msg">Could not load lyrics. Try manual search.</div>';
     }
 }
 
@@ -1912,10 +1916,10 @@ function attachTimeEvents(el) {
     };
 }
 
-function playDirectAudio(src, title, artist) {
+function playDirectAudio(src, title, artist, meta = null) {
     stopMic();
     const thisSession = ++currentAudioSessionId;
-    updateTrackInfo(title, artist, null);
+    updateTrackInfo(title, artist, meta?.thumb || null, meta);
     if (sourceBadge) sourceBadge.innerText = 'PLAYING';
 
     if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
@@ -1946,16 +1950,16 @@ async function playStream(query, presetMeta = null) {
     stopMic();
     const thisSession = ++currentAudioSessionId;
     if (sourceBadge) sourceBadge.innerText = 'STREAM';
-    updateTrackInfo(presetMeta?.title || query, presetMeta?.uploader || 'Streaming audio', presetMeta?.thumbnail);
+    updateTrackInfo(presetMeta?.title || query, presetMeta?.artist || presetMeta?.uploader || 'Streaming audio', presetMeta?.thumbnail || presetMeta?.thumb, presetMeta);
 
     try {
         let meta = presetMeta;
-        if (!meta) {
+        if (!meta || !meta.classification) {
             const r = await fetch(`/metadata?url=${encodeURIComponent(query)}`);
             meta = await r.json();
         }
         if (currentAudioSessionId !== thisSession) return;
-        updateTrackInfo(meta.title || query, meta.uploader || 'Unknown Artist', meta.thumbnail);
+        updateTrackInfo(meta.title || query, meta.artist || meta.uploader || 'Unknown Artist', meta.thumbnail || meta.thumb, meta);
 
         if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
         curAudioEl = new Audio();
@@ -2062,10 +2066,14 @@ document.querySelectorAll('.deck-tab').forEach(tab => {
     });
 });
 
-document.querySelectorAll('.preset-row').forEach(row => {
+document.querySelectorAll('.preset-row').forEach((row, rIdx) => {
     row.addEventListener('click', () => {
         document.querySelectorAll('.preset-row').forEach(r => r.classList.remove('active'));
         row.classList.add('active');
+        if (playlist[rIdx] && playlist[rIdx].type === 'demo') {
+            playTrackAtIndex(rIdx);
+            return;
+        }
         const trackObj = {
             title: row.dataset.title || 'Demo Track',
             artist: row.dataset.artist || 'Studio',
@@ -2200,51 +2208,49 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
 const fileUpload = document.getElementById('file-upload');
 document.getElementById('upload-btn')?.addEventListener('click', () => fileUpload?.click());
 
-async function loadLocalFiles(filesList) {
+function parseLocalTrackName(fileName) {
+    const clean = fileName.replace(/\.[^/.]+$/, '').trim();
+    const separators = [' - ', ' – ', ' — ', ' // '];
+    for (const sep of separators) {
+        if (clean.includes(sep)) {
+            const parts = clean.split(sep);
+            return {
+                artist: parts[0].trim(),
+                title: parts.slice(1).join(' ').trim()
+            };
+        }
+    }
+    return {
+        artist: 'Local Artist',
+        title: clean
+    };
+}
+
+function loadLocalFiles(filesList) {
     if (!filesList || filesList.length === 0) return;
     stopMic();
     const files = Array.from(filesList).filter(f => f.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac)$/i.test(f.name));
     if (files.length === 0) return;
 
-    for (let idx = 0; idx < files.length; idx++) {
-        const file = files[idx];
-        const rawName = file.name.replace(/\.[^/.]+$/, '');
-        let title = rawName;
-        let artist = 'Local Audio';
-        let album = null, year = null, genre = null;
-        let thumb = 'favicon.svg';
-
-        // Extract genuine ID3 tags and embedded APIC artwork
-        if (typeof window.readAudioMetadata === 'function') {
-            try {
-                const id3 = await window.readAudioMetadata(file);
-                if (id3) {
-                    if (id3.title) title = id3.title;
-                    if (id3.artist) artist = id3.artist;
-                    if (id3.album) album = id3.album;
-                    if (id3.year) year = id3.year;
-                    if (id3.genre) genre = id3.genre;
-                    if (id3.pictureUrl) thumb = id3.pictureUrl;
-                }
-            } catch (_) {}
-        }
-
+    files.forEach((file, idx) => {
+        const parsed = parseLocalTrackName(file.name);
+        const classification = classifyTrackLocally(parsed.title, parsed.artist);
         const trackObj = {
             id: Date.now() + Math.random(),
-            title: title,
-            artist: artist,
-            album: album,
-            year: year,
-            genre: genre,
+            title: parsed.title,
+            artist: parsed.artist,
+            album: 'Local Library',
+            format: file.name.split('.').pop().toUpperCase(),
             src: URL.createObjectURL(file),
-            thumb: thumb,
-            type: 'local'
+            thumb: 'favicon.svg',
+            type: 'local',
+            classification
         };
         addToPlaylist(trackObj, idx === 0 && (!curAudioEl || curAudioEl.paused));
-    }
+    });
 
     if (sourceBadge) sourceBadge.innerText = 'LOCAL';
-    showToast(`Loaded ${files.length} track(s) with metadata`);
+    showToast(`Added ${files.length} track(s) to playlist`);
 }
 
 fileUpload?.addEventListener('change', e => {
@@ -2252,25 +2258,17 @@ fileUpload?.addEventListener('change', e => {
 });
 
 const dropzone = document.getElementById('drag-dropzone');
-let dragEnterDepth = 0;
-window.addEventListener('dragenter', e => {
-    e.preventDefault();
-    dragEnterDepth++;
-    if (dropzone) dropzone.classList.add('active');
-});
 window.addEventListener('dragover', e => {
     e.preventDefault();
+    if (dropzone) dropzone.classList.add('active');
 });
 window.addEventListener('dragleave', e => {
-    e.preventDefault();
-    dragEnterDepth = Math.max(0, dragEnterDepth - 1);
-    if (dragEnterDepth === 0 && dropzone) {
+    if (e.relatedTarget === null && dropzone) {
         dropzone.classList.remove('active');
     }
 });
 window.addEventListener('drop', e => {
     e.preventDefault();
-    dragEnterDepth = 0;
     if (dropzone) dropzone.classList.remove('active');
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
@@ -2356,13 +2354,26 @@ function updateAllBarMaterials() {
         b.material.emissive.setHex(col);
     });
     updateMat(pulseBars, pulseBars.length);
+    if (pulseInnerBars) updateMat(pulseInnerBars, pulseInnerBars.length);
     updateMat(waveBars, waveBars.length);
     if (waveMirrorBars) updateMat(waveMirrorBars, waveMirrorBars.length);
+
+    if (wavePeakBeads) {
+        wavePeakBeads.forEach(b => {
+            b.material.color.copy(colEdge);
+        });
+    }
 
     if (waveHorizon && waveHorizon.material) {
         waveHorizon.material.color.copy(colCenter);
     }
+    if (waveFloor && waveFloor.material) {
+        waveFloor.material.color.copy(colCenter);
+    }
 
+    if (pulseFloor && pulseFloor.material) {
+        pulseFloor.material.color.copy(colCenter);
+    }
     if (pulseGyroCore && pulseGyroCore.material) {
         pulseGyroCore.material.color.copy(colCenter);
         pulseGyroCore.material.emissive.copy(colCenter);
@@ -2473,8 +2484,7 @@ muteBtn?.addEventListener('click', () => {
 });
 
 document.getElementById('reset-cam-btn')?.addEventListener('click', () => {
-    orbitRotX = 0.12; orbitRotY = 0; orbitVelX = 0; orbitVelY = 0;
-    targetCamRadius = 60;
+    targetRotX = 0; targetRotY = 0;
     isAutoCam = false;
     autoCamBtn?.classList.remove('active');
     if (visualizerRoot) { visualizerRoot.rotation.x = 0; visualizerRoot.rotation.y = 0; }
@@ -2496,6 +2506,11 @@ guideModal?.addEventListener('click', e => { if (e.target === guideModal) guideM
 
 const lyricsHud = document.getElementById('lyrics-hud');
 const lyricsBtn = document.getElementById('lyrics-btn');
+const lyricsSearchToggle = document.getElementById('lyrics-search-toggle');
+const lyricsManualBar = document.getElementById('lyrics-manual-bar');
+const lyricsManualInput = document.getElementById('lyrics-manual-input');
+const lyricsManualSubmit = document.getElementById('lyrics-manual-submit-btn');
+
 lyricsBtn?.addEventListener('click', () => {
     isLyricsOpen = !isLyricsOpen;
     lyricsBtn.classList.toggle('active', isLyricsOpen);
@@ -2507,21 +2522,25 @@ document.getElementById('lyrics-close-btn')?.addEventListener('click', () => {
     if (lyricsHud) lyricsHud.style.display = 'none';
 });
 
-const lyricsSearchInp = document.getElementById('lyrics-search-inp');
-const lyricsSearchBtn = document.getElementById('lyrics-search-btn');
+lyricsSearchToggle?.addEventListener('click', () => {
+    if (!lyricsManualBar) return;
+    const isShown = lyricsManualBar.style.display !== 'none';
+    lyricsManualBar.style.display = isShown ? 'none' : 'flex';
+    if (!isShown && lyricsManualInput) {
+        lyricsManualInput.value = `${trackTitle?.innerText || ''} ${trackArtist?.innerText || ''}`.trim();
+        lyricsManualInput.focus();
+    }
+});
 
 function triggerManualLyricsSearch() {
-    const q = lyricsSearchInp?.value.trim();
+    const q = lyricsManualInput?.value.trim();
     if (q) {
-        loadLyricsForTrack(q, '');
+        loadLyricsForTrack(q, '', q);
     }
 }
-lyricsSearchBtn?.addEventListener('click', triggerManualLyricsSearch);
-lyricsSearchInp?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        triggerManualLyricsSearch();
-    }
+lyricsManualSubmit?.addEventListener('click', triggerManualLyricsSearch);
+lyricsManualInput?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') triggerManualLyricsSearch();
 });
 
 window.addEventListener('keydown', e => {
@@ -2563,8 +2582,9 @@ function applyThemeMode(light) {
         themeMoonIcon.style.display = light ? 'none'  : 'block';
     }
     if (bloomPass) {
-        bloomPass.threshold = light ? 0.16 : 0.08;
-        bloomPass.strength  = light ? 1.05 : 1.35;
+        bloomPass.threshold = light ? 0.85 : 0.82;
+        bloomPass.strength  = light ? 0.38 : 0.45;
+        bloomPass.radius    = 0.25;
     }
     localStorage.setItem('wibei_theme_mode', light ? 'light' : 'dark');
 }

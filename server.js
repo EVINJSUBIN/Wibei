@@ -37,22 +37,35 @@ function getExec() {
     return { cmd: isWin ? 'python' : 'python3', prefix: ['-m', 'yt_dlp'], source: 'default-fallback' };
 }
 
-function getSpotifyTitle(url) {
-    return new Promise((resolve, reject) => {
-        https.get(url, (res) => {
+function getSpotifyMetadata(url) {
+    return new Promise((resolve) => {
+        https.get(url, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        }, (res) => {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
-                const match = data.match(/<title>(.*?)<\/title>/);
-                if (match && match[1]) {
-                    let title = match[1].split('|')[0].replace('- song and lyrics by', '').trim();
-                    resolve(title);
-                } else {
-                    resolve(null);
+                const titleMatch = data.match(/<title>(.*?)<\/title>/i);
+                const ogTitleMatch = data.match(/<meta property="og:title" content="(.*?)"/i);
+                const ogImageMatch = data.match(/<meta property="og:image" content="(.*?)"/i);
+                const ogDescMatch = data.match(/<meta property="og:description" content="(.*?)"/i);
+
+                let rawTitle = (ogTitleMatch && ogTitleMatch[1]) || (titleMatch && titleMatch[1]) || '';
+                let title = rawTitle.split('|')[0].replace(/- song and lyrics by.*/i, '').trim();
+                let artist = '';
+                if (ogDescMatch && ogDescMatch[1]) {
+                    const parts = ogDescMatch[1].split('·').map(s => s.trim());
+                    if (parts.length > 1) artist = parts[1];
                 }
+                const thumbnail = ogImageMatch ? ogImageMatch[1] : null;
+                resolve({ title: title || null, artist: artist || null, thumbnail });
             });
-        }).on('error', err => reject(err));
+        }).on('error', () => resolve({ title: null, artist: null, thumbnail: null }));
     });
+}
+
+function getSpotifyTitle(url) {
+    return getSpotifyMetadata(url).then(m => m.title);
 }
 
 app.get(['/app', '/visualizer', '/studio'], (req, res) => {
@@ -295,61 +308,162 @@ app.get('/api/playlist', async (req, res) => {
     }
 });
 
-function parseArtistAndTitle(rawTitle = '', rawArtist = '') {
-    let clean = (str = '') => {
-        return str
-            .replace(/\(official\s*(music\s*)?(video|audio|visualizer|lyric\s*video|hd|4k|clip)\)/gi, '')
-            .replace(/\[official\s*(music\s*)?(video|audio|visualizer|lyric\s*video|hd|4k|clip)\]/gi, '')
-            .replace(/\((visualizer|lyrics?|audio|video|official|hd|4k|remastered|extended)\)/gi, '')
-            .replace(/\[(visualizer|lyrics?|audio|video|official|hd|4k|remastered|extended)\]/gi, '')
-            .replace(/\(feat\.?[^)]*\)/gi, '')
-            .replace(/\[feat\.?[^\]]*\]/gi, '')
-            .replace(/ft\.?\s+[a-zA-Z0-9_\s]+/gi, '')
-            .replace(/\(prod\.?[^)]*\)/gi, '')
-            .replace(/\[prod\.?[^\]]*\]/gi, '')
-            .replace(/\(slowed(\s*\+\s*reverb)?\)/gi, '')
-            .replace(/\[slowed(\s*\+\s*reverb)?\]/gi, '')
-            .replace(/\(bass\s*boosted\)/gi, '')
-            .replace(/\[bass\s*boosted\]/gi, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-    };
+function cleanVideoNoise(str) {
+    if (!str) return '';
+    return str
+        .replace(/\((?:official\s*)?(?:music\s*)?(?:video|audio|visualizer|lyric\s*video|hd|4k|clip|mv|remastered|performance|live)\)/gi, '')
+        .replace(/\[(?:official\s*)?(?:music\s*)?(?:video|audio|visualizer|lyric\s*video|hd|4k|clip|mv|remastered|performance|live)\]/gi, '')
+        .replace(/\((?:lyrics?|audio|visualizer|hq|official)\)/gi, '')
+        .replace(/\[(?:lyrics?|audio|visualizer|hq|official)\]/gi, '')
+        .replace(/\b(ft\.?|feat\.?|featuring)\s+[^\(\)\[\]]+/gi, '')
+        .replace(/\(prod\.?\s*(?:by)?\s+[^\)]+\)/gi, '')
+        .replace(/\[prod\.?\s*(?:by)?\s+[^\]]+\]/gi, '')
+        .replace(/\s*\|\s*.*$/g, '')
+        .replace(/\s*-\s*Topic$/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
-    let title = clean(rawTitle);
-    let artist = clean(rawArtist);
+function parseTrackAndArtist(rawTitle = '', rawArtist = '') {
+    let title = cleanVideoNoise(rawTitle);
+    let artist = cleanVideoNoise(rawArtist);
 
-    // If title has "Artist - Track" or "Artist : Track"
-    const separators = [' - ', ' – ', ' — ', ' : '];
+    const separators = [' - ', ' – ', ' — ', ' // '];
     for (const sep of separators) {
         if (title.includes(sep)) {
             const parts = title.split(sep);
             if (parts.length >= 2) {
-                const possibleArtist = parts[0].trim();
-                const possibleTitle = parts.slice(1).join(sep).trim();
-                if (possibleArtist.length > 0 && possibleTitle.length > 0) {
-                    artist = clean(possibleArtist);
-                    title = clean(possibleTitle);
-                    break;
+                const candidateArtist = parts[0].trim();
+                const candidateTrack = parts.slice(1).join(' ').trim();
+                if (candidateArtist && candidateTrack) {
+                    return {
+                        track: cleanVideoNoise(candidateTrack),
+                        artist: cleanVideoNoise(candidateArtist)
+                    };
                 }
             }
         }
     }
 
-    // Clean up VEVO or Topic suffixes in artist names
-    artist = artist.replace(/vevo$/i, '').replace(/\s*-\s*topic$/i, '').trim();
-
-    return { title, artist, rawTitle, rawArtist };
+    return {
+        track: title,
+        artist: artist
+    };
 }
 
-function fetchLyrics(rawTitle, rawArtist) {
-    return new Promise((resolve) => {
-        const { title, artist } = parseArtistAndTitle(rawTitle, rawArtist);
+const GENRE_RULES = [
+    {
+        genre: 'phonk',
+        label: 'PHONK // DRIFT',
+        mood: 'High-Voltage / Aggressive',
+        theme: 'phonk',
+        color: '#ef4444',
+        accentHex: 0xef4444,
+        regex: /\b(phonk|drift|cowbell|memphis|kordhell|playaphonk|dxrk|lxst cxntury|interworld|shadowraze|mishashi|montagem|automotivo|brazilian funk|funk rj|funk mandelao|sp funk|funk brasileiro|wave phonk|drift phonk|aggregressive phonk|speed up phonk|prod\.?\s*by\s*lxst)\b/i,
+        weight: 2.6
+    },
+    {
+        genre: 'cyber',
+        label: 'CYBER // SYNTHWAVE',
+        mood: 'Futuristic / Electronic',
+        theme: 'cyber',
+        color: '#10b981',
+        accentHex: 0x10b981,
+        regex: /\b(synthwave|retrowave|cyberpunk|cyber|darksynth|electronic|edm|techno|trance|dubstep|dnb|drum and bass|drum & bass|future bass|house music|electro|industrial|glitch|chiptune|eurobeat|hardstyle|carpenter brut|perturbator|kavinsky|daft punk|skrillex|deadmau5|avicii|nightcall)\b/i,
+        weight: 2.3
+    },
+    {
+        genre: 'lofi',
+        label: 'LOFI // CHILL',
+        mood: 'Cozy / Nostalgic',
+        theme: 'lofi',
+        color: '#fb923c',
+        accentHex: 0xfb923c,
+        regex: /\b(lofi|lo-fi|chillhop|chill hop|study beats|chill beats|relaxing beats|sleep beats|coffee shop|cozy|rainy day|jazz hop|mellow|nostalgic|bedroom pop|downtempo|ambient chill|lofi girl|chilledcow|sleepy beats|quiet night|peaceful)\b/i,
+        weight: 2.3
+    },
+    {
+        genre: 'comic',
+        label: 'POP // ENERGETIC',
+        mood: 'Vibrant / Dance',
+        theme: 'comic',
+        color: '#facc15',
+        accentHex: 0xfacc15,
+        regex: /\b(pop|dance pop|hyperpop|k-pop|kpop|j-pop|jpop|anime|kawaii|vocaloid|hatsune miku|funk|disco|groove|upbeat|cheerful|party|happy|blackpink|bts|twice|newjeans|aespa|taylor swift|dua lipa|ariana grande|charli xcx|billie eilish|the weeknd|bruno mars)\b/i,
+        weight: 2.1
+    },
+    {
+        genre: 'serious',
+        label: 'SERIOUS // ACOUSTIC',
+        mood: 'Deep / Cinematic',
+        theme: 'serious',
+        color: '#f8fafc',
+        accentHex: 0xf8fafc,
+        regex: /\b(classical|piano solo|piano|acoustic|orchestra|symphony|cinematic|film score|soundtrack|hans zimmer|chopin|beethoven|mozart|bach|debussy|ludovico einaudi|max richter|philip glass|violin|cello|meditation|dark ambient|drone|minimalist|neoclassical|instrumental acoustic)\b/i,
+        weight: 2.2
+    },
+    {
+        genre: 'hiphop',
+        label: 'TRAP // HIP-HOP',
+        mood: 'Heavy 808 / Rhythm',
+        theme: 'phonk',
+        color: '#a855f7',
+        accentHex: 0xa855f7,
+        regex: /\b(hip hop|hip-hop|rap|trap|drill|boombap|boom bap|freestyle|bars|808 mafia|metro boomin|travis scott|drake|kendrick|kanye|eminem|future|21 savage|playboi carti|lil uzi|gunna|lil baby|central cee)\b/i,
+        weight: 2.2
+    }
+];
 
-        const tryDirect = (t, a) => {
+function classifyMusic({ title = '', artist = '', album = '', tags = [], categories = [], channel = '', uploader = '', description = '' }) {
+    const primaryText = `${title} ${artist} ${album}`;
+    const secondaryText = `${uploader} ${channel} ${(categories || []).join(' ')} ${(tags || []).slice(0, 15).join(' ')} ${(description || '').slice(0, 300)}`;
+    
+    let best = null;
+    let maxScore = 0;
+
+    for (const rule of GENRE_RULES) {
+        const primaryMatches = (primaryText.match(new RegExp(rule.regex, 'gi')) || []).length;
+        const secondaryMatches = (secondaryText.match(new RegExp(rule.regex, 'gi')) || []).length;
+        const score = (primaryMatches * rule.weight * 2.0) + (secondaryMatches * rule.weight * 0.8);
+
+        if (score > maxScore) {
+            maxScore = score;
+            best = rule;
+        }
+    }
+
+    if (best && maxScore >= 1.5) {
+        return {
+            genre: best.genre,
+            label: best.label,
+            mood: best.mood,
+            theme: best.theme,
+            color: best.color,
+            accentHex: best.accentHex,
+            confidence: Math.min(1.0, +(maxScore / 5.0).toFixed(2))
+        };
+    }
+
+    return {
+        genre: 'cyber',
+        label: 'NEO // ELECTRONIC',
+        mood: 'Dynamic Spectrum',
+        theme: 'cyber',
+        color: '#10b981',
+        accentHex: 0x10b981,
+        confidence: 0.5
+    };
+}
+
+function fetchLyrics(title, artist) {
+    return new Promise((resolve) => {
+        const parsed = parseTrackAndArtist(title, artist);
+        const cleanTrack = parsed.track;
+        const cleanArtist = parsed.artist;
+
+        const requestJson = (url) => {
             return new Promise((res) => {
-                if (!t) return res(null);
-                const targetUrl = `https://lrclib.net/api/get?track_name=${encodeURIComponent(t)}${a ? `&artist_name=${encodeURIComponent(a)}` : ''}`;
-                https.get(targetUrl, {
+                https.get(url, {
                     headers: { 'User-Agent': 'WibeiVisualizer/2.0 (https://github.com/evinjsubin/wibei)' }
                 }, (r) => {
                     let d = '';
@@ -357,107 +471,78 @@ function fetchLyrics(rawTitle, rawArtist) {
                     r.on('end', () => {
                         try {
                             const j = JSON.parse(d);
-                            if (j && (j.syncedLyrics || j.plainLyrics)) {
-                                res(j);
-                            } else {
-                                res(null);
-                            }
+                            res(j);
                         } catch (_) { res(null); }
                     });
                 }).on('error', () => res(null));
             });
         };
 
-        const trySearch = (q) => {
-            return new Promise((res) => {
-                if (!q || !q.trim()) return res(null);
-                const targetUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(q.trim())}`;
-                https.get(targetUrl, {
-                    headers: { 'User-Agent': 'WibeiVisualizer/2.0 (https://github.com/evinjsubin/wibei)' }
-                }, (r) => {
-                    let d = '';
-                    r.on('data', c => d += c);
-                    r.on('end', () => {
-                        try {
-                            const list = JSON.parse(d);
-                            if (Array.isArray(list) && list.length > 0) {
-                                // Prefer synced lyrics
-                                const match = list.find(item => item.syncedLyrics) || list.find(item => item.plainLyrics) || list[0];
-                                res(match);
-                            } else {
-                                res(null);
-                            }
-                        } catch (_) { res(null); }
-                    });
-                }).on('error', () => res(null));
-            });
+        const tryLrclibExact = async (t, a) => {
+            if (!t) return null;
+            const targetUrl = `https://lrclib.net/api/get?track_name=${encodeURIComponent(t)}${a ? `&artist_name=${encodeURIComponent(a)}` : ''}`;
+            const j = await requestJson(targetUrl);
+            if (j && (j.syncedLyrics || j.plainLyrics)) return j;
+            return null;
         };
 
-        // Multi-stage cascading query strategy
+        const tryLrclibSearch = async (q) => {
+            if (!q) return null;
+            const targetUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(q)}`;
+            const list = await requestJson(targetUrl);
+            if (Array.isArray(list) && list.length > 0) {
+                return list.find(item => item.syncedLyrics) || list.find(item => item.plainLyrics) || list[0];
+            }
+            return null;
+        };
+
+        const tryLyricsOvh = async (t, a) => {
+            if (!t || !a) return null;
+            const targetUrl = `https://api.lyrics.ovh/v1/${encodeURIComponent(a)}/${encodeURIComponent(t)}`;
+            const j = await requestJson(targetUrl);
+            if (j && j.lyrics) {
+                return {
+                    trackName: t,
+                    artistName: a,
+                    syncedLyrics: null,
+                    plainLyrics: j.lyrics,
+                    source: 'lyrics.ovh'
+                };
+            }
+            return null;
+        };
+
         (async () => {
-            // Stage 1: Exact track + artist
-            let result = await tryDirect(title, artist);
-            if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+            // 1. Direct LRCLIB exact match
+            let res = await tryLrclibExact(cleanTrack, cleanArtist);
+            if (res) return resolve(res);
 
-            // Stage 2: Combined search string
-            if (artist && title) {
-                result = await trySearch(`${artist} ${title}`);
-                if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+            // 2. Try reversed if both present
+            if (cleanTrack && cleanArtist) {
+                res = await tryLrclibExact(cleanArtist, cleanTrack);
+                if (res) return resolve(res);
             }
 
-            // Stage 3: Title-only search
-            result = await trySearch(title);
-            if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+            // 3. LRCLIB general search query
+            if (cleanTrack && cleanArtist) {
+                res = await tryLrclibSearch(`${cleanTrack} ${cleanArtist}`);
+                if (res) return resolve(res);
+            }
 
-            // Stage 4: Direct track-only without artist
-            result = await tryDirect(title, '');
-            if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+            // 4. LRCLIB track-only search
+            if (cleanTrack) {
+                res = await tryLrclibSearch(cleanTrack);
+                if (res) return resolve(res);
+            }
 
-            // Stage 5: Fallback on raw original title
-            if (rawTitle && rawTitle !== title) {
-                result = await trySearch(rawTitle);
-                if (result && (result.syncedLyrics || result.plainLyrics)) return resolve(result);
+            // 5. Secondary fallback: lyrics.ovh
+            if (cleanTrack && cleanArtist) {
+                res = await tryLyricsOvh(cleanTrack, cleanArtist);
+                if (res) return resolve(res);
             }
 
             resolve(null);
         })();
-    });
-}
-
-function enrichMetadataWithITunes(title, artist) {
-    return new Promise((resolve) => {
-        const { title: cleanT, artist: cleanA } = parseArtistAndTitle(title, artist);
-        const query = cleanA && cleanT ? `${cleanA} ${cleanT}` : (cleanT || title || '');
-        if (!query.trim()) return resolve(null);
-
-        const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1`;
-        https.get(itunesUrl, { headers: { 'User-Agent': 'WibeiVisualizer/2.0' } }, (r) => {
-            let d = '';
-            r.on('data', c => d += c);
-            r.on('end', () => {
-                try {
-                    const json = JSON.parse(d);
-                    const item = json.results?.[0];
-                    if (item) {
-                        let highResArt = item.artworkUrl100 || null;
-                        if (highResArt) {
-                            highResArt = highResArt.replace('100x100bb', '600x600bb');
-                        }
-                        const year = item.releaseDate ? item.releaseDate.slice(0, 4) : null;
-                        return resolve({
-                            title: item.trackName || cleanT,
-                            artist: item.artistName || cleanA,
-                            album: item.collectionName || null,
-                            genre: item.primaryGenreName || null,
-                            year: year,
-                            thumbnail: highResArt,
-                            duration: Math.round((item.trackTimeMillis || 0) / 1000)
-                        });
-                    }
-                    resolve(null);
-                } catch (_) { resolve(null); }
-            });
-        }).on('error', () => resolve(null));
     });
 }
 
@@ -475,7 +560,9 @@ app.get('/api/lyrics', async (req, res) => {
                 trackName: lyricsData.trackName || title,
                 artistName: lyricsData.artistName || artist,
                 syncedLyrics: lyricsData.syncedLyrics || null,
-                plainLyrics: lyricsData.plainLyrics || null
+                plainLyrics: lyricsData.plainLyrics || null,
+                isSynced: !!lyricsData.syncedLyrics,
+                source: lyricsData.source || 'lrclib'
             });
         } else {
             log('LYRICS', `No lyrics found for: "${title}"`);
@@ -487,28 +574,48 @@ app.get('/api/lyrics', async (req, res) => {
     }
 });
 
-app.get('/api/meta-enrich', async (req, res) => {
-    const { title, artist } = req.query;
-    if (!title && !artist) return res.json({ enriched: false });
-
-    try {
-        const data = await enrichMetadataWithITunes(title, artist);
-        if (data) {
-            return res.json({ enriched: true, ...data });
-        }
-        res.json({ enriched: false });
-    } catch (e) {
-        res.json({ enriched: false, error: e.message });
-    }
+app.get('/api/classify', (req, res) => {
+    const { title, artist, album, tags } = req.query;
+    const tagArray = tags ? tags.split(',') : [];
+    const classification = classifyMusic({
+        title: title || '',
+        artist: artist || '',
+        album: album || '',
+        tags: tagArray
+    });
+    res.json(classification);
 });
 
 app.get('/metadata', async (req, res) => {
     const url = req.query.url;
     if (!url) return res.status(400).send('URL required');
-  
+
+    if (url.includes('spotify.com/track/')) {
+        try {
+            const spMeta = await getSpotifyMetadata(url);
+            if (spMeta && spMeta.title) {
+                const classification = classifyMusic({
+                    title: spMeta.title,
+                    artist: spMeta.artist
+                });
+                return res.json({
+                    title: spMeta.title,
+                    rawTitle: spMeta.title,
+                    artist: spMeta.artist || 'Spotify Artist',
+                    uploader: spMeta.artist || 'Spotify Artist',
+                    thumbnail: spMeta.thumbnail,
+                    duration: 0,
+                    classification
+                });
+            }
+        } catch (e) {
+            log('METADATA-WARN', `Spotify metadata fallback: ${e.message}`);
+        }
+    }
+
     let targetUrl = url;
     if (!url.startsWith('http')) targetUrl = `ytsearch1:${url} audio`;
-  
+
     const { cmd, prefix, source } = getExec();
     const args = [
         ...prefix,
@@ -518,46 +625,60 @@ app.get('/metadata', async (req, res) => {
         '-j',
         targetUrl
     ];
-    
+
     log('METADATA', `Fetching track metadata via [${source}] for: "${url}"`);
     const ytdlp = spawn(cmd, args);
 
     let out = '';
     ytdlp.stdout.on('data', d => out += d);
 
-    ytdlp.on('error', async (err) => {
+    ytdlp.on('error', (err) => {
         log('METADATA-ERR', `Failed to fetch metadata: ${err.message}`);
-        // Attempt fast iTunes fallback
-        const itunesFallback = await enrichMetadataWithITunes(url, '');
-        if (!res.headersSent) {
-            res.json(itunesFallback || { title: url, uploader: 'Unknown', thumbnail: null });
-        }
+        if (!res.headersSent) res.json({ title: 'Unknown Track', artist: 'Unknown Artist', uploader: 'Unknown', thumbnail: null, classification: classifyMusic({}) });
     });
 
-    ytdlp.on('close', async () => {
+    ytdlp.on('close', () => {
         try {
             const data = JSON.parse(out);
-            const { title: cleanT, artist: cleanA } = parseArtistAndTitle(data.title, data.uploader);
-            log('METADATA', `Resolved: "${data.title}" by ${data.uploader}`);
+            const parsed = parseTrackAndArtist(data.title, data.uploader);
+            const cleanTrackTitle = data.track || parsed.track;
+            const cleanArtistName = data.artist || (data.creator || (data.uploader ? data.uploader.replace(/ - Topic$/i, '') : parsed.artist));
 
-            // Enrich in parallel with iTunes for 600x600 artwork and official genre
-            let enriched = null;
-            try {
-                enriched = await enrichMetadataWithITunes(cleanT, cleanA);
-            } catch (_) {}
+            let bestThumbnail = data.thumbnail;
+            if (Array.isArray(data.thumbnails) && data.thumbnails.length > 0) {
+                const sorted = [...data.thumbnails].sort((a, b) => (b.width || 0) - (a.width || 0));
+                if (sorted[0] && sorted[0].url) {
+                    bestThumbnail = sorted[0].url;
+                }
+            }
 
+            const classification = classifyMusic({
+                title: cleanTrackTitle,
+                artist: cleanArtistName,
+                album: data.album,
+                tags: data.tags,
+                categories: data.categories,
+                channel: data.channel,
+                uploader: data.uploader,
+                description: data.description
+            });
+
+            log('METADATA', `Resolved: "${cleanTrackTitle}" by ${cleanArtistName} [${classification.label}]`);
             res.json({
-                title: enriched?.title || cleanT || data.title,
-                uploader: enriched?.artist || cleanA || data.uploader,
-                thumbnail: enriched?.thumbnail || data.thumbnail,
-                duration: enriched?.duration || data.duration,
-                genre: enriched?.genre || data.genre || null,
-                album: enriched?.album || data.album || null,
-                year: enriched?.year || (data.upload_date ? data.upload_date.slice(0, 4) : null)
+                title: cleanTrackTitle,
+                rawTitle: data.title,
+                artist: cleanArtistName,
+                uploader: data.uploader,
+                album: data.album || null,
+                releaseYear: data.release_year || (data.upload_date ? data.upload_date.slice(0, 4) : null),
+                thumbnail: bestThumbnail,
+                duration: data.duration || 0,
+                genre: data.genre || (data.categories ? data.categories[0] : null),
+                tags: (data.tags || []).slice(0, 10),
+                classification: classification
             });
         } catch (e) {
-            const fallback = await enrichMetadataWithITunes(url, '');
-            res.json(fallback || { title: url, uploader: 'Unknown', thumbnail: null });
+            res.json({ title: 'Unknown', artist: 'Unknown Artist', uploader: 'Unknown', thumbnail: null, classification: classifyMusic({}) });
         }
     });
 });
