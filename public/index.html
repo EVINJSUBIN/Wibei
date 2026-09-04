@@ -3,138 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wibei // VOID 3D Audio Spectrograph</title>
+    <title>wibei // void</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="landing.css">
 </head>
 <body>
     <canvas id="hero-webgl-canvas"></canvas>
-    <div class="void-atmosphere"></div>
 
     <div class="content-container">
-        <div class="badge-row">
-            <span class="system-badge">
-                <span class="pulse-dot"></span>
-                VOID ENGINE // 3D AUDIO DSP
-            </span>
-            <span class="system-badge">STARDANCE</span>
-        </div>
-
         <header>
-            <h1>wibei <span class="version">v2.4</span></h1>
-            <p class="subtitle">Next-gen 3D audio spectrograph, lossless DSP pipeline & spatial acoustics</p>
+            <h1>wibei</h1>
+            <p class="subtitle">3D audio spectrograph &amp; DSP lab</p>
         </header>
 
         <div class="actions">
-            <a href="app.html" class="btn btn-launch">
-                <span>Launch Studio</span>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                </svg>
-            </a>
-            <a href="https://github.com/EVINJSUBIN/Wibei" class="btn btn-source" target="_blank" rel="noopener noreferrer">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-                </svg>
-                <span>GitHub</span>
-            </a>
+            <a href="app.html" class="btn active">[ launch studio ]</a>
+            <a href="https://github.com/EVINJSUBIN/Wibei" class="btn" target="_blank" rel="noopener noreferrer">[ source code ]</a>
         </div>
 
         <section>
-            <div class="section-tag">OVERVIEW</div>
-            <p class="intro-text">
-                Built for Hack Club Stardance by <a href="https://github.com/EVINJSUBIN" target="_blank" rel="noopener noreferrer">@EVINJSUBIN</a> and <a href="https://github.com/aamosm" target="_blank" rel="noopener noreferrer">@aamosm</a>. 
-                Route lossless local tracks, live YouTube/Spotify streams, or acoustic microphone input. Experiment with real-time biquad DSP nodes and render acoustic harmonics in 3D WebGL space with zero latency.
-            </p>
+            <p>Built for Hack Club Stardance by <a href="https://github.com/EVINJSUBIN" target="_blank" rel="noopener noreferrer">@EVINJSUBIN</a> and <a href="https://github.com/aamosm" target="_blank" rel="noopener noreferrer">@aamosm</a>.</p>
+            <br>
+            <p>Route lossless audio, experiment with real-time DSP filter nodes (biquad), and render acoustic harmonics in 3D space with zero latency.</p>
         </section>
 
         <section>
-            <div class="section-tag">3D SPECTROGRAPH ENGINES</div>
-            <div class="engine-grid">
-                <div class="engine-card">
-                    <div class="engine-header">
-                        <span class="engine-title">Radial Pulse</span>
-                        <span class="engine-badge">RING</span>
-                    </div>
-                    <p class="engine-desc">128 cylindrical towers scaling radially with sub-bass kick physics and a floating center album art hologram.</p>
-                </div>
-                <div class="engine-card">
-                    <div class="engine-header">
-                        <span class="engine-title">Wave Highway</span>
-                        <span class="engine-badge">WAVE</span>
-                    </div>
-                    <p class="engine-desc">Kinetic audio ribbon with mirror-floor reflection and dynamic logarithmic frequency displacement.</p>
-                </div>
-                <div class="engine-card">
-                    <div class="engine-header">
-                        <span class="engine-title">Spatial Matrix</span>
-                        <span class="engine-badge">GRID</span>
-                    </div>
-                    <p class="engine-desc">16x16 voxel terrain grid pulsing to harmonic shockwaves and circular frequency ripples.</p>
-                </div>
-                <div class="engine-card">
-                    <div class="engine-header">
-                        <span class="engine-title">Pulsar Sphere</span>
-                        <span class="engine-badge">ORB</span>
-                    </div>
-                    <p class="engine-desc">Geodesic wireframe icosahedron deformed by harmonic bins with dual orbital gimbal rings.</p>
-                </div>
-            </div>
-        </section>
-
-        <section>
-            <div class="section-tag">ACOUSTIC DSP PREVIEW</div>
-            <div class="dsp-grid">
-                <button class="sound-demo-btn active" data-mode="clean">
-                    <div class="btn-meta">
-                        <span class="btn-label">Clean Pass</span>
-                        <span class="btn-sub">Flat studio reference</span>
-                    </div>
-                    <span class="status-led"></span>
-                </button>
-                <button class="sound-demo-btn" data-mode="muffler">
-                    <div class="btn-meta">
-                        <span class="btn-label">Muffler Filter</span>
-                        <span class="btn-sub">450Hz low-pass underwater vibe</span>
-                    </div>
-                    <span class="status-led"></span>
-                </button>
-                <button class="sound-demo-btn" data-mode="bass">
-                    <div class="btn-meta">
-                        <span class="btn-label">Bass Drive</span>
-                        <span class="btn-sub">+16dB 140Hz sub-harmonic boost</span>
-                    </div>
-                    <span class="status-led"></span>
-                </button>
-                <button class="sound-demo-btn" data-mode="nightcore">
-                    <div class="btn-meta">
-                        <span class="btn-label">Nightcore Shifter</span>
-                        <span class="btn-sub">High-shelf pitch & speed overdrive</span>
-                    </div>
-                    <span class="status-led"></span>
-                </button>
-            </div>
-        </section>
-
-        <section>
-            <div class="section-tag">ARCHITECTURE</div>
-            <ul class="specs-list">
-                <li>32-bit Floating Web Audio API</li>
-                <li>Three.js UnrealBloomPass Pipeline</li>
-                <li>Zero-Dependency ID3 APIC Parser</li>
-                <li>Multi-Source Lossless Pipeline</li>
-                <li>Kinetic Audio Shockwave Physics</li>
-                <li>60+ FPS Hardware-Accelerated</li>
+            <h3>Engines</h3>
+            <ul>
+                <li><strong>Radial Pulse:</strong> 128 towers scaling radially with sub-bass kick transients &amp; center hologram.</li>
+                <li><strong>Waveform:</strong> 64-channel linear frequency analyzer &amp; kinetic ribbon highway.</li>
+                <li><strong>Matrix:</strong> 16x16 spatial voxel grid pulsing to harmonic shockwaves.</li>
+                <li><strong>Pulsar Sphere:</strong> Geodesic icosahedron deformed by harmonic bins with dual gimbal rings.</li>
             </ul>
         </section>
 
+        <section>
+            <h3>Aesthetic Vibes</h3>
+            <ul>
+                <li><strong>Serious Void:</strong> Distraction-free monochrome mixing spectrograph (default).</li>
+                <li><strong>Phonk / Drift:</strong> Blood Crimson &amp; Toxic Violet neon bloom with heavy bass physics.</li>
+                <li><strong>Comic / Pop:</strong> High-contrast tri-color palette with comic vibrancy.</li>
+                <li><strong>Lofi Sunset:</strong> Peach, Lavender &amp; Dusk atmosphere.</li>
+                <li><strong>Cyber Matrix:</strong> Acid green phosphors with digital terminal feel.</li>
+                <li><strong>Dynamic Auto:</strong> Real-time FFT mood engine that shifts the entire app with the music.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h3>Test DSP</h3>
+            <div class="dsp-grid">
+                <button class="sound-demo-btn active" data-mode="clean">[ clean ]</button>
+                <button class="sound-demo-btn" data-mode="muffler">[ muffler ]</button>
+                <button class="sound-demo-btn" data-mode="bass">[ bass drive ]</button>
+                <button class="sound-demo-btn" data-mode="nightcore">[ nightcore ]</button>
+            </div>
+        </section>
+        
         <footer>
-            <span>MIT License // 100% Client-Side WebGL</span>
-            <span>Hack Club Stardance 2026</span>
+            <p>MIT License. 100% Client-Side WebGL &amp; Web Audio API.</p>
         </footer>
     </div>
 
