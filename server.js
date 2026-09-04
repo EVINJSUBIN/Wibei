@@ -358,6 +358,32 @@ function cleanTitleForLyrics(str) {
 
 function fetchLyrics(title, artist) {
     return new Promise((resolve) => {
+        const lower = (title || '').toLowerCase();
+        if (lower.includes('synthwave pulse')) {
+            return resolve({
+                trackName: 'Synthwave Pulse',
+                artistName: 'RetroWave Studio',
+                syncedLyrics: `[00:00.00] ♫ (Analog Synth Arpeggio Intro) ♫\n[00:08.50] Cruising down the neon highway into the midnight grid...\n[00:18.20] Analog pulses beating through the cybernetic vein...\n[00:28.00] ♫ (Bassline Drop & Kinetic Surge) ♫\n[00:38.40] Electric dreams beneath the purple neon rain...\n[00:48.00] Feel the frequency resonate across the horizon...\n[00:58.20] ♫ (Full Spectrum Synthwave Climax) ♫\n[01:15.00] Outrun the shadows, lost inside the digital stream...\n[01:30.00] ♫ (Smooth Retro Outro) ♫`,
+                plainLyrics: `Cruising down the neon highway into the midnight grid...\nAnalog pulses beating through the cybernetic vein...\nElectric dreams beneath the purple neon rain...\nFeel the frequency resonate across the horizon...\nOutrun the shadows, lost inside the digital stream...`
+            });
+        }
+        if (lower.includes('lofi chill') || lower.includes('blizzard')) {
+            return resolve({
+                trackName: 'Lofi Chill Beats',
+                artistName: 'Lofi Studio',
+                syncedLyrics: `[00:00.00] ♫ (Vinyl Dust & Warm Rhodes Chords) ♫\n[00:07.80] Rain tapping softly against the foggy bedroom window...\n[00:16.50] Warm cup of coffee steaming on the wooden desk...\n[00:25.00] ♫ (Mellow Hip-Hop Drum Groove) ♫\n[00:34.20] Lo-fi tape warmth drifting into the quiet midnight air...\n[00:44.00] Pages turning, thoughts floating in serene tranquility...\n[00:54.00] ♫ (Gentle Tape Wobble Solo) ♫\n[01:10.00] Breathing slowly, peaceful rhythm taking over...\n[01:25.00] ♫ (Fade into Warm Static) ♫`,
+                plainLyrics: `Rain tapping softly against the foggy bedroom window...\nWarm cup of coffee steaming on the wooden desk...\nLo-fi tape warmth drifting into the quiet midnight air...\nPages turning, thoughts floating in serene tranquility...\nBreathing slowly, peaceful rhythm taking over...`
+            });
+        }
+        if (lower.includes('acoustic harmony')) {
+            return resolve({
+                trackName: 'Acoustic Harmony',
+                artistName: 'Ambient Vibes',
+                syncedLyrics: `[00:00.00] ♫ (Ethereal Acoustic Harmonic Resonance) ♫\n[00:09.00] Starlight shimmering over an endless glassy sea...\n[00:18.50] Waves of gentle harmonics washing across the soul...\n[00:28.00] ♫ (Ambient Cello & Acoustic Strings Swell) ♫\n[00:38.20] Pure acoustic vibrations drifting in zero gravity...\n[00:48.00] Floating above the clouds in timeless meditation...\n[00:58.00] ♫ (Harmonic Chimes & Deep Reverb) ♫\n[01:15.00] Peaceful resonance echoing through eternity...\n[01:30.00] ♫ (Soft Acoustic Fade) ♫`,
+                plainLyrics: `Starlight shimmering over an endless glassy sea...\nWaves of gentle harmonics washing across the soul...\nPure acoustic vibrations drifting in zero gravity...\nFloating above the clouds in timeless meditation...\nPeaceful resonance echoing through eternity...`
+            });
+        }
+
         const parsed = parseTrackMeta(title, artist);
         const cleanTitle = cleanTitleForLyrics(parsed.title);
         const cleanArtist = cleanTitleForLyrics(parsed.artist);
@@ -460,6 +486,44 @@ app.get('/metadata', (req, res) => {
     const url = req.query.url;
     if (!url) return res.status(400).send('URL required');
   
+    // Fast metadata for local demo tracks
+    if (url.includes('synthwave.mp3') || url.toLowerCase().includes('synthwave pulse')) {
+        return res.json({
+            title: 'Synthwave Pulse',
+            artist: 'RetroWave Studio',
+            album: 'Neon Horizon',
+            genre: 'Synthwave',
+            bpm: 128,
+            uploader: 'RetroWave Studio',
+            thumbnail: '/images/demo-synthwave.svg',
+            duration: 223
+        });
+    }
+    if (url.includes('lofi.mp3') || url.toLowerCase().includes('lofi chill')) {
+        return res.json({
+            title: 'Lofi Chill Beats',
+            artist: 'Lofi Studio',
+            album: 'Midnight Coffee',
+            genre: 'Lofi',
+            bpm: 85,
+            uploader: 'Lofi Studio',
+            thumbnail: '/images/demo-lofi.svg',
+            duration: 184
+        });
+    }
+    if (url.includes('chill.mp3') || url.toLowerCase().includes('acoustic harmony')) {
+        return res.json({
+            title: 'Acoustic Harmony',
+            artist: 'Ambient Vibes',
+            album: 'Celestial Waves',
+            genre: 'Ambient',
+            bpm: 100,
+            uploader: 'Ambient Vibes',
+            thumbnail: '/images/demo-chill.svg',
+            duration: 255
+        });
+    }
+
     let targetUrl = url;
     if (!url.startsWith('http')) targetUrl = `ytsearch1:${url} audio`;
   

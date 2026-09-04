@@ -1416,9 +1416,9 @@ function stopMic() {
 }
 
 let playlist = [
-    { id: 'demo-1', title: 'Synthwave Pulse', artist: 'RetroWave Studio', src: '/audio/synthwave.mp3', thumb: 'favicon.svg', type: 'demo' },
-    { id: 'demo-2', title: 'Lofi Chill Beats', artist: 'Lofi Studio', src: '/audio/lofi.mp3', thumb: 'favicon.svg', type: 'demo' },
-    { id: 'demo-3', title: 'Acoustic Harmony', artist: 'Ambient Vibes', src: '/audio/chill.mp3', thumb: 'favicon.svg', type: 'demo' }
+    { id: 'demo-1', title: 'Synthwave Pulse', artist: 'RetroWave Studio', album: 'Neon Horizon', genre: 'Synthwave', bpm: 128, src: '/audio/synthwave.mp3', thumb: '/images/demo-synthwave.svg', type: 'demo' },
+    { id: 'demo-2', title: 'Lofi Chill Beats', artist: 'Lofi Studio', album: 'Midnight Coffee', genre: 'Lofi', bpm: 85, src: '/audio/lofi.mp3', thumb: '/images/demo-lofi.svg', type: 'demo' },
+    { id: 'demo-3', title: 'Acoustic Harmony', artist: 'Ambient Vibes', album: 'Celestial Waves', genre: 'Ambient', bpm: 100, src: '/audio/chill.mp3', thumb: '/images/demo-chill.svg', type: 'demo' }
 ];
 let currentTrackIdx = -1;
 let isShuffle = false;
@@ -1440,6 +1440,7 @@ function renderPlaylistUI() {
         const item = document.createElement('div');
         item.className = `queue-item ${idx === currentTrackIdx ? 'active' : ''}`;
         item.innerHTML = `
+            <img class="queue-thumb" src="${track.thumb || 'favicon.svg'}" alt="" onerror="this.src='favicon.svg'">
             <div class="queue-item-info">
                 <span class="queue-item-title">${idx + 1}. ${track.title}</span>
                 <span class="queue-item-sub">${track.artist || 'Audio Track'}</span>
@@ -1509,7 +1510,7 @@ function playTrackAtIndex(idx) {
         else if (t.includes('phonk') || t.includes('drift')) applyTheme('phonk');
         else if (t.includes('acoustic') || t.includes('piano')) applyTheme('serious');
 
-        playDirectAudio(track.src, track.title, track.artist);
+        playDirectAudio(track.src, track.title, track.artist, track.thumb);
     }
 }
 
@@ -1692,10 +1693,10 @@ function attachTimeEvents(el) {
     };
 }
 
-function playDirectAudio(src, title, artist) {
+function playDirectAudio(src, title, artist, thumb = null) {
     stopMic();
     const thisSession = ++currentAudioSessionId;
-    updateTrackInfo(title, artist, null);
+    updateTrackInfo(title, artist, thumb);
     if (sourceBadge) sourceBadge.innerText = 'PLAYING';
 
     if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
@@ -1776,7 +1777,7 @@ function togglePlay() {
         if (playlist.length > 0) {
             playTrackAtIndex(0);
         } else {
-            playDirectAudio('/audio/synthwave.mp3', 'Synthwave Pulse', 'RetroWave Studio');
+            playDirectAudio('/audio/synthwave.mp3', 'Synthwave Pulse', 'RetroWave Studio', '/images/demo-synthwave.svg');
         }
         return;
     }
@@ -1825,9 +1826,9 @@ document.getElementById('clear-queue-btn')?.addEventListener('click', clearPlayl
 
 document.getElementById('queue-all-presets-btn')?.addEventListener('click', () => {
     const demos = [
-        { title: 'Synthwave Pulse', artist: 'RetroWave Studio', src: '/audio/synthwave.mp3', thumb: 'favicon.svg', type: 'demo' },
-        { title: 'Lofi Chill Beats', artist: 'Lofi Studio', src: '/audio/lofi.mp3', thumb: 'favicon.svg', type: 'demo' },
-        { title: 'Acoustic Harmony', artist: 'Ambient Vibes', src: '/audio/chill.mp3', thumb: 'favicon.svg', type: 'demo' }
+        { title: 'Synthwave Pulse', artist: 'RetroWave Studio', album: 'Neon Horizon', genre: 'Synthwave', bpm: 128, src: '/audio/synthwave.mp3', thumb: '/images/demo-synthwave.svg', type: 'demo' },
+        { title: 'Lofi Chill Beats', artist: 'Lofi Studio', album: 'Midnight Coffee', genre: 'Lofi', bpm: 85, src: '/audio/lofi.mp3', thumb: '/images/demo-lofi.svg', type: 'demo' },
+        { title: 'Acoustic Harmony', artist: 'Ambient Vibes', album: 'Celestial Waves', genre: 'Ambient', bpm: 100, src: '/audio/chill.mp3', thumb: '/images/demo-chill.svg', type: 'demo' }
     ];
     demos.forEach(d => addToPlaylist(d, false));
     showToast('Enqueued all 3 demo stems!');
@@ -1853,8 +1854,11 @@ document.querySelectorAll('.preset-row').forEach(row => {
         const trackObj = {
             title: row.dataset.title || 'Demo Track',
             artist: row.dataset.artist || 'Studio',
+            album: row.dataset.album || 'Demo Album',
+            genre: row.dataset.genre || 'Electronic',
+            bpm: row.dataset.bpm || '120',
             src: row.dataset.src,
-            thumb: 'favicon.svg',
+            thumb: row.dataset.thumb || '/images/demo-synthwave.svg',
             type: 'demo'
         };
         addToPlaylist(trackObj, true);

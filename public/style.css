@@ -310,6 +310,24 @@ body.light-mode .deck-tab.active {
     color: var(--dimmer);
     font-weight: 600;
 }
+.preset-thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    background: #111;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.preset-row:hover .preset-thumb {
+    transform: scale(1.06);
+    border-color: var(--accent);
+}
+.preset-row.active .preset-thumb {
+    border-color: var(--accent);
+    box-shadow: 0 0 10px var(--accent-glow);
+}
 .preset-details { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .preset-title {
     font-size: 12px;
@@ -319,9 +337,12 @@ body.light-mode .deck-tab.active {
     text-overflow: ellipsis;
 }
 .preset-sub {
-    font-size: 10px;
+    font-size: 9.5px;
     font-family: var(--font-mono);
     color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .preset-led {
     width: 6px;
@@ -475,6 +496,128 @@ body.light-mode .deck-tab.active {
     transform: scale(0.98);
 }
 .deck-hint { font-size: 10px; color: var(--dim); text-align: center; line-height: 1.4; }
+
+/* Playlist Queue Styling */
+.queue-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+}
+.queue-title-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--dim);
+    letter-spacing: 0.8px;
+}
+.queue-clear-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    color: var(--dim);
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.queue-clear-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-dim);
+}
+.queue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.queue-list::-webkit-scrollbar { width: 3px; }
+.queue-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+.queue-empty-state {
+    padding: 24px 12px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--dim);
+    line-height: 1.5;
+}
+.queue-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-md);
+    background: var(--panel-sub);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.queue-item:hover {
+    background: var(--panel-hover);
+    border-color: var(--border-hover);
+}
+.queue-item.active {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    box-shadow: 0 2px 10px var(--accent-glow);
+}
+.queue-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    background: #111;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.queue-item-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+}
+.queue-item-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.queue-item.active .queue-item-title {
+    color: var(--accent);
+}
+.queue-item-sub {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.queue-remove-btn {
+    background: none;
+    border: none;
+    color: var(--dim);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+    line-height: 1;
+}
+.queue-remove-btn:hover {
+    color: #ef4444;
+}
 
 /* Right Deck Controls */
 .section-group { display: flex; flex-direction: column; gap: 6px; }

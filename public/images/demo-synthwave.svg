@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0b0314"/>
+      <stop offset="55%" stop-color="#1e0836"/>
+      <stop offset="100%" stop-color="#07020d"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff007f"/>
+      <stop offset="50%" stop-color="#ff7b00"/>
+      <stop offset="100%" stop-color="#ffd000"/>
+    </linearGradient>
+    <linearGradient id="grid" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#ff007f" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="title" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="50%" stop-color="#00f2fe"/>
+      <stop offset="100%" stop-color="#ff007f"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <clipPath id="sunClip">
+      <circle cx="256" cy="235" r="105"/>
+    </clipPath>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <g fill="#ffffff" opacity="0.65">
+    <circle cx="65" cy="80" r="1.5"/>
+    <circle cx="120" cy="140" r="1"/>
+    <circle cx="190" cy="60" r="1.8"/>
+    <circle cx="340" cy="90" r="1.2"/>
+    <circle cx="410" cy="50" r="2"/>
+    <circle cx="450" cy="130" r="1.5"/>
+    <circle cx="90" cy="200" r="1"/>
+    <circle cx="430" cy="210" r="1.2"/>
+  </g>
+
+  <polygon points="40,320 140,240 220,320" fill="#140628" opacity="0.9"/>
+  <polygon points="180,320 280,210 380,320" fill="#1b0833" opacity="0.95"/>
+  <polygon points="320,320 420,250 490,320" fill="#120524" opacity="0.9"/>
+
+  <g clip-path="url(#sunClip)" filter="url(#glow)">
+    <circle cx="256" cy="235" r="105" fill="url(#sun)"/>
+    <rect x="130" y="220" width="250" height="4" fill="#0b0314"/>
+    <rect x="130" y="234" width="250" height="6" fill="#0b0314"/>
+    <rect x="130" y="250" width="250" height="9" fill="#0b0314"/>
+    <rect x="130" y="270" width="250" height="13" fill="#0b0314"/>
+    <rect x="130" y="295" width="250" height="18" fill="#0b0314"/>
+    <rect x="130" y="325" width="250" height="24" fill="#0b0314"/>
+  </g>
+
+  <line x1="0" y1="320" x2="512" y2="320" stroke="#00f2fe" stroke-width="2.5" filter="url(#glow)"/>
+
+  <g stroke="url(#grid)" stroke-width="1.4" opacity="0.75">
+    <line x1="256" y1="320" x2="-80" y2="512"/>
+    <line x1="256" y1="320" x2="20" y2="512"/>
+    <line x1="256" y1="320" x2="110" y2="512"/>
+    <line x1="256" y1="320" x2="190" y2="512"/>
+    <line x1="256" y1="320" x2="256" y2="512"/>
+    <line x1="256" y1="320" x2="322" y2="512"/>
+    <line x1="256" y1="320" x2="402" y2="512"/>
+    <line x1="256" y1="320" x2="492" y2="512"/>
+    <line x1="256" y1="320" x2="592" y2="512"/>
+
+    <line x1="0" y1="328" x2="512" y2="328"/>
+    <line x1="0" y1="340" x2="512" y2="340"/>
+    <line x1="0" y1="358" x2="512" y2="358"/>
+    <line x1="0" y1="384" x2="512" y2="384"/>
+    <line x1="0" y1="420" x2="512" y2="420"/>
+    <line x1="0" y1="468" x2="512" y2="468"/>
+  </g>
+
+  <rect width="512" height="512" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+
+  <g transform="translate(32, 42)">
+    <rect width="100" height="24" rx="12" fill="rgba(0, 242, 254, 0.12)" stroke="#00f2fe" stroke-width="1"/>
+    <text x="50" y="16" fill="#00f2fe" font-family="monospace" font-size="10" font-weight="700" text-anchor="middle" letter-spacing="1">128 BPM</text>
+  </g>
+  <g transform="translate(380, 42)">
+    <rect width="100" height="24" rx="12" fill="rgba(255, 0, 127, 0.12)" stroke="#ff007f" stroke-width="1"/>
+    <text x="50" y="16" fill="#ff007f" font-family="monospace" font-size="10" font-weight="700" text-anchor="middle" letter-spacing="1">SYNTH</text>
+  </g>
+
+  <g transform="translate(32, 462)">
+    <text x="0" y="0" fill="url(#title)" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="900" letter-spacing="1.5">SYNTHWAVE PULSE</text>
+    <text x="0" y="20" fill="rgba(248, 250, 252, 0.7)" font-family="monospace" font-size="11" font-weight="500" letter-spacing="1">RETROWAVE STUDIO // STEM 01</text>
+  </g>
+</svg>
