@@ -35,6 +35,7 @@ let vgridFloor, pulseFloor, waveFloor;
 let pulseBars = [], waveBars = [], waveMirrorBars = [], vgridBars = [], orbVertices = [];
 let orbMesh, orbWireMesh, orbInnerCore, orbRing1, orbRing2;
 let pulseGyroCore, pulseHalo, waveHorizon;
+let pulseArtDiscGrp, pulseArtDiscMesh, pulseArtBorder, pulseArtBackdrop, pulseTextureLoader;
 
 let matrixRipplePhase = 0;
 let matrixShockwaves = [];
@@ -227,6 +228,39 @@ function updatePlayIcons(playing) {
     if (artWrap) artWrap.classList.toggle('playing', playing);
 }
 
+function setPulseCenterArt(thumbUrl) {
+    if (!pulseArtDiscGrp || !pulseArtDiscMesh) return;
+
+    const isValid = thumbUrl && 
+                    typeof thumbUrl === 'string' && 
+                    thumbUrl !== 'favicon.svg' && 
+                    (thumbUrl.startsWith('http') || thumbUrl.startsWith('/') || thumbUrl.startsWith('blob:') || thumbUrl.startsWith('data:'));
+
+    if (isValid) {
+        if (!pulseTextureLoader) pulseTextureLoader = new THREE.TextureLoader();
+        pulseTextureLoader.load(
+            thumbUrl,
+            (tex) => {
+                tex.colorSpace = THREE.SRGBColorSpace;
+                pulseArtDiscMesh.material.map = tex;
+                pulseArtDiscMesh.material.needsUpdate = true;
+                pulseArtDiscGrp.visible = true;
+                if (pulseGyroCore) {
+                    pulseGyroCore.scale.set(1.55, 1.55, 1.55);
+                }
+            },
+            undefined,
+            () => {
+                pulseArtDiscGrp.visible = false;
+                if (pulseGyroCore) pulseGyroCore.scale.set(1, 1, 1);
+            }
+        );
+    } else {
+        pulseArtDiscGrp.visible = false;
+        if (pulseGyroCore) pulseGyroCore.scale.set(1, 1, 1);
+    }
+}
+
 function updateTrackInfo(title, artist, thumb) {
     if (trackTitle)  trackTitle.innerText  = title || 'Unknown Track';
     if (trackArtist) trackArtist.innerText = artist || 'Unknown Artist';
@@ -235,13 +269,15 @@ function updateTrackInfo(title, artist, thumb) {
     if (lyricsTrackTitle) lyricsTrackTitle.innerText = `${title || 'Track'} // ${artist || 'Artist'}`;
 
     if (albumArt) {
-        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/'))) {
+        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/') || thumb.startsWith('blob:') || thumb.startsWith('data:'))) {
             albumArt.src = thumb;
         } else {
             albumArt.src = 'favicon.svg';
         }
     }
     
+    setPulseCenterArt(thumb);
+
     if (title && !title.includes('Connecting') && !title.includes('Loading') && !title.includes('Error')) {
         loadLyricsForTrack(title, artist);
     }
@@ -725,6 +761,46 @@ function initThree() {
     pulseGyroCore = new THREE.Mesh(gyroGeo, gyroMat);
     pulseGrp.add(pulseGyroCore);
 
+    // Center Floating Music Album Art Disc
+    pulseArtDiscGrp = new THREE.Group();
+    pulseArtDiscGrp.position.set(0, 0, 0);
+
+    const artGeo = new THREE.CircleGeometry(4.2, 64);
+    const artMat = new THREE.MeshBasicMaterial({
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.96
+    });
+    pulseArtDiscMesh = new THREE.Mesh(artGeo, artMat);
+    pulseArtDiscGrp.add(pulseArtDiscMesh);
+
+    const backdropGeo = new THREE.CircleGeometry(4.35, 64);
+    const backdropMat = new THREE.MeshStandardMaterial({
+        color: 0x070709,
+        roughness: 0.2,
+        metalness: 0.8,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.7
+    });
+    pulseArtBackdrop = new THREE.Mesh(backdropGeo, backdropMat);
+    pulseArtBackdrop.position.z = -0.04;
+    pulseArtDiscGrp.add(pulseArtBackdrop);
+
+    const borderGeo = new THREE.RingGeometry(4.2, 4.45, 64);
+    const borderMat = new THREE.MeshBasicMaterial({
+        color: thInit.color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85
+    });
+    pulseArtBorder = new THREE.Mesh(borderGeo, borderMat);
+    pulseArtBorder.position.z = 0.02;
+    pulseArtDiscGrp.add(pulseArtBorder);
+
+    pulseArtDiscGrp.visible = false;
+    pulseGrp.add(pulseArtDiscGrp);
+
     // Glowing Halo Base Ring
     const haloGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
     const haloMat = new THREE.MeshBasicMaterial({
@@ -921,6 +997,7 @@ function initThree() {
         composer.setSize(innerWidth, innerHeight);
     });
 
+    setPulseCenterArt('/images/demo-synthwave.svg');
     threeAnimate();
 }
 
@@ -1130,10 +1207,26 @@ function threeAnimate() {
                 }
             }
 
+            if (pulseArtDiscGrp && pulseArtDiscGrp.visible) {
+                pulseArtDiscMesh.rotation.z += (isPlaying ? (0.01 + bgBassLevel * 0.02) : 0.002);
+                pulseArtDiscGrp.rotation.y = Math.sin(time * 0.8) * 0.16;
+                pulseArtDiscGrp.rotation.x = Math.cos(time * 0.6) * 0.12;
+                const discScale = 1 + bgBassLevel * 0.22;
+                pulseArtDiscGrp.scale.set(discScale, discScale, discScale);
+                if (pulseArtBorder && pulseArtBorder.material) {
+                    pulseArtBorder.material.opacity = 0.5 + bgBassLevel * 0.45;
+                    if (th.isAuto) {
+                        const c = new THREE.Color().setHSL(autoHue, 0.9, 0.6);
+                        pulseArtBorder.material.color.copy(c);
+                    }
+                }
+            }
+
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.02 + bgBassLevel * 0.04;
                 pulseGyroCore.rotation.y += 0.025 + bgBassLevel * 0.05;
-                const gyroScale = 1 + bgBassLevel * 0.65;
+                const baseScale = pulseArtDiscGrp?.visible ? 1.55 : 1.0;
+                const gyroScale = baseScale + bgBassLevel * 0.65;
                 pulseGyroCore.scale.set(gyroScale, gyroScale, gyroScale);
                 pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.4;
                 if (th.isAuto) {
@@ -1317,10 +1410,17 @@ function threeAnimate() {
                 b.scale.y += (tgt - b.scale.y) * 0.14;
                 b.material.emissiveIntensity = 0.32 + (wave * 0.22 + 0.22);
             }
+            if (pulseArtDiscGrp && pulseArtDiscGrp.visible) {
+                pulseArtDiscMesh.rotation.z += 0.003;
+                pulseArtDiscGrp.rotation.y = Math.sin(time * 0.5) * 0.1;
+                pulseArtDiscGrp.rotation.x = Math.cos(time * 0.4) * 0.08;
+                pulseArtDiscGrp.scale.set(1, 1, 1);
+            }
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.01;
                 pulseGyroCore.rotation.y += 0.015;
-                pulseGyroCore.scale.set(1, 1, 1);
+                const baseScale = pulseArtDiscGrp?.visible ? 1.55 : 1.0;
+                pulseGyroCore.scale.set(baseScale, baseScale, baseScale);
             }
             if (pulseHalo) {
                 pulseHalo.scale.set(1, 1, 1);
@@ -1989,13 +2089,14 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
 const fileUpload = document.getElementById('file-upload');
 document.getElementById('upload-btn')?.addEventListener('click', () => fileUpload?.click());
 
-function loadLocalFiles(filesList) {
+async function loadLocalFiles(filesList) {
     if (!filesList || filesList.length === 0) return;
     stopMic();
     const files = Array.from(filesList).filter(f => f.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac)$/i.test(f.name));
     if (files.length === 0) return;
 
-    files.forEach((file, idx) => {
+    for (let idx = 0; idx < files.length; idx++) {
+        const file = files[idx];
         const rawName = file.name.replace(/\.[^/.]+$/, '');
         let title = rawName;
         let artist = 'Local Audio';
@@ -2004,16 +2105,29 @@ function loadLocalFiles(filesList) {
             artist = split[0].trim();
             title = split.slice(1).join(' - ').trim();
         }
+
+        let thumb = 'favicon.svg';
+        if (window.readAudioMetadata) {
+            try {
+                const meta = await window.readAudioMetadata(file);
+                if (meta) {
+                    if (meta.title && meta.title.trim()) title = meta.title.trim();
+                    if (meta.artist && meta.artist.trim()) artist = meta.artist.trim();
+                    if (meta.pictureUrl) thumb = meta.pictureUrl;
+                }
+            } catch (_) {}
+        }
+
         const trackObj = {
             id: Date.now() + Math.random(),
             title: title,
             artist: artist,
             src: URL.createObjectURL(file),
-            thumb: 'favicon.svg',
+            thumb: thumb,
             type: 'local'
         };
         addToPlaylist(trackObj, idx === 0 && (!curAudioEl || curAudioEl.paused));
-    });
+    }
 
     if (sourceBadge) sourceBadge.innerText = 'LOCAL';
     showToast(`Added ${files.length} track(s) to playlist`);
@@ -2151,6 +2265,9 @@ function updateAllBarMaterials() {
     }
     if (pulseHalo && pulseHalo.material) {
         pulseHalo.material.color.copy(colCenter);
+    }
+    if (pulseArtBorder && pulseArtBorder.material) {
+        pulseArtBorder.material.color.copy(colCenter);
     }
 
     vgridBars.forEach(b => {
