@@ -31,9 +31,11 @@ const FX_SPEEDS = [1.0, 1.25, 0.85];
 let scene, camera, renderer, composer, bloomPass, bgTexture;
 let visualizerRoot, shockwaveGroup;
 let pulseGrp, waveGrp, vgridGrp, orbGrp, vgridFloor;
-let pulseBars = [], waveBars = [], waveMirrorBars = [], vgridBars = [], orbVertices = [];
-let orbMesh, orbWireMesh, orbInnerCore, orbRing1, orbRing2;
-let pulseGyroCore, pulseHalo, waveHorizon;
+let pulseBars = [], pulseInnerBars = [], waveBars = [], waveMirrorBars = [], wavePeakBeads = [], vgridBars = [], orbVertices = [];
+let orbMesh, orbWireMesh, orbInnerCore, orbRing1, orbRing2, orbRing3, orbEquatorBeacons = [], orbParticles;
+let pulseGyroCore, pulseHalo, pulseFloor, waveHorizon, waveFloor;
+let wavePeakY = [];
+let pulseInnerGrp, pulseOuterGrp;
 
 let matrixRipplePhase = 0;
 let matrixShockwaves = [];
@@ -672,10 +674,6 @@ function initThree() {
     shockwaveGroup = new THREE.Group();
     scene.add(shockwaveGroup);
 
-    // Smooth Tapered Cylindrical Rod for Pulse Ring
-    const ringRodGeo = new THREE.CylinderGeometry(0.38, 0.58, 1, 16);
-    ringRodGeo.translate(0, 0.5, 0);
-
     function makeMat(idx = 0, total = 128) {
         const th = THEMES[currentTheme] || THEMES.phonk;
         const col = th.getColor ? th.getColor(idx, total) : th.color;
@@ -688,19 +686,55 @@ function initThree() {
         });
     }
 
-    // 1. PULSE RING // Dual Accelerator, Rotating Gyro-Core & Base Halo
+    // 1. PULSE RING // Dual Accelerator (Outer Towers + Inner Iris), Floor Grid, Base Halo & Gyro Reactor
     pulseGrp = new THREE.Group();
-    const ringCount = 128, ringR = 22;
+    const ringCount = 96, ringR = 21;
+    const innerRingCount = 48, innerR = 13.5;
+
+    // Cyber Stage Floor Grid for Ring (matches the floor perspective depth of Grid)
+    pulseFloor = new THREE.GridHelper(56, 20, thInit.color, 0x181824);
+    pulseFloor.position.y = -10;
+    pulseFloor.rotation.x = 0.35;
+    pulseFloor.material.transparent = true;
+    pulseFloor.material.opacity = 0.35;
+    pulseGrp.add(pulseFloor);
+
+    pulseOuterGrp = new THREE.Group();
+    pulseGrp.add(pulseOuterGrp);
+
+    pulseInnerGrp = new THREE.Group();
+    pulseGrp.add(pulseInnerGrp);
+
+    // Smooth Tapered Cylindrical Rod for Outer Ring
+    const ringRodGeo = new THREE.CylinderGeometry(0.35, 0.55, 1, 16);
+    ringRodGeo.translate(0, 0.5, 0);
+
+    // Inner Inverted Spikes
+    const innerRodGeo = new THREE.CylinderGeometry(0.45, 0.25, 1, 16);
+    innerRodGeo.translate(0, -0.5, 0);
+
+    pulseBars = [];
+    pulseInnerBars = [];
+
+    // Outer Ring Towers
     for (let i = 0; i < ringCount; i++) {
         const m = new THREE.Mesh(ringRodGeo, makeMat(i, ringCount));
         const a = (i / ringCount) * Math.PI * 2;
         m.position.set(Math.cos(a) * ringR, Math.sin(a) * ringR, 0);
         m.rotation.z = a - Math.PI / 2;
-        pulseGrp.add(m);
+        pulseOuterGrp.add(m);
         pulseBars.push(m);
     }
 
-    const thInit = THEMES[currentTheme] || THEMES.phonk;
+    // Inner Iris Spikes (counter-pointing toward center)
+    for (let i = 0; i < innerRingCount; i++) {
+        const m = new THREE.Mesh(innerRodGeo, makeMat(i + ringCount, innerRingCount));
+        const a = (i / innerRingCount) * Math.PI * 2;
+        m.position.set(Math.cos(a) * innerR, Math.sin(a) * innerR, 0);
+        m.rotation.z = a - Math.PI / 2;
+        pulseInnerGrp.add(m);
+        pulseInnerBars.push(m);
+    }
 
     // Center Rotating Energy Gyro-Core
     const gyroGeo = new THREE.OctahedronGeometry(3.4, 0);
@@ -715,49 +749,76 @@ function initThree() {
     pulseGyroCore = new THREE.Mesh(gyroGeo, gyroMat);
     pulseGrp.add(pulseGyroCore);
 
-    // Glowing Halo Base Ring
-    const haloGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
+    // Dual Glowing Halo Base Rings
+    const haloOuterGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
     const haloMat = new THREE.MeshBasicMaterial({
         color: thInit.color,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.35
     });
-    pulseHalo = new THREE.Mesh(haloGeo, haloMat);
+    pulseHalo = new THREE.Mesh(haloOuterGeo, haloMat);
     pulseGrp.add(pulseHalo);
+
+    const haloInnerGeo = new THREE.RingGeometry(innerR - 0.35, innerR + 0.35, 48);
+    const haloInnerMesh = new THREE.Mesh(haloInnerGeo, haloMat);
+    pulseGrp.add(haloInnerMesh);
 
     visualizerRoot.add(pulseGrp);
 
-    // 2. WAVE RIBBON // 3D Curved Highway, Dual Mirrored Spectrum & Center Beam
+    // 2. WAVE RIBBON // 3D Curved Highway, Floor Reflection Grid, Mirror Spectrum, Horizon Beam & Peak Beads
     waveGrp = new THREE.Group();
     const waveN = 72;
     waveBars = [];
     waveMirrorBars = [];
+    wavePeakBeads = [];
+    wavePeakY = new Array(waveN).fill(0);
+
+    // Cyber Highway Floor Grid
+    waveFloor = new THREE.GridHelper(90, 22, thInit.color, 0x181826);
+    waveFloor.position.set(0, -9.5, 4);
+    waveFloor.rotation.x = 0.22;
+    waveFloor.material.transparent = true;
+    waveFloor.material.opacity = 0.35;
+    waveGrp.add(waveFloor);
 
     // Smooth Cylindrical Wave Pillars
-    const wavePillarGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
+    const wavePillarGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 16);
     wavePillarGeo.translate(0, 0.5, 0);
 
-    const waveMirrorGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
+    const waveMirrorGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 16);
     waveMirrorGeo.translate(0, -0.5, 0);
+
+    const beadGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.15, 16);
+    const beadMat = new THREE.MeshBasicMaterial({
+        color: thInit.secondaryColor || thInit.color,
+        transparent: true,
+        opacity: 0.95
+    });
 
     for (let i = 0; i < waveN; i++) {
         const norm = (i - waveN / 2) / (waveN / 2);
         const x = (i - waveN / 2) * 1.35;
-        // Subtle 3D cylindrical arc in Z wrapping toward viewer
-        const z = -Math.pow(norm * 2.6, 2) * 1.1;
+        // Parabolic 3D curvature wrapping toward camera
+        const z = -Math.pow(norm * 2.5, 2) * 1.4;
 
-        // Upper frequency bar
+        // Upper frequency pillar
         const mUp = new THREE.Mesh(wavePillarGeo, makeMat(i, waveN));
         mUp.position.set(x, -5, z);
         waveGrp.add(mUp);
         waveBars.push(mUp);
 
-        // Lower mirrored reflection bar
+        // Lower mirrored reflection pillar
         const mDown = new THREE.Mesh(waveMirrorGeo, makeMat(i, waveN));
         mDown.position.set(x, -5.2, z);
         waveGrp.add(mDown);
         waveMirrorBars.push(mDown);
+
+        // Floating Studio Peak Bead
+        const mBead = new THREE.Mesh(beadGeo, beadMat.clone());
+        mBead.position.set(x, -4.6, z);
+        waveGrp.add(mBead);
+        wavePeakBeads.push(mBead);
     }
 
     // Glowing central horizon line
@@ -768,7 +829,7 @@ function initThree() {
         opacity: 0.55
     });
     waveHorizon = new THREE.Mesh(horizGeo, horizMat);
-    waveHorizon.position.set(0, -5.1, -1);
+    waveHorizon.position.set(0, -5.1, -0.5);
     waveGrp.add(waveHorizon);
 
     waveGrp.visible = false;
@@ -820,11 +881,11 @@ function initThree() {
     vgridGrp.visible = false;
     visualizerRoot.add(vgridGrp);
 
-    // 4. PULSAR CYBER CORE // Solid Pulsing Core, Deformed Geodesic Shell & Dual Gimbal Rings
+    // 4. PULSAR CYBER CORE // Deformed Geodesic Shell, Triple Gimbal Gyroscope, Equator Beacons & Orbiting Spark Cloud
     orbGrp = new THREE.Group();
     
     // Outer Deformed Wireframe Shell
-    const sphereGeom = new THREE.IcosahedronGeometry(12, 3);
+    const sphereGeom = new THREE.IcosahedronGeometry(11, 3);
     const sphereMat = new THREE.MeshStandardMaterial({
         color: thInit.color,
         emissive: thInit.color,
@@ -841,8 +902,8 @@ function initThree() {
         orbVertices.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
     }
 
-    // Inner Glowing Pulsar Nucleus (Delicate wireframe energy core)
-    const innerCoreGeo = new THREE.IcosahedronGeometry(2.4, 1);
+    // Inner Glowing Pulsar Nucleus (Delicate wireframe energy diamond)
+    const innerCoreGeo = new THREE.IcosahedronGeometry(2.5, 1);
     const innerCoreMat = new THREE.MeshStandardMaterial({
         color: thInit.color,
         emissive: thInit.secondaryColor || thInit.color,
@@ -854,19 +915,66 @@ function initThree() {
     orbInnerCore = new THREE.Mesh(innerCoreGeo, innerCoreMat);
     orbGrp.add(orbInnerCore);
 
-    // Dual Gimbal Orbital Rings
-    const ringGeo = new THREE.TorusGeometry(15.5, 0.14, 16, 80);
+    // Triple Gimbal Gyroscopic Rings (Yaw, Pitch, Roll)
     const ringMat1 = new THREE.MeshBasicMaterial({ color: thInit.color, transparent: true, opacity: 0.65 });
-    orbRing1 = new THREE.Mesh(ringGeo, ringMat1);
+    orbRing1 = new THREE.Mesh(new THREE.TorusGeometry(14.2, 0.14, 16, 96), ringMat1);
     orbRing1.rotation.x = Math.PI / 4;
     orbRing1.rotation.y = Math.PI / 6;
     orbGrp.add(orbRing1);
 
     const ringMat2 = new THREE.MeshBasicMaterial({ color: thInit.secondaryColor || thInit.color, transparent: true, opacity: 0.55 });
-    orbRing2 = new THREE.Mesh(ringGeo, ringMat2);
+    orbRing2 = new THREE.Mesh(new THREE.TorusGeometry(15.8, 0.12, 16, 96), ringMat2);
     orbRing2.rotation.x = -Math.PI / 3;
     orbRing2.rotation.y = -Math.PI / 4;
     orbGrp.add(orbRing2);
+
+    const ringMat3 = new THREE.MeshBasicMaterial({ color: thInit.color, transparent: true, opacity: 0.45 });
+    orbRing3 = new THREE.Mesh(new THREE.TorusGeometry(17.4, 0.11, 16, 96), ringMat3);
+    orbRing3.rotation.z = Math.PI / 3;
+    orbGrp.add(orbRing3);
+
+    // Holographic Equatorial Satellites (32 beacons)
+    orbEquatorBeacons = [];
+    const beaconGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.6, 12);
+    const beaconMat = new THREE.MeshStandardMaterial({
+        color: thInit.color,
+        emissive: thInit.color,
+        emissiveIntensity: 0.45,
+        roughness: 0.2,
+        metalness: 0.8
+    });
+    const beaconCount = 32;
+    for (let i = 0; i < beaconCount; i++) {
+        const a = (i / beaconCount) * Math.PI * 2;
+        const b = new THREE.Mesh(beaconGeo, beaconMat.clone());
+        b.position.set(Math.cos(a) * 12.8, 0, Math.sin(a) * 12.8);
+        b.rotation.y = -a;
+        b.rotation.z = Math.PI / 2;
+        orbGrp.add(b);
+        orbEquatorBeacons.push(b);
+    }
+
+    // Orbiting Cosmic Particle Spark Cloud
+    const partCount = 72;
+    const partGeo = new THREE.BufferGeometry();
+    const partPos = new Float32Array(partCount * 3);
+    for (let i = 0; i < partCount; i++) {
+        const phi = Math.acos(-1 + (2 * i) / partCount);
+        const theta = Math.sqrt(partCount * Math.PI) * phi;
+        const r = 18.5 + (Math.random() - 0.5) * 4;
+        partPos[i * 3]     = r * Math.cos(theta) * Math.sin(phi);
+        partPos[i * 3 + 1] = r * Math.sin(theta) * Math.sin(phi);
+        partPos[i * 3 + 2] = r * Math.cos(phi);
+    }
+    partGeo.setAttribute('position', new THREE.BufferAttribute(partPos, 3));
+    const partMat = new THREE.PointsMaterial({
+        color: thInit.secondaryColor || thInit.color,
+        size: 0.65,
+        transparent: true,
+        opacity: 0.85
+    });
+    orbParticles = new THREE.Points(partGeo, partMat);
+    orbGrp.add(orbParticles);
 
     orbGrp.visible = false;
     visualizerRoot.add(orbGrp);
@@ -1059,12 +1167,30 @@ function threeAnimate() {
                 }
             }
 
+            // Inner Iris Spikes
+            const innerHalf = pulseInnerBars.length / 2;
+            for (let i = 0; i < pulseInnerBars.length; i++) {
+                const sym = i < innerHalf ? i : pulseInnerBars.length - 1 - i;
+                const bin = Math.min(dataArr.length - 1, Math.floor((sym / innerHalf) * 36));
+                const val = dataArr[bin] || 0;
+                pulseInnerBars[i].scale.y += (Math.max(0.6, 1 + (val / 255) * 12) - pulseInnerBars[i].scale.y) * 0.32;
+                if (th.isAuto) {
+                    const c = new THREE.Color().setHSL((autoHue + 0.45 + (i / pulseInnerBars.length) * 0.2) % 1, 0.9, 0.55);
+                    pulseInnerBars[i].material.color.copy(c);
+                    pulseInnerBars[i].material.emissive.copy(c);
+                }
+            }
+
+            // Dual Counter-Rotating Aperture
+            if (pulseOuterGrp) pulseOuterGrp.rotation.z += 0.003 + bgBassLevel * 0.008;
+            if (pulseInnerGrp) pulseInnerGrp.rotation.z -= 0.005 + bgBassLevel * 0.012;
+
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.02 + bgBassLevel * 0.04;
                 pulseGyroCore.rotation.y += 0.025 + bgBassLevel * 0.05;
-                const gyroScale = 1 + bgBassLevel * 0.65;
+                const gyroScale = 1 + bgBassLevel * 0.55;
                 pulseGyroCore.scale.set(gyroScale, gyroScale, gyroScale);
-                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.4;
+                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.35;
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL(autoHue, 0.9, 0.6);
                     pulseGyroCore.material.color.copy(c);
@@ -1080,6 +1206,18 @@ function threeAnimate() {
                 if (waveMirrorBars[i]) {
                     waveMirrorBars[i].scale.y += (targetH * 0.62 - waveMirrorBars[i].scale.y) * 0.28;
                 }
+
+                // Studio Peak Beads Gravity Physics
+                if (wavePeakBeads[i]) {
+                    const barTop = -5 + waveBars[i].scale.y;
+                    if (barTop >= (wavePeakY[i] || -4.6)) {
+                        wavePeakY[i] = barTop;
+                    } else {
+                        wavePeakY[i] = Math.max(-4.6, (wavePeakY[i] || -4.6) - 0.16);
+                    }
+                    wavePeakBeads[i].position.y = wavePeakY[i] + 0.26;
+                }
+
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL((autoHue + (i / waveBars.length) * 0.35) % 1, 0.9, 0.55);
                     waveBars[i].material.color.copy(c);
@@ -1144,21 +1282,37 @@ function threeAnimate() {
             for (let i = 0; i < pos.count; i++) {
                 const orig = orbVertices[i];
                 const bin = (i * 3) % (dataArr.length - 1);
-                const factor = 1 + ((dataArr[bin] || 0) / 255) * 0.85 + bgBassLevel * 0.4;
+                const factor = 1 + ((dataArr[bin] || 0) / 255) * 0.75 + bgBassLevel * 0.35;
                 pos.setXYZ(i, orig.x * factor, orig.y * factor, orig.z * factor);
             }
             pos.needsUpdate = true;
 
             if (orbInnerCore) {
-                const coreScale = 1 + bgBassLevel * 0.55;
+                const coreScale = 1 + bgBassLevel * 0.5;
                 orbInnerCore.scale.set(coreScale, coreScale, coreScale);
                 orbInnerCore.rotation.y -= 0.015;
                 orbInnerCore.rotation.x += 0.01;
             }
 
-            if (orbRing1 && orbRing2) {
-                orbRing1.rotation.z += 0.012 + bgBassLevel * 0.02;
-                orbRing2.rotation.y += 0.015 + bgBassLevel * 0.025;
+            // Triple Gyroscope Gimbals
+            if (orbRing1) orbRing1.rotation.z += 0.012 + bgBassLevel * 0.02;
+            if (orbRing2) orbRing2.rotation.y += 0.015 + bgBassLevel * 0.025;
+            if (orbRing3) orbRing3.rotation.x += 0.01 + bgBassLevel * 0.018;
+
+            // Equatorial Satellites
+            if (orbEquatorBeacons) {
+                for (let i = 0; i < orbEquatorBeacons.length; i++) {
+                    const bin = (i * 4) % (dataArr.length - 1);
+                    const val = (dataArr[bin] || 0) / 255;
+                    const scaleY = 1 + val * 3.8 + bgBassLevel * 2.2;
+                    orbEquatorBeacons[i].scale.y += (scaleY - orbEquatorBeacons[i].scale.y) * 0.3;
+                }
+            }
+
+            // Cosmic Particle Spark Cloud
+            if (orbParticles) {
+                orbParticles.rotation.y += 0.006 + bgBassLevel * 0.015;
+                orbParticles.rotation.x -= 0.003;
             }
 
             if (th.isAuto) {
@@ -1184,6 +1338,16 @@ function threeAnimate() {
                 const tgt = Math.max(0.7, 1.35 + Math.sin(time * 1.2) * 0.2 + h);
                 pulseBars[i].scale.y += (tgt - pulseBars[i].scale.y) * 0.12;
             }
+            if (pulseInnerBars) {
+                for (let i = 0; i < pulseInnerBars.length; i++) {
+                    const a = (i / pulseInnerBars.length) * Math.PI * 2;
+                    const h = Math.sin(a * 3 - time * 1.5) * 0.35;
+                    const tgt = Math.max(0.6, 1.2 + h);
+                    pulseInnerBars[i].scale.y += (tgt - pulseInnerBars[i].scale.y) * 0.12;
+                }
+            }
+            if (pulseOuterGrp) pulseOuterGrp.rotation.z += 0.0015;
+            if (pulseInnerGrp) pulseInnerGrp.rotation.z -= 0.0025;
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.01;
                 pulseGyroCore.rotation.y += 0.015;
@@ -1196,6 +1360,9 @@ function threeAnimate() {
                 waveBars[i].scale.y += (tgt - waveBars[i].scale.y) * 0.12;
                 if (waveMirrorBars[i]) {
                     waveMirrorBars[i].scale.y += (tgt * 0.6 - waveMirrorBars[i].scale.y) * 0.12;
+                }
+                if (wavePeakBeads[i]) {
+                    wavePeakBeads[i].position.y = -5 + waveBars[i].scale.y + 0.26;
                 }
             }
         } else if (currentVis === 'grid') {
@@ -1220,6 +1387,16 @@ function threeAnimate() {
             if (orbInnerCore) orbInnerCore.rotation.y -= 0.006;
             if (orbRing1) orbRing1.rotation.z += 0.006;
             if (orbRing2) orbRing2.rotation.y += 0.008;
+            if (orbRing3) orbRing3.rotation.x += 0.005;
+            if (orbParticles) {
+                orbParticles.rotation.y += 0.003;
+            }
+            if (orbEquatorBeacons) {
+                for (let i = 0; i < orbEquatorBeacons.length; i++) {
+                    const wave = Math.sin(time * 3 + i * 0.3) * 0.4;
+                    orbEquatorBeacons[i].scale.y = 1 + wave;
+                }
+            }
         }
     }
 
@@ -1951,22 +2128,35 @@ autoCamBtn?.addEventListener('click', () => {
 
 function updateAllBarMaterials() {
     const th = THEMES[currentTheme] || THEMES.phonk;
+    const colCenter = new THREE.Color(th.color);
+    const colEdge = new THREE.Color(th.secondaryColor || th.color);
+
     const updateMat = (arr, total) => arr.forEach((b, idx) => {
         const col = th.getColor ? th.getColor(idx, total) : th.color;
         b.material.color.setHex(col);
         b.material.emissive.setHex(col);
     });
     updateMat(pulseBars, pulseBars.length);
+    if (pulseInnerBars) updateMat(pulseInnerBars, pulseInnerBars.length);
     updateMat(waveBars, waveBars.length);
     if (waveMirrorBars) updateMat(waveMirrorBars, waveMirrorBars.length);
 
-    const colCenter = new THREE.Color(th.color);
-    const colEdge = new THREE.Color(th.secondaryColor || th.color);
+    if (wavePeakBeads) {
+        wavePeakBeads.forEach(b => {
+            b.material.color.copy(colEdge);
+        });
+    }
 
     if (waveHorizon && waveHorizon.material) {
         waveHorizon.material.color.copy(colCenter);
     }
+    if (waveFloor && waveFloor.material) {
+        waveFloor.material.color.copy(colCenter);
+    }
 
+    if (pulseFloor && pulseFloor.material) {
+        pulseFloor.material.color.copy(colCenter);
+    }
     if (pulseGyroCore && pulseGyroCore.material) {
         pulseGyroCore.material.color.copy(colCenter);
         pulseGyroCore.material.emissive.copy(colCenter);
@@ -1999,6 +2189,18 @@ function updateAllBarMaterials() {
     }
     if (orbRing2 && orbRing2.material) {
         orbRing2.material.color.copy(colEdge);
+    }
+    if (orbRing3 && orbRing3.material) {
+        orbRing3.material.color.copy(colCenter);
+    }
+    if (orbEquatorBeacons) {
+        orbEquatorBeacons.forEach(b => {
+            b.material.color.copy(colCenter);
+            b.material.emissive.copy(colCenter);
+        });
+    }
+    if (orbParticles && orbParticles.material) {
+        orbParticles.material.color.copy(colEdge);
     }
 }
 
