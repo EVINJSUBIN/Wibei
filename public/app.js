@@ -55,7 +55,7 @@ const THEMES = {
         color: 0xef4444,
         secondaryColor: 0xa855f7,
         lightColor: 0xef4444,
-        bloomStrength: 1.8,
+        bloomStrength: 0.5,
         getColor: (idx, total) => idx % 2 === 0 ? 0xef4444 : 0xa855f7
     },
     comic: {
@@ -70,7 +70,7 @@ const THEMES = {
         color: 0xfacc15,
         secondaryColor: 0x06b6d4,
         lightColor: 0xfacc15,
-        bloomStrength: 1.4,
+        bloomStrength: 0.4,
         getColor: (idx, total) => {
             const step = idx % 3;
             if (step === 0) return 0xfacc15;
@@ -90,7 +90,7 @@ const THEMES = {
         color: 0xfb923c,
         secondaryColor: 0xc084fc,
         lightColor: 0xfb923c,
-        bloomStrength: 1.25,
+        bloomStrength: 0.35,
         getColor: (idx, total) => {
             const t = idx / total;
             return new THREE.Color().setHSL(0.05 + t * 0.18, 0.95, 0.6).getHex();
@@ -108,7 +108,7 @@ const THEMES = {
         color: 0x10b981,
         secondaryColor: 0x34d399,
         lightColor: 0x10b981,
-        bloomStrength: 1.5,
+        bloomStrength: 0.45,
         getColor: (idx, total) => idx % 4 === 0 ? 0x34d399 : 0x10b981
     },
     serious: {
@@ -123,7 +123,7 @@ const THEMES = {
         color: 0xf8fafc,
         secondaryColor: 0x94a3b8,
         lightColor: 0xf8fafc,
-        bloomStrength: 0.9,
+        bloomStrength: 0.3,
         getColor: (idx, total) => (idx % 8 === 0 ? 0xffffff : 0x64748b)
     },
     auto: {
@@ -138,7 +138,7 @@ const THEMES = {
         color: 0xef4444,
         secondaryColor: 0x06b6d4,
         lightColor: 0xef4444,
-        bloomStrength: 1.4,
+        bloomStrength: 0.45,
         isAuto: true,
         getColor: (idx, total) => new THREE.Color().setHSL((idx / total) % 1, 0.9, 0.55).getHex()
     }
@@ -550,23 +550,27 @@ function drawAtmosphericAura() {
     const accentCol = getActiveAccentColor();
     const secCol = th.secondaryColor ? ('#' + new THREE.Color(th.secondaryColor).getHexString()) : accentCol;
 
-    // 1. Center pulsing radial audio nebula
-    const maxR = Math.max(w, h) * (0.42 + bgBassLevel * 0.22);
+    // Solid dark base to prevent transparent WebGL additive blowout
+    bgCtx.fillStyle = th.bg || '#070709';
+    bgCtx.fillRect(0, 0, w, h);
+
+    // 1. Subtle, deep cosmic radial nebula (dark & soft)
+    const maxR = Math.max(w, h) * 0.45;
     const auraGrad = bgCtx.createRadialGradient(cx, cy, 10, cx, cy, maxR);
-    const coreAlpha = 0.10 + bgBassLevel * 0.18;
-    const midAlpha  = 0.04 + bgBassLevel * 0.08;
+    const coreAlpha = 0.04 + bgBassLevel * 0.05;
+    const midAlpha  = 0.015 + bgBassLevel * 0.02;
     auraGrad.addColorStop(0, hexToRgba(accentCol, coreAlpha));
     auraGrad.addColorStop(0.45, hexToRgba(secCol, midAlpha));
-    auraGrad.addColorStop(0.85, hexToRgba(accentCol, 0.01));
+    auraGrad.addColorStop(0.85, hexToRgba(accentCol, 0.003));
     auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
     bgCtx.fillStyle = auraGrad;
     bgCtx.fillRect(0, 0, w, h);
 
     // 2. Cinematic perimeter vignette
-    const vigGrad = bgCtx.createRadialGradient(cx, cy, Math.min(w, h) * 0.45, cx, cy, Math.max(w, h) * 0.75);
+    const vigGrad = bgCtx.createRadialGradient(cx, cy, Math.min(w, h) * 0.4, cx, cy, Math.max(w, h) * 0.72);
     vigGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    vigGrad.addColorStop(1, 'rgba(0, 0, 0, 0.52)');
+    vigGrad.addColorStop(1, 'rgba(0, 0, 0, 0.68)');
     bgCtx.fillStyle = vigGrad;
     bgCtx.fillRect(0, 0, w, h);
 }
@@ -648,17 +652,17 @@ function initThree() {
     scene.background = bgTexture;
 
     const renderScene = new THREE.RenderPass(scene, camera);
-    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.5, 0.4, 0.85);
-    bloomPass.threshold = 0.08;
-    bloomPass.strength  = 1.35;
-    bloomPass.radius    = 0.55;
+    bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.25, 0.82);
+    bloomPass.threshold = 0.82;
+    bloomPass.strength  = 0.45;
+    bloomPass.radius    = 0.25;
 
     composer = new THREE.EffectComposer(renderer);
     composer.addPass(renderScene);
     composer.addPass(bloomPass);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-    const pointLight = new THREE.PointLight(THEMES[currentTheme].color, 2.8, 140);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.65));
+    const pointLight = new THREE.PointLight(THEMES[currentTheme].color, 0.85, 120);
     pointLight.position.set(0, 0, 24);
     scene.add(pointLight);
 
@@ -678,7 +682,7 @@ function initThree() {
         return new THREE.MeshStandardMaterial({
             color:             col,
             emissive:          col,
-            emissiveIntensity: 0.85,
+            emissiveIntensity: 0.42,
             roughness:         0.18,
             metalness:         0.82,
         });
@@ -699,11 +703,11 @@ function initThree() {
     const thInit = THEMES[currentTheme] || THEMES.phonk;
 
     // Center Rotating Energy Gyro-Core
-    const gyroGeo = new THREE.OctahedronGeometry(4.8, 0);
+    const gyroGeo = new THREE.OctahedronGeometry(3.4, 0);
     const gyroMat = new THREE.MeshStandardMaterial({
         color: thInit.color,
         emissive: thInit.color,
-        emissiveIntensity: 1.2,
+        emissiveIntensity: 0.4,
         wireframe: true,
         roughness: 0.1,
         metalness: 0.9
@@ -801,7 +805,7 @@ function initThree() {
             const mat = new THREE.MeshStandardMaterial({
                 color: col,
                 emissive: col,
-                emissiveIntensity: 0.85,
+                emissiveIntensity: 0.4,
                 roughness: 0.16,
                 metalness: 0.84
             });
@@ -824,7 +828,7 @@ function initThree() {
     const sphereMat = new THREE.MeshStandardMaterial({
         color: thInit.color,
         emissive: thInit.color,
-        emissiveIntensity: 0.85,
+        emissiveIntensity: 0.42,
         wireframe: true,
         roughness: 0.1,
         metalness: 0.9
@@ -837,12 +841,13 @@ function initThree() {
         orbVertices.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
     }
 
-    // Inner Glowing Pulsar Core (Solid geodesic core)
-    const innerCoreGeo = new THREE.IcosahedronGeometry(6.5, 2);
+    // Inner Glowing Pulsar Nucleus (Delicate wireframe energy core)
+    const innerCoreGeo = new THREE.IcosahedronGeometry(2.4, 1);
     const innerCoreMat = new THREE.MeshStandardMaterial({
         color: thInit.color,
         emissive: thInit.secondaryColor || thInit.color,
-        emissiveIntensity: 1.4,
+        emissiveIntensity: 0.35,
+        wireframe: true,
         roughness: 0.2,
         metalness: 0.8
     });
@@ -1059,7 +1064,7 @@ function threeAnimate() {
                 pulseGyroCore.rotation.y += 0.025 + bgBassLevel * 0.05;
                 const gyroScale = 1 + bgBassLevel * 0.65;
                 pulseGyroCore.scale.set(gyroScale, gyroScale, gyroScale);
-                pulseGyroCore.material.emissiveIntensity = 1.0 + bgBassLevel * 2.2;
+                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.4;
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL(autoHue, 0.9, 0.6);
                     pulseGyroCore.material.color.copy(c);
@@ -1124,7 +1129,7 @@ function threeAnimate() {
 
                 const targetScaleY = Math.max(0.4, 0.8 + audioVal * 16 + wave * (0.8 + bgBassLevel * 3.5) + shockBoost);
                 b.scale.y += (targetScaleY - b.scale.y) * 0.32;
-                b.material.emissiveIntensity = 0.4 + audioVal * 1.6 + (shockBoost > 1 ? 1.5 : 0);
+                b.material.emissiveIntensity = 0.22 + audioVal * 0.45 + (shockBoost > 1 ? 0.35 : 0);
 
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL((autoHue + u.normDist * 0.4) % 1, 0.9, 0.55);
