@@ -192,7 +192,7 @@
         <div class="section-group">
             <span class="section-label">AESTHETIC VIBE & PALETTE</span>
             <div class="vibe-grid" id="theme-vibe-grid">
-                <button class="vibe-btn active" data-theme="phonk" title="Phonk / Drift (Crimson & Toxic Violet)">
+                <button class="vibe-btn" data-theme="phonk" title="Phonk / Drift (Crimson & Toxic Violet)">
                     <span class="vibe-dot dot-phonk"></span>
                     <span>PHONK</span>
                 </button>
@@ -208,7 +208,7 @@
                     <span class="vibe-dot dot-cyber"></span>
                     <span>CYBER</span>
                 </button>
-                <button class="vibe-btn" data-theme="serious" title="Serious Void (Ice Silver & Obsidian)">
+                <button class="vibe-btn active" data-theme="serious" title="Serious Void (Ice Silver & Obsidian)">
                     <span class="vibe-dot dot-serious"></span>
                     <span>VOID</span>
                 </button>
@@ -242,7 +242,6 @@
     <footer class="master-transport">
         <div class="transport-track">
             <div class="album-art-wrap">
-                <div class="vinyl-disc" id="vinyl-disc"></div>
                 <img id="album-art" src="favicon.svg" alt="Cover">
                 <div class="art-pulse-ring"></div>
             </div>
@@ -253,14 +252,7 @@
                         <span></span><span></span><span></span><span></span>
                     </div>
                 </div>
-                <div class="artist-genre-row">
-                    <span id="track-artist" class="track-artist">RetroWave Studio</span>
-                    <span id="track-genre-badge" class="track-genre-badge" title="Detected Music Genre / Vibe">CYBER // SYNTHWAVE</span>
-                </div>
-                <div class="meta-sub-row">
-                    <span id="track-album-meta" class="track-album-meta">Neon Horizons • 2024</span>
-                    <span class="track-format-tag" id="track-format-tag">LOSSLESS</span>
-                </div>
+                <span id="track-artist" class="track-artist">RetroWave Studio</span>
             </div>
         </div>
 
@@ -312,19 +304,10 @@
     <div class="lyrics-hud" id="lyrics-hud" style="display:none;">
         <div class="lyrics-hud-header">
             <div class="lyrics-hud-meta">
-                <span class="lyrics-badge" id="lyrics-status-badge">SYNCED LYRICS</span>
+                <span class="lyrics-badge">SYNCED LYRICS</span>
                 <span class="lyrics-track-title" id="lyrics-track-title">Synthwave Pulse</span>
             </div>
-            <div class="lyrics-header-actions">
-                <button class="lyrics-hud-tool-btn" id="lyrics-search-toggle" title="Search Lyrics Manually">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </button>
-                <button class="lyrics-hud-close" id="lyrics-close-btn" title="Close Lyrics">&times;</button>
-            </div>
-        </div>
-        <div class="lyrics-manual-bar" id="lyrics-manual-bar" style="display:none;">
-            <input type="text" id="lyrics-manual-input" placeholder="Search song or artist..." autocomplete="off" />
-            <button id="lyrics-manual-submit-btn">Search</button>
+            <button class="lyrics-hud-close" id="lyrics-close-btn" title="Close Lyrics">&times;</button>
         </div>
         <div class="lyrics-hud-body" id="lyrics-hud-body">
             <div class="lyrics-empty-msg">Play a song to load real-time synchronized karaoke lyrics...</div>

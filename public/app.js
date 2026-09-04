@@ -30,12 +30,11 @@ const FX_SPEEDS = [1.0, 1.25, 0.85];
 
 let scene, camera, renderer, composer, bloomPass, bgTexture;
 let visualizerRoot, shockwaveGroup;
-let pulseGrp, waveGrp, vgridGrp, orbGrp, vgridFloor;
-let pulseBars = [], pulseInnerBars = [], waveBars = [], waveMirrorBars = [], wavePeakBeads = [], vgridBars = [], orbVertices = [];
-let orbMesh, orbWireMesh, orbInnerCore, orbRing1, orbRing2, orbRing3, orbEquatorBeacons = [], orbParticles;
-let pulseGyroCore, pulseHalo, pulseFloor, waveHorizon, waveFloor;
-let wavePeakY = [];
-let pulseInnerGrp, pulseOuterGrp;
+let pulseGrp, waveGrp, vgridGrp, orbGrp;
+let vgridFloor, pulseFloor, waveFloor;
+let pulseBars = [], waveBars = [], waveMirrorBars = [], vgridBars = [], orbVertices = [];
+let orbMesh, orbWireMesh, orbInnerCore, orbRing1, orbRing2;
+let pulseGyroCore, pulseHalo, waveHorizon;
 
 let matrixRipplePhase = 0;
 let matrixShockwaves = [];
@@ -43,6 +42,14 @@ let lastMatrixShockwaveTime = 0;
 const MATRIX_DIM = 18;
 const MATRIX_SPACING = 2.15;
 const MATRIX_MAX_DIST = Math.hypot((MATRIX_DIM / 2) * MATRIX_SPACING, (MATRIX_DIM / 2) * MATRIX_SPACING);
+
+let pulseRipplePhase = 0;
+let pulseShockwaves = [];
+let lastPulseShockwaveTime = 0;
+
+let waveRipplePhase = 0;
+let waveShockwaves = [];
+let lastWaveShockwaveTime = 0;
 
 const THEMES = {
     phonk: {
@@ -145,7 +152,7 @@ const THEMES = {
         getColor: (idx, total) => new THREE.Color().setHSL((idx / total) % 1, 0.9, 0.55).getHex()
     }
 };
-let currentTheme = 'phonk';
+let currentTheme = 'serious';
 let autoHue = 0;
 let currentVis   = 'pulse';
 let currentBg    = 'vibe';
@@ -220,80 +227,7 @@ function updatePlayIcons(playing) {
     if (artWrap) artWrap.classList.toggle('playing', playing);
 }
 
-const CLIENT_GENRE_TAXONOMY = [
-    {
-        genre: 'phonk',
-        label: 'PHONK // DRIFT',
-        mood: 'High-Voltage / Aggressive',
-        theme: 'phonk',
-        color: '#ef4444',
-        regex: /\b(phonk|drift|cowbell|memphis|kordhell|playaphonk|dxrk|lxst cxntury|interworld|shadowraze|mishashi|montagem|automotivo|brazilian funk|funk rj|funk mandelao|sp funk|funk brasileiro|wave phonk|drift phonk|aggregressive phonk|speed up phonk)\b/i
-    },
-    {
-        genre: 'cyber',
-        label: 'CYBER // SYNTHWAVE',
-        mood: 'Futuristic / Electronic',
-        theme: 'cyber',
-        color: '#10b981',
-        regex: /\b(synthwave|retrowave|cyberpunk|cyber|darksynth|electronic|edm|techno|trance|dubstep|dnb|drum and bass|drum & bass|future bass|house music|electro|industrial|glitch|chiptune|eurobeat|hardstyle|carpenter brut|perturbator|kavinsky|daft punk|skrillex|deadmau5|avicii|nightcall)\b/i
-    },
-    {
-        genre: 'lofi',
-        label: 'LOFI // CHILL',
-        mood: 'Cozy / Nostalgic',
-        theme: 'lofi',
-        color: '#fb923c',
-        regex: /\b(lofi|lo-fi|chillhop|chill hop|study beats|chill beats|relaxing beats|sleep beats|coffee shop|cozy|rainy day|jazz hop|mellow|nostalgic|bedroom pop|downtempo|ambient chill|lofi girl|chilledcow|sleepy beats|quiet night|peaceful)\b/i
-    },
-    {
-        genre: 'comic',
-        label: 'POP // ENERGETIC',
-        mood: 'Vibrant / Dance',
-        theme: 'comic',
-        color: '#facc15',
-        regex: /\b(pop|dance pop|hyperpop|k-pop|kpop|j-pop|jpop|anime|kawaii|vocaloid|hatsune miku|funk|disco|groove|upbeat|cheerful|party|happy|blackpink|bts|twice|newjeans|aespa|taylor swift|dua lipa|ariana grande|charli xcx|billie eilish|the weeknd|bruno mars)\b/i
-    },
-    {
-        genre: 'serious',
-        label: 'SERIOUS // ACOUSTIC',
-        mood: 'Deep / Cinematic',
-        theme: 'serious',
-        color: '#f8fafc',
-        regex: /\b(classical|piano solo|piano|acoustic|orchestra|symphony|cinematic|film score|soundtrack|hans zimmer|chopin|beethoven|mozart|bach|debussy|ludovico einaudi|max richter|philip glass|violin|cello|meditation|dark ambient|drone|minimalist|neoclassical|instrumental acoustic)\b/i
-    },
-    {
-        genre: 'hiphop',
-        label: 'TRAP // HIP-HOP',
-        mood: 'Heavy 808 / Rhythm',
-        theme: 'phonk',
-        color: '#a855f7',
-        regex: /\b(hip hop|hip-hop|rap|trap|drill|boombap|boom bap|freestyle|bars|808 mafia|metro boomin|travis scott|drake|kendrick|kanye|eminem|future|21 savage|playboi carti|lil uzi|gunna|lil baby|central cee)\b/i
-    }
-];
-
-function classifyTrackLocally(title = '', artist = '', album = '') {
-    const text = `${title} ${artist} ${album}`;
-    for (const item of CLIENT_GENRE_TAXONOMY) {
-        if (item.regex.test(text)) {
-            return {
-                genre: item.genre,
-                label: item.label,
-                mood: item.mood,
-                theme: item.theme,
-                color: item.color
-            };
-        }
-    }
-    return {
-        genre: 'cyber',
-        label: 'NEO // ELECTRONIC',
-        mood: 'Dynamic Spectrum',
-        theme: 'cyber',
-        color: '#10b981'
-    };
-}
-
-function updateTrackInfo(title, artist, thumb, meta = null) {
+function updateTrackInfo(title, artist, thumb) {
     if (trackTitle)  trackTitle.innerText  = title || 'Unknown Track';
     if (trackArtist) trackArtist.innerText = artist || 'Unknown Artist';
     
@@ -301,46 +235,10 @@ function updateTrackInfo(title, artist, thumb, meta = null) {
     if (lyricsTrackTitle) lyricsTrackTitle.innerText = `${title || 'Track'} // ${artist || 'Artist'}`;
 
     if (albumArt) {
-        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/') || thumb.startsWith('data:'))) {
+        if (thumb && (thumb.startsWith('http') || thumb.startsWith('/'))) {
             albumArt.src = thumb;
         } else {
             albumArt.src = 'favicon.svg';
-        }
-    }
-
-    // Determine classification
-    const classification = meta?.classification || classifyTrackLocally(title, artist, meta?.album);
-    
-    // Update genre badge
-    const genreBadge = document.getElementById('track-genre-badge');
-    if (genreBadge) {
-        genreBadge.innerText = classification.label || 'NEO // ELECTRONIC';
-        if (classification.color) {
-            genreBadge.style.color = classification.color;
-            genreBadge.style.borderColor = classification.color;
-        }
-    }
-
-    // Update album / year metadata
-    const albumMetaEl = document.getElementById('track-album-meta');
-    if (albumMetaEl) {
-        if (meta?.album || meta?.releaseYear) {
-            albumMetaEl.innerText = `${meta.album || 'Studio Master'}${meta.releaseYear ? ` • ${meta.releaseYear}` : ''}`;
-        } else {
-            albumMetaEl.innerText = meta?.uploader ? `Via ${meta.uploader}` : 'Digital Master';
-        }
-    }
-
-    // Update format tag
-    const formatTagEl = document.getElementById('track-format-tag');
-    if (formatTagEl) {
-        formatTagEl.innerText = meta?.format || (meta?.duration ? `${fmtTime(meta.duration)} // HQ` : 'DSP-3D');
-    }
-
-    // Auto-steer visualizer theme if auto theme is active or if user hasn't explicitly locked it
-    if (currentTheme === 'auto' || THEMES[currentTheme]?.isAuto) {
-        if (classification.theme && THEMES[classification.theme]) {
-            applyTheme(classification.theme, true);
         }
     }
     
@@ -783,6 +681,10 @@ function initThree() {
     shockwaveGroup = new THREE.Group();
     scene.add(shockwaveGroup);
 
+    // Smooth Tapered Cylindrical Rod for Pulse Ring
+    const ringRodGeo = new THREE.CylinderGeometry(0.38, 0.58, 1, 16);
+    ringRodGeo.translate(0, 0.5, 0);
+
     function makeMat(idx = 0, total = 128) {
         const th = THEMES[currentTheme] || THEMES.phonk;
         const col = th.getColor ? th.getColor(idx, total) : th.color;
@@ -795,55 +697,20 @@ function initThree() {
         });
     }
 
-    // 1. PULSE RING // Dual Accelerator (Outer Towers + Inner Iris), Floor Grid, Base Halo & Gyro Reactor
+    // 1. PULSE RING // Dual Accelerator, Rotating Gyro-Core & Base Halo
     pulseGrp = new THREE.Group();
-    const ringCount = 96, ringR = 21;
-    const innerRingCount = 48, innerR = 13.5;
-
-    // Cyber Stage Floor Grid for Ring (matches the floor perspective depth of Grid)
-    pulseFloor = new THREE.GridHelper(56, 20, thInit.color, 0x181824);
-    pulseFloor.position.y = -10;
-    pulseFloor.rotation.x = 0.35;
-    pulseFloor.material.transparent = true;
-    pulseFloor.material.opacity = 0.35;
-    pulseGrp.add(pulseFloor);
-
-    pulseOuterGrp = new THREE.Group();
-    pulseGrp.add(pulseOuterGrp);
-
-    pulseInnerGrp = new THREE.Group();
-    pulseGrp.add(pulseInnerGrp);
-
-    // Smooth Tapered Cylindrical Rod for Outer Ring
-    const ringRodGeo = new THREE.CylinderGeometry(0.35, 0.55, 1, 16);
-    ringRodGeo.translate(0, 0.5, 0);
-
-    // Inner Inverted Spikes
-    const innerRodGeo = new THREE.CylinderGeometry(0.45, 0.25, 1, 16);
-    innerRodGeo.translate(0, -0.5, 0);
-
-    pulseBars = [];
-    pulseInnerBars = [];
-
-    // Outer Ring Towers
+    const ringCount = 128, ringR = 22;
     for (let i = 0; i < ringCount; i++) {
         const m = new THREE.Mesh(ringRodGeo, makeMat(i, ringCount));
         const a = (i / ringCount) * Math.PI * 2;
         m.position.set(Math.cos(a) * ringR, Math.sin(a) * ringR, 0);
         m.rotation.z = a - Math.PI / 2;
-        pulseOuterGrp.add(m);
+        m.userData = { index: i, angle: a };
+        pulseGrp.add(m);
         pulseBars.push(m);
     }
 
-    // Inner Iris Spikes (counter-pointing toward center)
-    for (let i = 0; i < innerRingCount; i++) {
-        const m = new THREE.Mesh(innerRodGeo, makeMat(i + ringCount, innerRingCount));
-        const a = (i / innerRingCount) * Math.PI * 2;
-        m.position.set(Math.cos(a) * innerR, Math.sin(a) * innerR, 0);
-        m.rotation.z = a - Math.PI / 2;
-        pulseInnerGrp.add(m);
-        pulseInnerBars.push(m);
-    }
+    const thInit = THEMES[currentTheme] || THEMES.phonk;
 
     // Center Rotating Energy Gyro-Core
     const gyroGeo = new THREE.OctahedronGeometry(3.4, 0);
@@ -858,76 +725,57 @@ function initThree() {
     pulseGyroCore = new THREE.Mesh(gyroGeo, gyroMat);
     pulseGrp.add(pulseGyroCore);
 
-    // Dual Glowing Halo Base Rings
-    const haloOuterGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
+    // Glowing Halo Base Ring
+    const haloGeo = new THREE.RingGeometry(ringR - 0.4, ringR + 0.4, 64);
     const haloMat = new THREE.MeshBasicMaterial({
         color: thInit.color,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.35
     });
-    pulseHalo = new THREE.Mesh(haloOuterGeo, haloMat);
+    pulseHalo = new THREE.Mesh(haloGeo, haloMat);
     pulseGrp.add(pulseHalo);
 
-    const haloInnerGeo = new THREE.RingGeometry(innerR - 0.35, innerR + 0.35, 48);
-    const haloInnerMesh = new THREE.Mesh(haloInnerGeo, haloMat);
-    pulseGrp.add(haloInnerMesh);
+    pulseFloor = new THREE.GridHelper(56, 20, thInit.color, 0x1f1f2e);
+    pulseFloor.position.set(0, -9, 0);
+    pulseFloor.material.transparent = true;
+    pulseFloor.material.opacity = 0.32;
+    pulseGrp.add(pulseFloor);
 
     visualizerRoot.add(pulseGrp);
 
-    // 2. WAVE RIBBON // 3D Curved Highway, Floor Reflection Grid, Mirror Spectrum, Horizon Beam & Peak Beads
+    // 2. WAVE RIBBON // 3D Curved Highway, Dual Mirrored Spectrum & Center Beam
     waveGrp = new THREE.Group();
     const waveN = 72;
     waveBars = [];
     waveMirrorBars = [];
-    wavePeakBeads = [];
-    wavePeakY = new Array(waveN).fill(0);
-
-    // Cyber Highway Floor Grid
-    waveFloor = new THREE.GridHelper(90, 22, thInit.color, 0x181826);
-    waveFloor.position.set(0, -9.5, 4);
-    waveFloor.rotation.x = 0.22;
-    waveFloor.material.transparent = true;
-    waveFloor.material.opacity = 0.35;
-    waveGrp.add(waveFloor);
 
     // Smooth Cylindrical Wave Pillars
-    const wavePillarGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 16);
+    const wavePillarGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
     wavePillarGeo.translate(0, 0.5, 0);
 
-    const waveMirrorGeo = new THREE.CylinderGeometry(0.55, 0.55, 1, 16);
+    const waveMirrorGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
     waveMirrorGeo.translate(0, -0.5, 0);
-
-    const beadGeo = new THREE.CylinderGeometry(0.62, 0.62, 0.15, 16);
-    const beadMat = new THREE.MeshBasicMaterial({
-        color: thInit.secondaryColor || thInit.color,
-        transparent: true,
-        opacity: 0.95
-    });
 
     for (let i = 0; i < waveN; i++) {
         const norm = (i - waveN / 2) / (waveN / 2);
         const x = (i - waveN / 2) * 1.35;
-        // Parabolic 3D curvature wrapping toward camera
-        const z = -Math.pow(norm * 2.5, 2) * 1.4;
+        // Subtle 3D cylindrical arc in Z wrapping toward viewer
+        const z = -Math.pow(norm * 2.6, 2) * 1.1;
 
-        // Upper frequency pillar
+        // Upper frequency bar
         const mUp = new THREE.Mesh(wavePillarGeo, makeMat(i, waveN));
         mUp.position.set(x, -5, z);
+        mUp.userData = { index: i, norm: norm, x: x };
         waveGrp.add(mUp);
         waveBars.push(mUp);
 
-        // Lower mirrored reflection pillar
+        // Lower mirrored reflection bar
         const mDown = new THREE.Mesh(waveMirrorGeo, makeMat(i, waveN));
         mDown.position.set(x, -5.2, z);
+        mDown.userData = { index: i, norm: norm, x: x };
         waveGrp.add(mDown);
         waveMirrorBars.push(mDown);
-
-        // Floating Studio Peak Bead
-        const mBead = new THREE.Mesh(beadGeo, beadMat.clone());
-        mBead.position.set(x, -4.6, z);
-        waveGrp.add(mBead);
-        wavePeakBeads.push(mBead);
     }
 
     // Glowing central horizon line
@@ -938,8 +786,14 @@ function initThree() {
         opacity: 0.55
     });
     waveHorizon = new THREE.Mesh(horizGeo, horizMat);
-    waveHorizon.position.set(0, -5.1, -0.5);
+    waveHorizon.position.set(0, -5.1, -1);
     waveGrp.add(waveHorizon);
+
+    waveFloor = new THREE.GridHelper(waveN * 1.35 + 8, 20, thInit.color, 0x1f1f2e);
+    waveFloor.position.set(0, -8.5, -1);
+    waveFloor.material.transparent = true;
+    waveFloor.material.opacity = 0.32;
+    waveGrp.add(waveFloor);
 
     waveGrp.visible = false;
     visualizerRoot.add(waveGrp);
@@ -990,11 +844,11 @@ function initThree() {
     vgridGrp.visible = false;
     visualizerRoot.add(vgridGrp);
 
-    // 4. PULSAR CYBER CORE // Deformed Geodesic Shell, Triple Gimbal Gyroscope, Equator Beacons & Orbiting Spark Cloud
+    // 4. PULSAR CYBER CORE // Solid Pulsing Core, Deformed Geodesic Shell & Dual Gimbal Rings
     orbGrp = new THREE.Group();
     
     // Outer Deformed Wireframe Shell
-    const sphereGeom = new THREE.IcosahedronGeometry(11, 3);
+    const sphereGeom = new THREE.IcosahedronGeometry(12, 3);
     const sphereMat = new THREE.MeshStandardMaterial({
         color: thInit.color,
         emissive: thInit.color,
@@ -1011,8 +865,8 @@ function initThree() {
         orbVertices.push(new THREE.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)));
     }
 
-    // Inner Glowing Pulsar Nucleus (Delicate wireframe energy diamond)
-    const innerCoreGeo = new THREE.IcosahedronGeometry(2.5, 1);
+    // Inner Glowing Pulsar Nucleus (Delicate wireframe energy core)
+    const innerCoreGeo = new THREE.IcosahedronGeometry(2.4, 1);
     const innerCoreMat = new THREE.MeshStandardMaterial({
         color: thInit.color,
         emissive: thInit.secondaryColor || thInit.color,
@@ -1024,66 +878,19 @@ function initThree() {
     orbInnerCore = new THREE.Mesh(innerCoreGeo, innerCoreMat);
     orbGrp.add(orbInnerCore);
 
-    // Triple Gimbal Gyroscopic Rings (Yaw, Pitch, Roll)
+    // Dual Gimbal Orbital Rings
+    const ringGeo = new THREE.TorusGeometry(15.5, 0.14, 16, 80);
     const ringMat1 = new THREE.MeshBasicMaterial({ color: thInit.color, transparent: true, opacity: 0.65 });
-    orbRing1 = new THREE.Mesh(new THREE.TorusGeometry(14.2, 0.14, 16, 96), ringMat1);
+    orbRing1 = new THREE.Mesh(ringGeo, ringMat1);
     orbRing1.rotation.x = Math.PI / 4;
     orbRing1.rotation.y = Math.PI / 6;
     orbGrp.add(orbRing1);
 
     const ringMat2 = new THREE.MeshBasicMaterial({ color: thInit.secondaryColor || thInit.color, transparent: true, opacity: 0.55 });
-    orbRing2 = new THREE.Mesh(new THREE.TorusGeometry(15.8, 0.12, 16, 96), ringMat2);
+    orbRing2 = new THREE.Mesh(ringGeo, ringMat2);
     orbRing2.rotation.x = -Math.PI / 3;
     orbRing2.rotation.y = -Math.PI / 4;
     orbGrp.add(orbRing2);
-
-    const ringMat3 = new THREE.MeshBasicMaterial({ color: thInit.color, transparent: true, opacity: 0.45 });
-    orbRing3 = new THREE.Mesh(new THREE.TorusGeometry(17.4, 0.11, 16, 96), ringMat3);
-    orbRing3.rotation.z = Math.PI / 3;
-    orbGrp.add(orbRing3);
-
-    // Holographic Equatorial Satellites (32 beacons)
-    orbEquatorBeacons = [];
-    const beaconGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.6, 12);
-    const beaconMat = new THREE.MeshStandardMaterial({
-        color: thInit.color,
-        emissive: thInit.color,
-        emissiveIntensity: 0.45,
-        roughness: 0.2,
-        metalness: 0.8
-    });
-    const beaconCount = 32;
-    for (let i = 0; i < beaconCount; i++) {
-        const a = (i / beaconCount) * Math.PI * 2;
-        const b = new THREE.Mesh(beaconGeo, beaconMat.clone());
-        b.position.set(Math.cos(a) * 12.8, 0, Math.sin(a) * 12.8);
-        b.rotation.y = -a;
-        b.rotation.z = Math.PI / 2;
-        orbGrp.add(b);
-        orbEquatorBeacons.push(b);
-    }
-
-    // Orbiting Cosmic Particle Spark Cloud
-    const partCount = 72;
-    const partGeo = new THREE.BufferGeometry();
-    const partPos = new Float32Array(partCount * 3);
-    for (let i = 0; i < partCount; i++) {
-        const phi = Math.acos(-1 + (2 * i) / partCount);
-        const theta = Math.sqrt(partCount * Math.PI) * phi;
-        const r = 18.5 + (Math.random() - 0.5) * 4;
-        partPos[i * 3]     = r * Math.cos(theta) * Math.sin(phi);
-        partPos[i * 3 + 1] = r * Math.sin(theta) * Math.sin(phi);
-        partPos[i * 3 + 2] = r * Math.cos(phi);
-    }
-    partGeo.setAttribute('position', new THREE.BufferAttribute(partPos, 3));
-    const partMat = new THREE.PointsMaterial({
-        color: thInit.secondaryColor || thInit.color,
-        size: 0.65,
-        transparent: true,
-        opacity: 0.85
-    });
-    orbParticles = new THREE.Points(partGeo, partMat);
-    orbGrp.add(orbParticles);
 
     orbGrp.visible = false;
     visualizerRoot.add(orbGrp);
@@ -1263,79 +1070,156 @@ function threeAnimate() {
         }
 
         if (currentVis === 'pulse') {
+            pulseRipplePhase += 0.05 + bgBassLevel * 0.18;
+
+            const nowMs = performance.now();
+            if (bgBassLevel > 0.44 && nowMs - lastPulseShockwaveTime > 300) {
+                pulseShockwaves.push({
+                    radius: 0,
+                    speed: 0.08 + bgBassLevel * 0.14,
+                    intensity: 1.0,
+                    maxRadius: Math.PI + 0.2
+                });
+                lastPulseShockwaveTime = nowMs;
+            }
+
+            pulseShockwaves.forEach(sw => {
+                sw.radius += sw.speed;
+                sw.intensity *= 0.94;
+            });
+            pulseShockwaves = pulseShockwaves.filter(sw => sw.radius < sw.maxRadius && sw.intensity > 0.05);
+
             const half = pulseBars.length / 2;
+            const colCenter = new THREE.Color(th.color);
+            const colEdge = new THREE.Color(th.secondaryColor || th.color);
+
             for (let i = 0; i < pulseBars.length; i++) {
+                const b = pulseBars[i];
+                const a = (b.userData && b.userData.angle !== undefined) ? b.userData.angle : (i / pulseBars.length) * Math.PI * 2;
                 const sym = i < half ? i : pulseBars.length - 1 - i;
                 const bin = Math.min(dataArr.length - 1, Math.floor((sym / half) * dataArr.length * 0.7));
-                const val = dataArr[bin] || 0;
-                pulseBars[i].scale.y += (Math.max(0.8, 1 + (val / 255) * 17) - pulseBars[i].scale.y) * 0.28;
+                const audioVal = (dataArr[bin] || 0) / 255;
+
+                // Kinetic traveling wave ripple around the ring
+                const ripple = Math.sin(a * 4 - pulseRipplePhase) * (0.8 + bgBassLevel * 3.5);
+
+                // Sub-bass shockwave boost propagating around both hemispheres
+                let shockBoost = 0;
+                for (let j = 0; j < pulseShockwaves.length; j++) {
+                    const sw = pulseShockwaves[j];
+                    const distFromOrigin = Math.abs(Math.atan2(Math.sin(a), Math.cos(a)));
+                    const diff = Math.abs(distFromOrigin - sw.radius);
+                    if (diff < 0.6) {
+                        shockBoost += Math.exp(-Math.pow(diff / 0.3, 2)) * sw.intensity * 7.5;
+                    }
+                }
+
+                const targetScaleY = Math.max(0.8, 1 + audioVal * 18 + ripple + shockBoost);
+                b.scale.y += (targetScaleY - b.scale.y) * 0.32;
+                b.material.emissiveIntensity = 0.22 + audioVal * 0.45 + (shockBoost > 1 ? 0.35 : 0);
+
                 if (th.isAuto) {
-                    const c = new THREE.Color().setHSL((autoHue + (i / pulseBars.length) * 0.25) % 1, 0.9, 0.55);
-                    pulseBars[i].material.color.copy(c);
-                    pulseBars[i].material.emissive.copy(c);
+                    const c = new THREE.Color().setHSL((autoHue + (i / pulseBars.length) * 0.35) % 1, 0.9, 0.55);
+                    b.material.color.copy(c);
+                    b.material.emissive.copy(c);
+                } else {
+                    const t = Math.abs(Math.sin(a));
+                    const col = colCenter.clone().lerp(colEdge, t);
+                    b.material.color.copy(col);
+                    b.material.emissive.copy(col);
                 }
             }
-
-            // Inner Iris Spikes
-            const innerHalf = pulseInnerBars.length / 2;
-            for (let i = 0; i < pulseInnerBars.length; i++) {
-                const sym = i < innerHalf ? i : pulseInnerBars.length - 1 - i;
-                const bin = Math.min(dataArr.length - 1, Math.floor((sym / innerHalf) * 36));
-                const val = dataArr[bin] || 0;
-                pulseInnerBars[i].scale.y += (Math.max(0.6, 1 + (val / 255) * 12) - pulseInnerBars[i].scale.y) * 0.32;
-                if (th.isAuto) {
-                    const c = new THREE.Color().setHSL((autoHue + 0.45 + (i / pulseInnerBars.length) * 0.2) % 1, 0.9, 0.55);
-                    pulseInnerBars[i].material.color.copy(c);
-                    pulseInnerBars[i].material.emissive.copy(c);
-                }
-            }
-
-            // Dual Counter-Rotating Aperture
-            if (pulseOuterGrp) pulseOuterGrp.rotation.z += 0.003 + bgBassLevel * 0.008;
-            if (pulseInnerGrp) pulseInnerGrp.rotation.z -= 0.005 + bgBassLevel * 0.012;
 
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.02 + bgBassLevel * 0.04;
                 pulseGyroCore.rotation.y += 0.025 + bgBassLevel * 0.05;
-                const gyroScale = 1 + bgBassLevel * 0.55;
+                const gyroScale = 1 + bgBassLevel * 0.65;
                 pulseGyroCore.scale.set(gyroScale, gyroScale, gyroScale);
-                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.35;
+                pulseGyroCore.material.emissiveIntensity = 0.3 + bgBassLevel * 0.4;
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL(autoHue, 0.9, 0.6);
                     pulseGyroCore.material.color.copy(c);
                     pulseGyroCore.material.emissive.copy(c);
                 }
             }
+            if (pulseHalo) {
+                const haloScale = 1 + bgBassLevel * 0.12;
+                pulseHalo.scale.set(haloScale, haloScale, 1);
+                pulseHalo.material.opacity = 0.25 + bgBassLevel * 0.35;
+            }
         } else if (currentVis === 'wave') {
+            waveRipplePhase += 0.055 + bgBassLevel * 0.20;
+
+            const nowMs = performance.now();
+            if (bgBassLevel > 0.44 && nowMs - lastWaveShockwaveTime > 320) {
+                waveShockwaves.push({
+                    radius: 0,
+                    speed: 0.06 + bgBassLevel * 0.09,
+                    intensity: 1.0,
+                    maxRadius: 1.2
+                });
+                lastWaveShockwaveTime = nowMs;
+            }
+
+            waveShockwaves.forEach(sw => {
+                sw.radius += sw.speed;
+                sw.intensity *= 0.94;
+            });
+            waveShockwaves = waveShockwaves.filter(sw => sw.radius < sw.maxRadius && sw.intensity > 0.05);
+
+            const colCenter = new THREE.Color(th.color);
+            const colEdge = new THREE.Color(th.secondaryColor || th.color);
+
             for (let i = 0; i < waveBars.length; i++) {
+                const b = waveBars[i];
+                const norm = (b.userData && b.userData.norm !== undefined) ? b.userData.norm : (i - waveBars.length / 2) / (waveBars.length / 2);
+                const absNorm = Math.abs(norm);
                 const bin = Math.floor((i / waveBars.length) * dataArr.length * 0.65);
-                const val = dataArr[bin] || 0;
-                const targetH = Math.max(0.6, 1 + (val / 255) * 19);
-                waveBars[i].scale.y += (targetH - waveBars[i].scale.y) * 0.28;
-                if (waveMirrorBars[i]) {
-                    waveMirrorBars[i].scale.y += (targetH * 0.62 - waveMirrorBars[i].scale.y) * 0.28;
+                const audioVal = (dataArr[bin] || 0) / 255;
+
+                // Kinetic traveling wave ripple
+                const ripple = Math.sin(norm * 6 - waveRipplePhase) * (0.8 + bgBassLevel * 3.5);
+
+                // Sub-bass shockwave expanding outward from center
+                let shockBoost = 0;
+                for (let j = 0; j < waveShockwaves.length; j++) {
+                    const sw = waveShockwaves[j];
+                    const diff = Math.abs(absNorm - sw.radius);
+                    if (diff < 0.25) {
+                        shockBoost += Math.exp(-Math.pow(diff / 0.12, 2)) * sw.intensity * 7.5;
+                    }
                 }
 
-                // Studio Peak Beads Gravity Physics
-                if (wavePeakBeads[i]) {
-                    const barTop = -5 + waveBars[i].scale.y;
-                    if (barTop >= (wavePeakY[i] || -4.6)) {
-                        wavePeakY[i] = barTop;
-                    } else {
-                        wavePeakY[i] = Math.max(-4.6, (wavePeakY[i] || -4.6) - 0.16);
-                    }
-                    wavePeakBeads[i].position.y = wavePeakY[i] + 0.26;
+                const targetH = Math.max(0.6, 1 + audioVal * 19 + ripple + shockBoost);
+                b.scale.y += (targetH - b.scale.y) * 0.32;
+                b.material.emissiveIntensity = 0.22 + audioVal * 0.45 + (shockBoost > 1 ? 0.35 : 0);
+
+                if (waveMirrorBars[i]) {
+                    waveMirrorBars[i].scale.y += (targetH * 0.62 - waveMirrorBars[i].scale.y) * 0.32;
+                    waveMirrorBars[i].material.emissiveIntensity = 0.18 + audioVal * 0.35;
                 }
 
                 if (th.isAuto) {
                     const c = new THREE.Color().setHSL((autoHue + (i / waveBars.length) * 0.35) % 1, 0.9, 0.55);
-                    waveBars[i].material.color.copy(c);
-                    waveBars[i].material.emissive.copy(c);
+                    b.material.color.copy(c);
+                    b.material.emissive.copy(c);
                     if (waveMirrorBars[i]) {
                         waveMirrorBars[i].material.color.copy(c);
                         waveMirrorBars[i].material.emissive.copy(c);
                     }
+                } else {
+                    const col = colCenter.clone().lerp(colEdge, absNorm);
+                    b.material.color.copy(col);
+                    b.material.emissive.copy(col);
+                    if (waveMirrorBars[i]) {
+                        waveMirrorBars[i].material.color.copy(col);
+                        waveMirrorBars[i].material.emissive.copy(col);
+                    }
                 }
+            }
+
+            if (waveHorizon && waveHorizon.material) {
+                waveHorizon.material.opacity = 0.4 + bgBassLevel * 0.4;
             }
         } else if (currentVis === 'grid') {
             matrixRipplePhase += 0.045 + bgBassLevel * 0.18;
@@ -1391,37 +1275,21 @@ function threeAnimate() {
             for (let i = 0; i < pos.count; i++) {
                 const orig = orbVertices[i];
                 const bin = (i * 3) % (dataArr.length - 1);
-                const factor = 1 + ((dataArr[bin] || 0) / 255) * 0.75 + bgBassLevel * 0.35;
+                const factor = 1 + ((dataArr[bin] || 0) / 255) * 0.85 + bgBassLevel * 0.4;
                 pos.setXYZ(i, orig.x * factor, orig.y * factor, orig.z * factor);
             }
             pos.needsUpdate = true;
 
             if (orbInnerCore) {
-                const coreScale = 1 + bgBassLevel * 0.5;
+                const coreScale = 1 + bgBassLevel * 0.55;
                 orbInnerCore.scale.set(coreScale, coreScale, coreScale);
                 orbInnerCore.rotation.y -= 0.015;
                 orbInnerCore.rotation.x += 0.01;
             }
 
-            // Triple Gyroscope Gimbals
-            if (orbRing1) orbRing1.rotation.z += 0.012 + bgBassLevel * 0.02;
-            if (orbRing2) orbRing2.rotation.y += 0.015 + bgBassLevel * 0.025;
-            if (orbRing3) orbRing3.rotation.x += 0.01 + bgBassLevel * 0.018;
-
-            // Equatorial Satellites
-            if (orbEquatorBeacons) {
-                for (let i = 0; i < orbEquatorBeacons.length; i++) {
-                    const bin = (i * 4) % (dataArr.length - 1);
-                    const val = (dataArr[bin] || 0) / 255;
-                    const scaleY = 1 + val * 3.8 + bgBassLevel * 2.2;
-                    orbEquatorBeacons[i].scale.y += (scaleY - orbEquatorBeacons[i].scale.y) * 0.3;
-                }
-            }
-
-            // Cosmic Particle Spark Cloud
-            if (orbParticles) {
-                orbParticles.rotation.y += 0.006 + bgBassLevel * 0.015;
-                orbParticles.rotation.x -= 0.003;
+            if (orbRing1 && orbRing2) {
+                orbRing1.rotation.z += 0.012 + bgBassLevel * 0.02;
+                orbRing2.rotation.y += 0.015 + bgBassLevel * 0.025;
             }
 
             if (th.isAuto) {
@@ -1442,37 +1310,37 @@ function threeAnimate() {
 
         if (currentVis === 'pulse') {
             for (let i = 0; i < pulseBars.length; i++) {
-                const a = (i / pulseBars.length) * Math.PI * 2;
-                const h = Math.sin(a * 3 + time * 1.5) * 0.45 + Math.sin(a * 2 - time * 0.9) * 0.35;
-                const tgt = Math.max(0.7, 1.35 + Math.sin(time * 1.2) * 0.2 + h);
-                pulseBars[i].scale.y += (tgt - pulseBars[i].scale.y) * 0.12;
+                const b = pulseBars[i];
+                const a = (b.userData && b.userData.angle !== undefined) ? b.userData.angle : (i / pulseBars.length) * Math.PI * 2;
+                const wave = Math.sin(a * 4 - time * 2.2) * Math.cos(a * 2 + time * 1.1);
+                const tgt = Math.max(0.6, 1.25 + wave * 1.4);
+                b.scale.y += (tgt - b.scale.y) * 0.14;
+                b.material.emissiveIntensity = 0.32 + (wave * 0.22 + 0.22);
             }
-            if (pulseInnerBars) {
-                for (let i = 0; i < pulseInnerBars.length; i++) {
-                    const a = (i / pulseInnerBars.length) * Math.PI * 2;
-                    const h = Math.sin(a * 3 - time * 1.5) * 0.35;
-                    const tgt = Math.max(0.6, 1.2 + h);
-                    pulseInnerBars[i].scale.y += (tgt - pulseInnerBars[i].scale.y) * 0.12;
-                }
-            }
-            if (pulseOuterGrp) pulseOuterGrp.rotation.z += 0.0015;
-            if (pulseInnerGrp) pulseInnerGrp.rotation.z -= 0.0025;
             if (pulseGyroCore) {
                 pulseGyroCore.rotation.x += 0.01;
                 pulseGyroCore.rotation.y += 0.015;
                 pulseGyroCore.scale.set(1, 1, 1);
             }
+            if (pulseHalo) {
+                pulseHalo.scale.set(1, 1, 1);
+                pulseHalo.material.opacity = 0.35;
+            }
         } else if (currentVis === 'wave') {
             for (let i = 0; i < waveBars.length; i++) {
-                const n = i / waveBars.length;
-                const tgt = Math.max(0.7, 1.3 + Math.sin(n * Math.PI * 2 + time * 2) * 0.55);
-                waveBars[i].scale.y += (tgt - waveBars[i].scale.y) * 0.12;
+                const b = waveBars[i];
+                const norm = (b.userData && b.userData.norm !== undefined) ? b.userData.norm : (i - waveBars.length / 2) / (waveBars.length / 2);
+                const wave = Math.sin(norm * 5 - time * 2.5);
+                const tgt = Math.max(0.5, 1.2 + wave * 1.4);
+                b.scale.y += (tgt - b.scale.y) * 0.14;
+                b.material.emissiveIntensity = 0.32 + (wave * 0.22 + 0.22);
                 if (waveMirrorBars[i]) {
-                    waveMirrorBars[i].scale.y += (tgt * 0.6 - waveMirrorBars[i].scale.y) * 0.12;
+                    waveMirrorBars[i].scale.y += (tgt * 0.6 - waveMirrorBars[i].scale.y) * 0.14;
+                    waveMirrorBars[i].material.emissiveIntensity = 0.22 + (wave * 0.16 + 0.16);
                 }
-                if (wavePeakBeads[i]) {
-                    wavePeakBeads[i].position.y = -5 + waveBars[i].scale.y + 0.26;
-                }
+            }
+            if (waveHorizon && waveHorizon.material) {
+                waveHorizon.material.opacity = 0.45;
             }
         } else if (currentVis === 'grid') {
             for (let i = 0; i < vgridBars.length; i++) {
@@ -1496,16 +1364,6 @@ function threeAnimate() {
             if (orbInnerCore) orbInnerCore.rotation.y -= 0.006;
             if (orbRing1) orbRing1.rotation.z += 0.006;
             if (orbRing2) orbRing2.rotation.y += 0.008;
-            if (orbRing3) orbRing3.rotation.x += 0.005;
-            if (orbParticles) {
-                orbParticles.rotation.y += 0.003;
-            }
-            if (orbEquatorBeacons) {
-                for (let i = 0; i < orbEquatorBeacons.length; i++) {
-                    const wave = Math.sin(time * 3 + i * 0.3) * 0.4;
-                    orbEquatorBeacons[i].scale.y = 1 + wave;
-                }
-            }
         }
     }
 
@@ -1558,60 +1416,9 @@ function stopMic() {
 }
 
 let playlist = [
-    { 
-        id: 'demo-1', 
-        title: 'Synthwave Pulse', 
-        artist: 'RetroWave Studio', 
-        album: 'Neon Horizons',
-        releaseYear: '2024',
-        format: 'LOSSLESS // 48kHz',
-        src: '/audio/synthwave.mp3', 
-        thumb: 'favicon.svg', 
-        type: 'demo',
-        classification: {
-            genre: 'cyber',
-            label: 'CYBER // SYNTHWAVE',
-            mood: 'Futuristic / Electronic',
-            theme: 'cyber',
-            color: '#10b981'
-        }
-    },
-    { 
-        id: 'demo-2', 
-        title: 'Lofi Chill Beats', 
-        artist: 'Lofi Studio', 
-        album: 'Midnight Coffee',
-        releaseYear: '2024',
-        format: '320kbps MP3',
-        src: '/audio/lofi.mp3', 
-        thumb: 'favicon.svg', 
-        type: 'demo',
-        classification: {
-            genre: 'lofi',
-            label: 'LOFI // CHILL',
-            mood: 'Cozy / Nostalgic',
-            theme: 'lofi',
-            color: '#fb923c'
-        }
-    },
-    { 
-        id: 'demo-3', 
-        title: 'Acoustic Harmony', 
-        artist: 'Ambient Vibes', 
-        album: 'Tranquil Echoes',
-        releaseYear: '2024',
-        format: '320kbps MP3',
-        src: '/audio/chill.mp3', 
-        thumb: 'favicon.svg', 
-        type: 'demo',
-        classification: {
-            genre: 'serious',
-            label: 'SERIOUS // ACOUSTIC',
-            mood: 'Deep / Cinematic',
-            theme: 'serious',
-            color: '#f8fafc'
-        }
-    }
+    { id: 'demo-1', title: 'Synthwave Pulse', artist: 'RetroWave Studio', src: '/audio/synthwave.mp3', thumb: 'favicon.svg', type: 'demo' },
+    { id: 'demo-2', title: 'Lofi Chill Beats', artist: 'Lofi Studio', src: '/audio/lofi.mp3', thumb: 'favicon.svg', type: 'demo' },
+    { id: 'demo-3', title: 'Acoustic Harmony', artist: 'Ambient Vibes', src: '/audio/chill.mp3', thumb: 'favicon.svg', type: 'demo' }
 ];
 let currentTrackIdx = -1;
 let isShuffle = false;
@@ -1632,11 +1439,10 @@ function renderPlaylistUI() {
     playlist.forEach((track, idx) => {
         const item = document.createElement('div');
         item.className = `queue-item ${idx === currentTrackIdx ? 'active' : ''}`;
-        const genreBadgeText = track.classification?.label || (track.type === 'demo' ? 'DEMO STEM' : 'STREAM');
         item.innerHTML = `
             <div class="queue-item-info">
                 <span class="queue-item-title">${idx + 1}. ${track.title}</span>
-                <span class="queue-item-sub">${track.artist || 'Audio Track'} • ${genreBadgeText}</span>
+                <span class="queue-item-sub">${track.artist || 'Audio Track'}</span>
             </div>
             <button class="queue-remove-btn" title="Remove track">&times;</button>
         `;
@@ -1653,9 +1459,6 @@ function renderPlaylistUI() {
 
 function addToPlaylist(track, playImmediately = false) {
     track.id = track.id || (Date.now() + Math.random());
-    if (!track.classification) {
-        track.classification = classifyTrackLocally(track.title, track.artist, track.album);
-    }
     playlist.push(track);
     renderPlaylistUI();
     if (playImmediately || (playlist.length === 1 && (!curAudioEl || curAudioEl.paused))) {
@@ -1700,17 +1503,13 @@ function playTrackAtIndex(idx) {
     if (track.type === 'stream' || track.url) {
         playStream(track.url || track.src, track);
     } else {
-        if (track.classification?.theme) {
-            applyTheme(track.classification.theme, true);
-        } else {
-            const t = (track.title || '').toLowerCase();
-            if (t.includes('synth') || t.includes('cyber')) applyTheme('cyber', true);
-            else if (t.includes('lofi') || t.includes('chill')) applyTheme('lofi', true);
-            else if (t.includes('phonk') || t.includes('drift')) applyTheme('phonk', true);
-            else if (t.includes('acoustic') || t.includes('piano')) applyTheme('serious', true);
-        }
+        const t = (track.title || '').toLowerCase();
+        if (t.includes('synth') || t.includes('cyber')) applyTheme('cyber');
+        else if (t.includes('lofi') || t.includes('chill')) applyTheme('lofi');
+        else if (t.includes('phonk') || t.includes('drift')) applyTheme('phonk');
+        else if (t.includes('acoustic') || t.includes('piano')) applyTheme('serious');
 
-        playDirectAudio(track.src, track.title, track.artist, track);
+        playDirectAudio(track.src, track.title, track.artist);
     }
 }
 
@@ -1783,41 +1582,25 @@ function parseLRC(text) {
     return result.sort((a, b) => a.time - b.time);
 }
 
-async function loadLyricsForTrack(title, artist, customQuery = null) {
+async function loadLyricsForTrack(title, artist) {
     const hudBody = document.getElementById('lyrics-hud-body');
-    const statusBadge = document.getElementById('lyrics-status-badge');
     if (!hudBody) return;
-
     hudBody.innerHTML = '<div class="lyrics-empty-msg">Searching synchronized lyrics... 🎵</div>';
     currentLyrics = [];
     activeLyricIdx = -1;
     isLyricsSynced = false;
-    if (statusBadge) statusBadge.innerText = 'SEARCHING...';
 
     try {
-        const queryParam = customQuery 
-            ? `title=${encodeURIComponent(customQuery)}` 
-            : `title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || '')}`;
-
-        const res = await fetch(`/api/lyrics?${queryParam}`);
+        const res = await fetch(`/api/lyrics?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist || '')}`);
         const data = await res.json();
         
         if (!data.found) {
-            if (statusBadge) statusBadge.innerText = 'NO LYRICS';
-            hudBody.innerHTML = `
-                <div class="lyrics-empty-msg">
-                    No lyrics found for "<strong>${title}</strong>".<br>
-                    <span style="opacity:0.7;font-size:10px;margin-top:6px;display:inline-block;">Click 🔍 above to search manually with another title.</span>
-                </div>`;
+            hudBody.innerHTML = `<div class="lyrics-empty-msg">No synchronized lyrics found for "${title}".<br><span style="opacity:0.6;font-size:9px;">Enjoy the visualizer!</span></div>`;
             return;
         }
 
         if (data.syncedLyrics) {
             isLyricsSynced = true;
-            if (statusBadge) {
-                statusBadge.innerText = '● SYNCED KARAOKE';
-                statusBadge.style.color = 'var(--accent)';
-            }
             currentLyrics = parseLRC(data.syncedLyrics);
             if (currentLyrics.length === 0) {
                 renderPlainLyrics(data.plainLyrics || data.syncedLyrics);
@@ -1830,25 +1613,18 @@ async function loadLyricsForTrack(title, artist, customQuery = null) {
                 lineEl.className = 'lyric-line';
                 lineEl.dataset.idx = idx;
                 lineEl.innerText = l.text;
-                lineEl.title = 'Click to seek audio here';
                 lineEl.addEventListener('click', () => {
                     if (curAudioEl) {
                         curAudioEl.currentTime = l.time;
-                        if (curAudioEl.paused) curAudioEl.play();
                     }
                 });
                 hudBody.appendChild(lineEl);
             });
         } else if (data.plainLyrics) {
-            if (statusBadge) {
-                statusBadge.innerText = '● PLAIN LYRICS';
-                statusBadge.style.color = 'var(--dim)';
-            }
             renderPlainLyrics(data.plainLyrics);
         }
     } catch (err) {
-        if (statusBadge) statusBadge.innerText = 'ERROR';
-        hudBody.innerHTML = '<div class="lyrics-empty-msg">Could not load lyrics. Try manual search.</div>';
+        hudBody.innerHTML = '<div class="lyrics-empty-msg">Could not load lyrics.</div>';
     }
 }
 
@@ -1916,10 +1692,10 @@ function attachTimeEvents(el) {
     };
 }
 
-function playDirectAudio(src, title, artist, meta = null) {
+function playDirectAudio(src, title, artist) {
     stopMic();
     const thisSession = ++currentAudioSessionId;
-    updateTrackInfo(title, artist, meta?.thumb || null, meta);
+    updateTrackInfo(title, artist, null);
     if (sourceBadge) sourceBadge.innerText = 'PLAYING';
 
     if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
@@ -1950,16 +1726,20 @@ async function playStream(query, presetMeta = null) {
     stopMic();
     const thisSession = ++currentAudioSessionId;
     if (sourceBadge) sourceBadge.innerText = 'STREAM';
-    updateTrackInfo(presetMeta?.title || query, presetMeta?.artist || presetMeta?.uploader || 'Streaming audio', presetMeta?.thumbnail || presetMeta?.thumb, presetMeta);
+    
+    const initTitle = presetMeta?.title || query;
+    const initArtist = presetMeta?.artist || presetMeta?.uploader || 'Streaming audio';
+    const initThumb = presetMeta?.thumbnail || presetMeta?.thumb;
+    updateTrackInfo(initTitle, initArtist, initThumb);
 
     try {
         let meta = presetMeta;
-        if (!meta || !meta.classification) {
+        if (!meta || !meta.artist || meta.artist === 'YouTube Stream' || meta.artist === 'YouTube Artist') {
             const r = await fetch(`/metadata?url=${encodeURIComponent(query)}`);
             meta = await r.json();
         }
         if (currentAudioSessionId !== thisSession) return;
-        updateTrackInfo(meta.title || query, meta.artist || meta.uploader || 'Unknown Artist', meta.thumbnail || meta.thumb, meta);
+        updateTrackInfo(meta.title || query, meta.artist || meta.uploader || 'Unknown Artist', meta.thumbnail || initThumb);
 
         if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
         curAudioEl = new Audio();
@@ -2066,14 +1846,10 @@ document.querySelectorAll('.deck-tab').forEach(tab => {
     });
 });
 
-document.querySelectorAll('.preset-row').forEach((row, rIdx) => {
+document.querySelectorAll('.preset-row').forEach(row => {
     row.addEventListener('click', () => {
         document.querySelectorAll('.preset-row').forEach(r => r.classList.remove('active'));
         row.classList.add('active');
-        if (playlist[rIdx] && playlist[rIdx].type === 'demo') {
-            playTrackAtIndex(rIdx);
-            return;
-        }
         const trackObj = {
             title: row.dataset.title || 'Demo Track',
             artist: row.dataset.artist || 'Studio',
@@ -2153,11 +1929,12 @@ searchInp?.addEventListener('input', () => {
             data.forEach(item => {
                 const card = document.createElement('div');
                 card.className = 'suggestion-card';
+                const displayArtist = item.artist || item.uploader || 'YouTube Stream';
                 card.innerHTML = `
                     ${item.thumbnail ? `<img class="suggestion-thumb" src="${item.thumbnail}" alt="" onerror="this.style.display='none'">` : `<div class="suggestion-thumb" style="display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:12px;">♪</div>`}
                     <div class="suggestion-info">
                         <div class="suggestion-title">${item.title}</div>
-                        <div class="suggestion-channel">${item.uploader || 'YouTube Stream'}</div>
+                        <div class="suggestion-channel">${displayArtist}</div>
                     </div>
                 `;
                 card.onclick = () => {
@@ -2165,7 +1942,7 @@ searchInp?.addEventListener('input', () => {
                     searchInp.value = '';
                     const trackObj = {
                         title: item.title,
-                        artist: item.uploader || 'YouTube Artist',
+                        artist: displayArtist,
                         url: item.url,
                         thumb: item.thumbnail,
                         type: 'stream'
@@ -2208,24 +1985,6 @@ document.getElementById('mic-btn')?.addEventListener('click', async () => {
 const fileUpload = document.getElementById('file-upload');
 document.getElementById('upload-btn')?.addEventListener('click', () => fileUpload?.click());
 
-function parseLocalTrackName(fileName) {
-    const clean = fileName.replace(/\.[^/.]+$/, '').trim();
-    const separators = [' - ', ' – ', ' — ', ' // '];
-    for (const sep of separators) {
-        if (clean.includes(sep)) {
-            const parts = clean.split(sep);
-            return {
-                artist: parts[0].trim(),
-                title: parts.slice(1).join(' ').trim()
-            };
-        }
-    }
-    return {
-        artist: 'Local Artist',
-        title: clean
-    };
-}
-
 function loadLocalFiles(filesList) {
     if (!filesList || filesList.length === 0) return;
     stopMic();
@@ -2233,18 +1992,21 @@ function loadLocalFiles(filesList) {
     if (files.length === 0) return;
 
     files.forEach((file, idx) => {
-        const parsed = parseLocalTrackName(file.name);
-        const classification = classifyTrackLocally(parsed.title, parsed.artist);
+        const rawName = file.name.replace(/\.[^/.]+$/, '');
+        let title = rawName;
+        let artist = 'Local Audio';
+        const split = rawName.split(/\s*[-–—]\s*/);
+        if (split.length >= 2) {
+            artist = split[0].trim();
+            title = split.slice(1).join(' - ').trim();
+        }
         const trackObj = {
             id: Date.now() + Math.random(),
-            title: parsed.title,
-            artist: parsed.artist,
-            album: 'Local Library',
-            format: file.name.split('.').pop().toUpperCase(),
+            title: title,
+            artist: artist,
             src: URL.createObjectURL(file),
             thumb: 'favicon.svg',
-            type: 'local',
-            classification
+            type: 'local'
         };
         addToPlaylist(trackObj, idx === 0 && (!curAudioEl || curAudioEl.paused));
     });
@@ -2348,32 +2110,37 @@ function updateAllBarMaterials() {
     const colCenter = new THREE.Color(th.color);
     const colEdge = new THREE.Color(th.secondaryColor || th.color);
 
-    const updateMat = (arr, total) => arr.forEach((b, idx) => {
-        const col = th.getColor ? th.getColor(idx, total) : th.color;
-        b.material.color.setHex(col);
-        b.material.emissive.setHex(col);
+    pulseBars.forEach(b => {
+        const a = b.userData?.angle !== undefined ? b.userData.angle : 0;
+        const t = Math.abs(Math.sin(a));
+        const col = colCenter.clone().lerp(colEdge, t);
+        b.material.color.copy(col);
+        b.material.emissive.copy(col);
     });
-    updateMat(pulseBars, pulseBars.length);
-    if (pulseInnerBars) updateMat(pulseInnerBars, pulseInnerBars.length);
-    updateMat(waveBars, waveBars.length);
-    if (waveMirrorBars) updateMat(waveMirrorBars, waveMirrorBars.length);
 
-    if (wavePeakBeads) {
-        wavePeakBeads.forEach(b => {
-            b.material.color.copy(colEdge);
-        });
+    waveBars.forEach((b, idx) => {
+        const absNorm = Math.abs(b.userData?.norm || 0);
+        const col = colCenter.clone().lerp(colEdge, absNorm);
+        b.material.color.copy(col);
+        b.material.emissive.copy(col);
+        if (waveMirrorBars && waveMirrorBars[idx]) {
+            waveMirrorBars[idx].material.color.copy(col);
+            waveMirrorBars[idx].material.emissive.copy(col);
+        }
+    });
+
+    if (pulseFloor && pulseFloor.material) {
+        pulseFloor.material.color.copy(colCenter);
+    }
+
+    if (waveFloor && waveFloor.material) {
+        waveFloor.material.color.copy(colCenter);
     }
 
     if (waveHorizon && waveHorizon.material) {
         waveHorizon.material.color.copy(colCenter);
     }
-    if (waveFloor && waveFloor.material) {
-        waveFloor.material.color.copy(colCenter);
-    }
 
-    if (pulseFloor && pulseFloor.material) {
-        pulseFloor.material.color.copy(colCenter);
-    }
     if (pulseGyroCore && pulseGyroCore.material) {
         pulseGyroCore.material.color.copy(colCenter);
         pulseGyroCore.material.emissive.copy(colCenter);
@@ -2406,18 +2173,6 @@ function updateAllBarMaterials() {
     }
     if (orbRing2 && orbRing2.material) {
         orbRing2.material.color.copy(colEdge);
-    }
-    if (orbRing3 && orbRing3.material) {
-        orbRing3.material.color.copy(colCenter);
-    }
-    if (orbEquatorBeacons) {
-        orbEquatorBeacons.forEach(b => {
-            b.material.color.copy(colCenter);
-            b.material.emissive.copy(colCenter);
-        });
-    }
-    if (orbParticles && orbParticles.material) {
-        orbParticles.material.color.copy(colEdge);
     }
 }
 
@@ -2506,11 +2261,6 @@ guideModal?.addEventListener('click', e => { if (e.target === guideModal) guideM
 
 const lyricsHud = document.getElementById('lyrics-hud');
 const lyricsBtn = document.getElementById('lyrics-btn');
-const lyricsSearchToggle = document.getElementById('lyrics-search-toggle');
-const lyricsManualBar = document.getElementById('lyrics-manual-bar');
-const lyricsManualInput = document.getElementById('lyrics-manual-input');
-const lyricsManualSubmit = document.getElementById('lyrics-manual-submit-btn');
-
 lyricsBtn?.addEventListener('click', () => {
     isLyricsOpen = !isLyricsOpen;
     lyricsBtn.classList.toggle('active', isLyricsOpen);
@@ -2520,27 +2270,6 @@ document.getElementById('lyrics-close-btn')?.addEventListener('click', () => {
     isLyricsOpen = false;
     lyricsBtn?.classList.remove('active');
     if (lyricsHud) lyricsHud.style.display = 'none';
-});
-
-lyricsSearchToggle?.addEventListener('click', () => {
-    if (!lyricsManualBar) return;
-    const isShown = lyricsManualBar.style.display !== 'none';
-    lyricsManualBar.style.display = isShown ? 'none' : 'flex';
-    if (!isShown && lyricsManualInput) {
-        lyricsManualInput.value = `${trackTitle?.innerText || ''} ${trackArtist?.innerText || ''}`.trim();
-        lyricsManualInput.focus();
-    }
-});
-
-function triggerManualLyricsSearch() {
-    const q = lyricsManualInput?.value.trim();
-    if (q) {
-        loadLyricsForTrack(q, '', q);
-    }
-}
-lyricsManualSubmit?.addEventListener('click', triggerManualLyricsSearch);
-lyricsManualInput?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') triggerManualLyricsSearch();
 });
 
 window.addEventListener('keydown', e => {
@@ -2582,9 +2311,8 @@ function applyThemeMode(light) {
         themeMoonIcon.style.display = light ? 'none'  : 'block';
     }
     if (bloomPass) {
-        bloomPass.threshold = light ? 0.85 : 0.82;
-        bloomPass.strength  = light ? 0.38 : 0.45;
-        bloomPass.radius    = 0.25;
+        bloomPass.threshold = light ? 0.16 : 0.08;
+        bloomPass.strength  = light ? 1.05 : 1.35;
     }
     localStorage.setItem('wibei_theme_mode', light ? 'light' : 'dark');
 }
