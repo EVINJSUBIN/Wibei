@@ -17,9 +17,9 @@
     --glass-shadow-sm: 0 10px 28px -4px rgba(0, 0, 0, 0.35);
     --font: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
-    --radius-lg: 20px;
-    --radius-md: 14px;
-    --radius-sm: 9px;
+    --radius-lg: 28px;
+    --radius-md: 18px;
+    --radius-sm: 12px;
     --radius-pill: 9999px;
 }
 
@@ -62,6 +62,7 @@ body {
 #bg-canvas, #threejs-container { position: fixed; inset: 0; }
 #bg-canvas { z-index: 1; pointer-events: none; }
 #threejs-container { z-index: 2; cursor: grab; }
+#threejs-container canvas { background: transparent !important; }
 
 /* Dropzone Overlay */
 .dropzone-overlay {
@@ -345,10 +346,10 @@ body.light-mode .deck-tab.active {
     background: var(--panel-sub);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 8px 12px;
+    padding: 9px 16px;
     font-size: 11px;
     outline: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-pill);
     transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .search-box input:focus {
@@ -360,19 +361,22 @@ body.light-mode .deck-tab.active {
     background: var(--panel-sub);
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 0 12px;
-    border-radius: var(--radius-md);
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: var(--radius-pill);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
 }
 .search-submit:hover {
     background: var(--accent);
     border-color: var(--accent);
     color: #000;
-    transform: scale(1.04);
+    transform: scale(1.05);
 }
 .search-results-list {
     display: flex;
@@ -448,11 +452,11 @@ body.light-mode .deck-tab.active {
     width: 100%;
     background: var(--panel-sub);
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-pill);
     color: var(--text);
     font-size: 11px;
     font-weight: 600;
-    padding: 10px;
+    padding: 11px;
     cursor: pointer;
     margin-bottom: 6px;
     display: flex;
@@ -570,7 +574,7 @@ body.light-mode .seg-btn.active {
     font-weight: 700;
     padding: 8px 4px;
     cursor: pointer;
-    border-radius: var(--radius-sm);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -611,7 +615,7 @@ body.light-mode .seg-btn.active {
     flex: 1;
     background: var(--panel-sub);
     border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
     color: var(--dim);
     font-size: 10px;
     font-weight: 600;
@@ -632,14 +636,14 @@ body.light-mode .seg-btn.active {
     bottom: 14px;
     left: 16px;
     right: 16px;
-    height: 64px;
+    height: 68px;
     background: var(--panel);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    border-radius: 34px;
     box-shadow: var(--glass-shadow), inset 0 1px 0 var(--border-glass-top);
-    padding: 0 18px;
+    padding: 0 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -741,9 +745,9 @@ body.light-mode .seg-btn.active {
     background: var(--panel-sub);
     border: 1px solid var(--border);
     color: var(--dim);
-    width: 30px;
-    height: 30px;
-    border-radius: var(--radius-pill);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -754,7 +758,7 @@ body.light-mode .seg-btn.active {
 .transport-ctrl-btn:hover {
     border-color: var(--border-hover);
     color: var(--text);
-    transform: scale(1.05);
+    transform: scale(1.06);
 }
 .transport-ctrl-btn.active {
     border-color: var(--accent);
@@ -767,8 +771,8 @@ body.light-mode .seg-btn.active {
     background: var(--text);
     border: none;
     color: var(--bg);
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1120,11 +1124,11 @@ body.light-mode .seg-btn.active {
 .modal-dialog {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    border-radius: 30px;
     box-shadow: var(--glass-shadow), inset 0 1px 0 var(--border-glass-top);
     max-width: 500px;
     width: 100%;
-    padding: 22px;
+    padding: 26px;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -1149,8 +1153,8 @@ body.light-mode .seg-btn.active {
 .sc-entry kbd {
     background: var(--panel-sub);
     border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 2px 6px;
+    border-radius: 6px;
+    padding: 2px 7px;
     color: var(--accent);
     font-family: var(--font-mono);
     font-size: 9px;
@@ -1159,11 +1163,11 @@ body.light-mode .seg-btn.active {
 .dialog-action-btn {
     background: var(--accent);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-pill);
     color: #000;
     font-size: 11px;
     font-weight: 700;
-    padding: 10px;
+    padding: 11px;
     cursor: pointer;
     transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }

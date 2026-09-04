@@ -28,7 +28,7 @@ let fxBassBoost = false;
 let fxSpeedIdx = 0;
 const FX_SPEEDS = [1.0, 1.25, 0.85];
 
-let scene, camera, renderer, composer, bloomPass;
+let scene, camera, renderer, composer, bloomPass, bgTexture;
 let visualizerRoot, shockwaveGroup;
 let pulseGrp, waveGrp, vgridGrp, orbGrp, vgridFloor;
 let pulseBars = [], waveBars = [], waveMirrorBars = [], vgridBars = [], orbVertices = [];
@@ -245,6 +245,7 @@ let ringSpawnTimer = 0;
 function resizeCanvas() {
     bgCanvas.width  = window.innerWidth;
     bgCanvas.height = window.innerHeight;
+    if (bgTexture) bgTexture.needsUpdate = true;
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
@@ -606,6 +607,8 @@ function animateBg() {
     else if (currentBg === 'dots') drawDotsFrame();
     else if (currentBg === 'rings') drawRingsFrame();
     bgCtx.globalAlpha = 1;
+
+    if (bgTexture) bgTexture.needsUpdate = true;
 }
 animateBg();
 
@@ -638,7 +641,11 @@ function initThree() {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(innerWidth, innerHeight);
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
+
+    bgTexture = new THREE.CanvasTexture(bgCanvas);
+    scene.background = bgTexture;
 
     const renderScene = new THREE.RenderPass(scene, camera);
     bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.5, 0.4, 0.85);
@@ -661,8 +668,9 @@ function initThree() {
     shockwaveGroup = new THREE.Group();
     scene.add(shockwaveGroup);
 
-    const bGeo = new THREE.BoxGeometry(0.5, 1, 0.5);
-    bGeo.translate(0, 0.5, 0);
+    // Smooth Tapered Cylindrical Rod for Pulse Ring
+    const ringRodGeo = new THREE.CylinderGeometry(0.38, 0.58, 1, 16);
+    ringRodGeo.translate(0, 0.5, 0);
 
     function makeMat(idx = 0, total = 128) {
         const th = THEMES[currentTheme] || THEMES.phonk;
@@ -671,8 +679,8 @@ function initThree() {
             color:             col,
             emissive:          col,
             emissiveIntensity: 0.85,
-            roughness:         0.2,
-            metalness:         0.8,
+            roughness:         0.18,
+            metalness:         0.82,
         });
     }
 
@@ -680,7 +688,7 @@ function initThree() {
     pulseGrp = new THREE.Group();
     const ringCount = 128, ringR = 22;
     for (let i = 0; i < ringCount; i++) {
-        const m = new THREE.Mesh(bGeo, makeMat(i, ringCount));
+        const m = new THREE.Mesh(ringRodGeo, makeMat(i, ringCount));
         const a = (i / ringCount) * Math.PI * 2;
         m.position.set(Math.cos(a) * ringR, Math.sin(a) * ringR, 0);
         m.rotation.z = a - Math.PI / 2;
@@ -722,10 +730,11 @@ function initThree() {
     waveBars = [];
     waveMirrorBars = [];
 
-    const wavePillarGeo = new THREE.BoxGeometry(0.85, 1, 0.85);
+    // Smooth Cylindrical Wave Pillars
+    const wavePillarGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
     wavePillarGeo.translate(0, 0.5, 0);
 
-    const waveMirrorGeo = new THREE.BoxGeometry(0.85, 1, 0.85);
+    const waveMirrorGeo = new THREE.CylinderGeometry(0.58, 0.58, 1, 16);
     waveMirrorGeo.translate(0, -0.5, 0);
 
     for (let i = 0; i < waveN; i++) {
@@ -772,7 +781,8 @@ function initThree() {
     vgridFloor.material.opacity = 0.35;
     vgridGrp.add(vgridFloor);
 
-    const gridPillarGeo = new THREE.BoxGeometry(1.6, 1, 1.6);
+    // Smooth Cylindrical Architectural Audio Pillars
+    const gridPillarGeo = new THREE.CylinderGeometry(0.92, 0.92, 1, 18);
     gridPillarGeo.translate(0, 0.5, 0);
 
     const colCenter = new THREE.Color(thInit.color);
@@ -792,8 +802,8 @@ function initThree() {
                 color: col,
                 emissive: col,
                 emissiveIntensity: 0.85,
-                roughness: 0.18,
-                metalness: 0.82
+                roughness: 0.16,
+                metalness: 0.84
             });
 
             const m = new THREE.Mesh(gridPillarGeo, mat);
