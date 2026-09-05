@@ -4,7 +4,7 @@ a 3d webgl audio spectrograph and real-time dsp synthesizer built with three.js 
 
 **live site:** [https://wibei.onrender.com](https://wibei.onrender.com) (backup: [https://wibei-production.up.railway.app/](https://wibei-production.up.railway.app/))
 
-![Wibei Preview](preview.png)
+![Wibei Preview](public/preview.png)
 
 ---
 
@@ -59,6 +59,36 @@ npm install
 npm start
 ```
 open `http://localhost:3000` in your browser.
+
+---
+
+### project structure
+```text
+Wibei/
+├── bin/                 # Local yt-dlp binary (gitignored)
+├── docs/                # Devlog & Stardance roadmap documentation
+│   ├── DEVLOG.md
+│   └── stardance_roadmap.md
+├── public/              # Web application root (statically served)
+│   ├── audio/           # Royalty-free local demo tracks
+│   ├── css/             # Stylesheets (app glassmorphism & landing)
+│   ├── images/          # Track vector artwork & visual assets
+│   ├── js/              # Modular ES audio, 3D visualizer & UI scripts
+│   ├── app.html         # 3D Audio Spectrograph Studio cockpit
+│   ├── favicon.svg      # App icon
+│   ├── index.html       # VOID aesthetic landing page
+│   └── preview.png      # Application UI preview snapshot
+├── scripts/             # Build and deployment binary installer
+│   └── install-ytdlp.js
+├── CODEBASE.md          # Comprehensive directory-by-directory architecture guide
+├── Dockerfile           # Production container build definition
+├── nixpacks.toml        # Nixpacks deployment environment configuration
+├── package.json         # NPM dependencies & lifecycle scripts
+├── README.md            # Main overview
+├── render.yaml          # Render.com auto-deployment configuration
+└── server.js            # Express API, audio streamer & static file server
+```
+For deep-dive documentation on every single directory, see [CODEBASE.md](CODEBASE.md).
 
 ---
 
