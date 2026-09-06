@@ -26,29 +26,52 @@ function setPulseCenterArt(thumbUrl) {
                     thumbUrl !== 'favicon.svg' && 
                     (thumbUrl.startsWith('http') || thumbUrl.startsWith('/') || thumbUrl.startsWith('blob:') || thumbUrl.startsWith('data:'));
 
-    if (isValid) {
-        if (!pulseTextureLoader) pulseTextureLoader = new THREE.TextureLoader();
-        pulseTextureLoader.load(
-            thumbUrl,
-            (tex) => {
-                tex.colorSpace = THREE.SRGBColorSpace;
+    if (!isValid) {
+        pulseArtDiscGrp.visible = false;
+        if (pulseGyroCore) pulseGyroCore.scale.set(1, 1, 1);
+        return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+        try {
+            const w = img.naturalWidth || img.width || 512;
+            const h = img.naturalHeight || img.height || 512;
+            if (w === 0 || h === 0) {
+                pulseArtDiscGrp.visible = false;
+                if (pulseGyroCore) pulseGyroCore.scale.set(1, 1, 1);
+                return;
+            }
+            const cvs = document.createElement('canvas');
+            cvs.width = 512;
+            cvs.height = 512;
+            const ctx = cvs.getContext('2d');
+            ctx.drawImage(img, 0, 0, 512, 512);
+
+            const tex = new THREE.CanvasTexture(cvs);
+            if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+            tex.needsUpdate = true;
+
+            if (pulseArtDiscMesh && pulseArtDiscMesh.material) {
+                if (pulseArtDiscMesh.material.map && typeof pulseArtDiscMesh.material.map.dispose === 'function') {
+                    pulseArtDiscMesh.material.map.dispose();
+                }
                 pulseArtDiscMesh.material.map = tex;
                 pulseArtDiscMesh.material.needsUpdate = true;
                 pulseArtDiscGrp.visible = true;
-                if (pulseGyroCore) {
-                    pulseGyroCore.scale.set(1.55, 1.55, 1.55);
-                }
-            },
-            undefined,
-            () => {
-                pulseArtDiscGrp.visible = false;
-                if (pulseGyroCore) pulseGyroCore.scale.set(1, 1, 1);
+                if (pulseGyroCore) pulseGyroCore.scale.set(1.55, 1.55, 1.55);
             }
-        );
-    } else {
+        } catch (_) {
+            pulseArtDiscGrp.visible = false;
+            if (pulseGyroCore) pulseGyroCore.scale.set(1, 1, 1);
+        }
+    };
+    img.onerror = () => {
         pulseArtDiscGrp.visible = false;
         if (pulseGyroCore) pulseGyroCore.scale.set(1, 1, 1);
-    }
+    };
+    img.src = thumbUrl;
 }
 
 function updateAllBarMaterials() {
@@ -894,5 +917,7 @@ function threeAnimate() {
         }
     }
 
-    composer.render();
+    try {
+        composer.render();
+    } catch (_) {}
 }
