@@ -133,6 +133,10 @@ function playTrackAtIndex(idx) {
     renderPlaylistUI();
 
     const track = playlist[idx];
+    document.querySelectorAll('.preset-row').forEach(r => {
+        r.classList.toggle('active', r.dataset.src === track?.src);
+    });
+
     if (track.type === 'stream' || track.url) {
         playStream(track.url || track.src, track);
     } else {
@@ -325,26 +329,24 @@ function playDirectAudio(src, title, artist, thumb = null) {
     updateTrackInfo(title, artist, thumb);
     if (sourceBadge) sourceBadge.innerText = 'PLAYING';
 
-    if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
+    ensureAudioCtx();
+    const el = getOrCreateAudioElement();
+    el.pause();
+    el.src = src;
+    el.playbackRate = FX_SPEEDS[fxSpeedIdx];
+    el.currentTime = 0;
 
-    curAudioEl = new Audio();
-    curAudioEl.crossOrigin = 'anonymous';
-    curAudioEl.src = src;
-    curAudioEl.playbackRate = FX_SPEEDS[fxSpeedIdx];
+    attachTimeEvents(el);
 
-    curAudioEl.oncanplay = () => {
-        if (currentAudioSessionId !== thisSession) return;
-        ensureAudioCtx();
-        attachAudioElement(curAudioEl);
-        curAudioEl.play().catch(() => {});
-        updatePlayIcons(true);
-    };
-    curAudioEl.onerror = () => {
-        if (currentAudioSessionId === thisSession && curAudioEl.error?.code !== 20) {
+    const playPromise = el.play();
+    if (playPromise !== undefined) {
+        playPromise.then(() => {
+            if (currentAudioSessionId !== thisSession) return;
+            updatePlayIcons(true);
+        }).catch(() => {
             updatePlayIcons(false);
-        }
-    };
-    attachTimeEvents(curAudioEl);
+        });
+    }
 }
 
 async function playStream(query, presetMeta = null) {
@@ -368,27 +370,27 @@ async function playStream(query, presetMeta = null) {
         if (currentAudioSessionId !== thisSession) return;
         updateTrackInfo(meta.title || query, meta.artist || meta.uploader || 'Unknown Artist', meta.thumbnail || initThumb);
 
-        if (curAudioEl) { curAudioEl.pause(); curAudioEl.src = ''; }
-        curAudioEl = new Audio();
-        curAudioEl.crossOrigin = 'anonymous';
-        curAudioEl.src = `/stream?url=${encodeURIComponent(query)}`;
-        curAudioEl.playbackRate = FX_SPEEDS[fxSpeedIdx];
+        ensureAudioCtx();
+        const el = getOrCreateAudioElement();
+        el.pause();
+        el.src = `/stream?url=${encodeURIComponent(query)}`;
+        el.playbackRate = FX_SPEEDS[fxSpeedIdx];
+        el.currentTime = 0;
 
-        curAudioEl.oncanplay = () => {
-            if (currentAudioSessionId !== thisSession) return;
-            ensureAudioCtx();
-            attachAudioElement(curAudioEl);
-            curAudioEl.play().catch(() => {});
-            updatePlayIcons(true);
-        };
-        curAudioEl.onerror = () => {
-            if (currentAudioSessionId === thisSession && curAudioEl.error?.code !== 20) {
-                updatePlayIcons(false);
-                showToast('Stream buffer notice: Retrying or switch to Demos.');
-            }
-        };
-        attachTimeEvents(curAudioEl);
+        attachTimeEvents(el);
 
+        const playPromise = el.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                if (currentAudioSessionId !== thisSession) return;
+                updatePlayIcons(true);
+            }).catch(() => {
+                if (currentAudioSessionId === thisSession) {
+                    updatePlayIcons(false);
+                    showToast('Stream buffer notice: Retrying or switch to Demos.');
+                }
+            });
+        }
     } catch (_) {
         if (currentAudioSessionId === thisSession) {
             updatePlayIcons(false);
@@ -399,20 +401,27 @@ async function playStream(query, presetMeta = null) {
 
 function togglePlay() {
     if (isMicActive) return;
-    if (!curAudioEl || !curAudioEl.src) {
+    ensureAudioCtx();
+    const el = getOrCreateAudioElement();
+    if (!el.src || el.src === window.location.href) {
         if (playlist.length > 0) {
-            playTrackAtIndex(0);
+            playTrackAtIndex(currentTrackIdx >= 0 ? currentTrackIdx : 0);
         } else {
             playDirectAudio('/audio/synthwave.mp3', 'Synthwave Pulse', 'RetroWave Studio', '/images/demo-synthwave.svg');
         }
         return;
     }
-    if (curAudioEl.paused) {
-        ensureAudioCtx();
-        curAudioEl.play();
-        updatePlayIcons(true);
+    if (el.paused) {
+        const p = el.play();
+        if (p !== undefined) {
+            p.then(() => {
+                updatePlayIcons(true);
+            }).catch(() => {});
+        } else {
+            updatePlayIcons(true);
+        }
     } else {
-        curAudioEl.pause();
+        el.pause();
         updatePlayIcons(false);
     }
 }

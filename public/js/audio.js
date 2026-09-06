@@ -33,20 +33,31 @@ function ensureAudioCtx() {
     }
 }
 
+let persistentAudio = null;
+
+function getOrCreateAudioElement() {
+    if (!persistentAudio) {
+        persistentAudio = new Audio();
+        persistentAudio.crossOrigin = 'anonymous';
+        curAudioEl = persistentAudio;
+        attachAudioElement(persistentAudio);
+    }
+    return persistentAudio;
+}
+
 function attachAudioElement(el) {
     ensureAudioCtx();
+    if (!el._audioSourceNode) {
+        try {
+            el._audioSourceNode = audioCtx.createMediaElementSource(el);
+        } catch (_) {}
+    }
     if (el._audioSourceNode) {
         audioSrc = el._audioSourceNode;
-    } else {
-        if (audioSrc) {
-            try { audioSrc.disconnect(); } catch (_) {}
-        }
-        el._audioSourceNode = audioCtx.createMediaElementSource(el);
-        audioSrc = el._audioSourceNode;
+        try {
+            audioSrc.connect(biquadMuffler);
+        } catch (_) {}
     }
-    try {
-        audioSrc.connect(biquadMuffler);
-    } catch (_) {}
 }
 
 function stopMic() {

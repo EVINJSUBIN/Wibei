@@ -55,6 +55,8 @@ let lastPulseShockwaveTime = 0;
 let waveRipplePhase = 0;
 let waveShockwaves = [];
 let lastWaveShockwaveTime = 0;
+let lastMoodSwitchTime = 0;
+let autoDetectedMood = 'phonk';
 
 const THEMES = {
     phonk: {
@@ -182,7 +184,7 @@ let lyricsCurrentLine = -1;
 
 let toastTimer = null;
 let suggTimer = null;
-let repeatMode = 'none';
+let repeatMode = 'off';
 let isShuffle = false;
 
 let isLightMode = localStorage.getItem('wibei_theme_mode') === 'light';

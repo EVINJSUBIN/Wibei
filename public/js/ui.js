@@ -74,17 +74,23 @@ function initUIEvents() {
         row.addEventListener('click', () => {
             document.querySelectorAll('.preset-row').forEach(r => r.classList.remove('active'));
             row.classList.add('active');
-            const trackObj = {
-                title: row.dataset.title || 'Demo Track',
-                artist: row.dataset.artist || 'Studio',
-                album: row.dataset.album || 'Demo Album',
-                genre: row.dataset.genre || 'Electronic',
-                bpm: row.dataset.bpm || '120',
-                src: row.dataset.src,
-                thumb: row.dataset.thumb || '/images/demo-synthwave.svg',
-                type: 'demo'
-            };
-            addToPlaylist(trackObj, true);
+            const targetSrc = row.dataset.src;
+            const existingIdx = playlist.findIndex(p => p.src === targetSrc);
+            if (existingIdx !== -1) {
+                playTrackAtIndex(existingIdx);
+            } else {
+                const trackObj = {
+                    title: row.dataset.title || 'Demo Track',
+                    artist: row.dataset.artist || 'Studio',
+                    album: row.dataset.album || 'Demo Album',
+                    genre: row.dataset.genre || 'Electronic',
+                    bpm: row.dataset.bpm || '120',
+                    src: targetSrc,
+                    thumb: row.dataset.thumb || '/images/demo-synthwave.svg',
+                    type: 'demo'
+                };
+                addToPlaylist(trackObj, true);
+            }
         });
     });
 
@@ -188,10 +194,10 @@ function initUIEvents() {
             document.querySelectorAll('#style-segmented .seg-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentVis = btn.dataset.value;
-            pulseGrp.visible = currentVis === 'pulse';
-            waveGrp.visible  = currentVis === 'wave';
-            vgridGrp.visible = currentVis === 'grid';
-            orbGrp.visible   = currentVis === 'orb';
+            if (pulseGrp) pulseGrp.visible = currentVis === 'pulse';
+            if (waveGrp)  waveGrp.visible  = currentVis === 'wave';
+            if (vgridGrp) vgridGrp.visible = currentVis === 'grid';
+            if (orbGrp)   orbGrp.visible   = currentVis === 'orb';
             const geometryBadge = document.getElementById('geometry-badge');
             if (geometryBadge) geometryBadge.innerText = btn.innerText;
         });

@@ -453,67 +453,70 @@ function initThree() {
 }
 
 function detectSongMoodAndGeometry(bassAvg, midAvg, trebleAvg) {
-    const now = performance.now();
-    if (now - lastMoodSwitchTime < 3500) return;
+    try {
+        const now = performance.now();
+        if (now - lastMoodSwitchTime < 3500) return;
 
-    let targetMood = 'phonk';
-    let targetVis = 'pulse';
+        let targetMood = 'phonk';
+        let targetVis = 'pulse';
 
-    if (bassAvg > 0.42 && (bassAvg - midAvg) > 0.08) {
-        targetMood = 'phonk';
-        targetVis = 'pulse';
-    } else if (midAvg > 0.32 && trebleAvg > 0.20) {
-        targetMood = 'comic';
-        targetVis = 'grid';
-    } else if (bassAvg < 0.28 && midAvg < 0.28) {
-        targetMood = 'lofi';
-        targetVis = 'wave';
-    } else if (trebleAvg > 0.30) {
-        targetMood = 'cyber';
-        targetVis = 'orb';
-    }
-
-    if (targetMood !== autoDetectedMood) {
-        autoDetectedMood = targetMood;
-        lastMoodSwitchTime = now;
-
-        const th = THEMES[currentTheme];
-        if (th && th.isAuto) {
-            const detectedTheme = THEMES[targetMood];
-            if (detectedTheme) {
-                document.documentElement.style.setProperty('--accent', detectedTheme.accent);
-                document.documentElement.style.setProperty('--accent-glow', detectedTheme.accentGlow);
-                document.documentElement.style.setProperty('--bg', detectedTheme.bg);
-                document.documentElement.style.setProperty('--panel', detectedTheme.panelBg);
-                document.documentElement.style.setProperty('--border', detectedTheme.border);
-                
-                const pl = scene?.children.find(c => c.isPointLight);
-                if (pl) pl.color.setHex(detectedTheme.lightColor);
-                if (bloomPass) bloomPass.strength = detectedTheme.bloomStrength;
-            }
-
-            if (currentVis !== targetVis) {
-                currentVis = targetVis;
-                pulseGrp.visible = currentVis === 'pulse';
-                waveGrp.visible = currentVis === 'wave';
-                vgridGrp.visible = currentVis === 'grid';
-                orbGrp.visible = currentVis === 'orb';
-                const geometryBadge = document.getElementById('geometry-badge');
-                if (geometryBadge) geometryBadge.innerText = targetVis.toUpperCase();
-                document.querySelectorAll('#style-segmented .seg-btn').forEach(b => {
-                    b.classList.toggle('active', b.dataset.value === targetVis);
-                });
-            }
-
-            const telemetryMode = document.getElementById('telemetry-mode');
-            if (telemetryMode) telemetryMode.innerText = `AUTO: ${targetMood.toUpperCase()}`;
+        if (bassAvg > 0.42 && (bassAvg - midAvg) > 0.08) {
+            targetMood = 'phonk';
+            targetVis = 'pulse';
+        } else if (midAvg > 0.32 && trebleAvg > 0.20) {
+            targetMood = 'comic';
+            targetVis = 'grid';
+        } else if (bassAvg < 0.28 && midAvg < 0.28) {
+            targetMood = 'lofi';
+            targetVis = 'wave';
+        } else if (trebleAvg > 0.30) {
+            targetMood = 'cyber';
+            targetVis = 'orb';
         }
-    }
+
+        if (targetMood !== autoDetectedMood) {
+            autoDetectedMood = targetMood;
+            lastMoodSwitchTime = now;
+
+            const th = THEMES[currentTheme];
+            if (th && th.isAuto) {
+                const detectedTheme = THEMES[targetMood];
+                if (detectedTheme) {
+                    document.documentElement.style.setProperty('--accent', detectedTheme.accent);
+                    document.documentElement.style.setProperty('--accent-glow', detectedTheme.accentGlow);
+                    document.documentElement.style.setProperty('--bg', detectedTheme.bg);
+                    document.documentElement.style.setProperty('--panel', detectedTheme.panelBg);
+                    document.documentElement.style.setProperty('--border', detectedTheme.border);
+                    
+                    const pl = scene?.children.find(c => c.isPointLight);
+                    if (pl) pl.color.setHex(detectedTheme.lightColor);
+                    if (bloomPass) bloomPass.strength = detectedTheme.bloomStrength;
+                }
+
+                if (currentVis !== targetVis) {
+                    currentVis = targetVis;
+                    if (pulseGrp) pulseGrp.visible = currentVis === 'pulse';
+                    if (waveGrp)  waveGrp.visible  = currentVis === 'wave';
+                    if (vgridGrp) vgridGrp.visible = currentVis === 'grid';
+                    if (orbGrp)   orbGrp.visible   = currentVis === 'orb';
+                    const geometryBadge = document.getElementById('geometry-badge');
+                    if (geometryBadge) geometryBadge.innerText = targetVis.toUpperCase();
+                    document.querySelectorAll('#style-segmented .seg-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.value === targetVis);
+                    });
+                }
+
+                const telemetryMode = document.getElementById('telemetry-mode');
+                if (telemetryMode) telemetryMode.innerText = `AUTO: ${targetMood.toUpperCase()}`;
+            }
+        }
+    } catch (_) {}
 }
 
 function threeAnimate() {
     requestAnimationFrame(threeAnimate);
-    const time = performance.now() * 0.001;
+    try {
+        const time = performance.now() * 0.001;
 
     frameCounter++;
     const nowMs = performance.now();
@@ -916,6 +919,7 @@ function threeAnimate() {
             if (orbRing2) orbRing2.rotation.y += 0.008;
         }
     }
+    } catch (_) {}
 
     try {
         composer.render();

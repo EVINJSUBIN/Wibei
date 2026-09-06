@@ -9,7 +9,7 @@ let cyberDrops = [];
 let lofiOrbs = [];
 let lightningBolts = [];
 let voidStars = [];
-let autoDetectedMood = 'phonk';
+autoDetectedMood = 'phonk';
 
 function resizeCanvas() {
     if (!bgCanvas) return;
